@@ -1,6 +1,7 @@
 import json
 import os
 
+# Using absolute path for safety
 FILE_PATH = '/Users/carollucas/Desktop/Summit/data/deep-dive.json'
 
 MARKDOWN_INSTRUCTION_TEMPLATE = """
@@ -24,6 +25,11 @@ Structure:
 1. A flow diagram (graph TD) explaining the logic/execution process.
 2. A sequence or architectural diagram explaining the interaction between components.)
 
+**Mermaid Syntax Requirements (v10+):**
+- ALWAYS wrap node text in double quotes if it contains symbols, punctuation, or mathematical notation (e.g., ":", "/", "(n)", "←", "?").
+- NEVER use "\\n" for line breaks inside nodes. Use HTML "<br>" tags instead.
+- Ensure notations like "O(n)" or "fn()" are strictly wrapped in double quotes to avoid breaking the parser.
+
 ## 🏢 Interview Context & FAANG Signals
 (Where this appears in the interview loop and the specific "Lead signals" interviewers are looking for.)
 
@@ -37,7 +43,7 @@ Structure:
 > **✓ Correct Lead Approach:** ...
 
 ## 🛠️ Practice Scenarios (5-10 Scenarios)
-(Provide 5 to 10 realistic, complex interview scenarios. Each should include a problem statement and a hidden "Staff-Level Solution" block.)
+(Provide 5 to 10 realistic, complex interview scenarios. Each should include a problem statement and a hidden "Staff-Level Solution" block using markdown details/summary tags.)
 
 Use professional technical language. Use ```javascript or ```typescript for all code blocks. Return ONLY the markdown content. No conversational preamble.
 """
@@ -83,7 +89,7 @@ def fix_prompts():
     with open(FILE_PATH, 'w') as f:
         json.dump(data, f, indent=2)
 
-    print(f"Successfully cleaned and updated {updated_count} prompts in {FILE_PATH}.")
+    print(f"Successfully updated {updated_count} prompts with Mermaid v10 rules in {FILE_PATH}.")
 
 if __name__ == "__main__":
     fix_prompts()

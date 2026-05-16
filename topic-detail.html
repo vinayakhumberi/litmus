@@ -37,14 +37,29 @@
 <style type="text/tailwindcss">
   @layer base {
     body { 
-      @apply bg-white text-zinc-900 transition-colors duration-200 dark:bg-summit-bg dark:text-zinc-100; 
+      @apply bg-white text-zinc-900 transition-colors duration-200 dark:bg-summit-bg dark:text-zinc-100 overflow-x-hidden; 
       font-feature-settings: "cv02", "cv03", "cv04", "ss01";
     }
     body.light-theme { @apply bg-summit-paper; }
   }
 
+  /* Mermaid Diagrams */
+  .mermaid-target {
+    @apply bg-slate-900 p-4 md:p-8 rounded-lg border border-slate-800 my-8 flex justify-center overflow-x-auto shadow-xl;
+    background-color: ghostwhite;
+  }
   
-  .code-wrap { @apply relative my-6; }
+  .mermaid-target svg {
+    @apply w-full h-auto;
+    max-width: 100%;
+  }
+
+  .mermaid-target text, .mermaid-target span, .mermaid-target .messageText, .mermaid-target .noteText { 
+    fill: #ffffff !important; color: #ffffff !important; font-weight: 500 !important;
+    font-family: "Plus Jakarta Sans", sans-serif !important; font-size: 13px !important;
+  }
+  
+  .code-wrap { @apply relative my-6 w-full overflow-hidden; }
   .copy-btn-code {
     @apply absolute top-3 right-3 bg-zinc-800 text-zinc-400 text-[9px] px-2 py-1 rounded border border-zinc-700 
     hover:bg-summit-accent hover:text-white transition-all opacity-0 pointer-events-none font-mono uppercase tracking-tighter;
@@ -52,50 +67,57 @@
   .code-wrap:hover .copy-btn-code { @apply opacity-100 pointer-events-auto; }
 
   pre[class*="language-"] { 
-    @apply m-0 rounded-lg text-sm border border-zinc-800 bg-zinc-950 p-5 leading-relaxed !important; 
+    @apply m-0 rounded-lg text-xs md:text-sm border border-zinc-800 bg-zinc-950 p-4 md:p-5 leading-relaxed overflow-x-auto whitespace-pre-wrap md:whitespace-pre !important; 
   }
   
   /* Interactive Elements */
-  details { @apply bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg mb-5 overflow-hidden transition-all; }
+  details { @apply bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg mb-5 overflow-hidden transition-all w-full; }
   details[open] { @apply ring-1 ring-summit-accent/30; }
   summary { @apply px-5 py-3 font-bold text-xs uppercase tracking-widest cursor-pointer select-none bg-zinc-100 dark:bg-zinc-800/30 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors; }
-  .details-content { @apply p-5 border-t border-zinc-200 dark:border-zinc-800 text-[15px]; }
+  .details-content { @apply p-4 md:p-6 border-t border-zinc-200 dark:border-zinc-800 text-[14px] md:text-[15px] break-words; }
 
-  /* Custom Markdown Alerts */
-  blockquote { @apply border-l-4 border-summit-accent bg-zinc-100/50 dark:bg-zinc-900/30 py-4 px-6 rounded-r-lg italic my-6 text-[15px]; }
-  
-  .mistake-card { @apply mb-6 rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden; }
-  .m-wrong { @apply bg-red-50 dark:bg-red-950/20 px-5 py-2 border-b border-zinc-200 dark:border-zinc-800 text-red-600 dark:text-red-400 font-bold text-[10px] uppercase tracking-widest; }
-  .m-correct { @apply bg-emerald-50 dark:bg-emerald-950/20 px-5 py-2 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] uppercase tracking-widest; }
-  .m-body { @apply p-5 bg-white dark:bg-zinc-900 text-[15px]; }
+  /* Mobile Sidebar Overrides */
+  #sidebar.mobile-closed { @apply -translate-x-full lg:translate-x-0; }
 </style>
 </head>
 <body class="antialiased">
 
-<div class="flex min-h-screen">
+<!-- Mobile Header -->
+<div class="lg:hidden sticky top-0 z-50 bg-white/80 dark:bg-summit-bg/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 px-6 py-4 flex items-center justify-between">
+  <a href="index.html" class="font-mono text-[9px] font-bold tracking-widest text-zinc-400">← TRACKER</a>
+  <button onclick="toggleSidebar()" class="text-zinc-900 dark:text-white p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+  </button>
+</div>
+
+<div class="flex min-h-screen overflow-hidden">
   <!-- Sidebar -->
-  <aside class="hidden lg:flex w-64 flex-col border-r border-zinc-200 dark:border-zinc-800 sticky top-0 h-screen p-6 bg-zinc-50 dark:bg-zinc-950">
-    <a href="index.html" class="font-mono text-[9px] font-bold tracking-[0.2em] text-zinc-400 hover:text-summit-accent mb-10 transition-colors">← TRACKER</a>
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 lg:static lg:block transform transition-transform duration-300 mobile-closed flex flex-col border-r border-zinc-200 dark:border-zinc-800 p-6 bg-zinc-50 dark:bg-zinc-950">
+    <div class="flex items-center justify-between lg:block mb-10">
+      <a href="index.html" class="font-mono text-[9px] font-bold tracking-[0.2em] text-zinc-400 hover:text-summit-accent transition-colors">← TRACKER</a>
+      <button onclick="toggleSidebar()" class="lg:hidden p-2">✕</button>
+    </div>
     
     <div class="text-[9px] uppercase tracking-[0.2em] font-extrabold text-zinc-400/80 mb-4 px-2">On this page</div>
-    <nav>
-      <ul id="toc" class="space-y-0.5">
-        <!-- Injected -->
-      </ul>
+    <nav class="flex-1 overflow-y-auto">
+      <ul id="toc" class="space-y-0.5"></ul>
     </nav>
   </aside>
 
+  <!-- Overlay -->
+  <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden backdrop-blur-sm"></div>
+
   <!-- Main -->
-  <main class="flex-1 flex justify-center px-6 py-10 lg:px-16 lg:py-16">
-    <div class="w-full max-w-2xl">
-      <div id="markdown-content" class="prose prose-zinc dark:prose-invert max-w-none
+  <main class="flex-1 flex justify-center px-4 py-8 md:px-10 md:py-16 lg:px-20 lg:py-20 overflow-hidden">
+    <div class="w-full max-w-2xl overflow-hidden">
+      <div id="markdown-content" class="prose prose-zinc dark:prose-invert max-w-none break-words
         prose-headings:font-display prose-headings:tracking-tight prose-headings:font-extrabold
-        prose-h1:text-4xl prose-h1:mb-10 prose-h1:text-zinc-900 prose-h1:dark:text-white
-        prose-h2:text-xl prose-h2:border-b prose-h2:border-zinc-200 prose-h2:dark:border-zinc-800 prose-h2:pb-2 prose-h2:mt-12 prose-h2:mb-6
-        prose-h3:text-summit-accent prose-h3:text-lg prose-h3:mt-8
-        prose-p:text-[15px] prose-p:leading-relaxed prose-p:font-medium prose-p:text-zinc-600 prose-p:dark:text-zinc-300
-        prose-li:text-[15px] prose-li:text-zinc-600 prose-li:dark:text-zinc-300
-        prose-code:text-summit-accent prose-code:bg-zinc-100 prose-code:dark:bg-zinc-800/80 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-semibold prose-code:text-[13px] prose-code:before:content-none prose-code:after:content-none
+        prose-h1:text-3xl md:prose-h1:text-4xl prose-h1:mb-8 md:prose-h1:mb-12 prose-h1:text-zinc-900 prose-h1:dark:text-white
+        prose-h2:text-lg md:prose-h2:text-xl prose-h2:border-b prose-h2:border-zinc-200 prose-h2:dark:border-zinc-800 prose-h2:pb-2 prose-h2:mt-10 md:prose-h2:mt-12 prose-h2:mb-6
+        prose-h3:text-summit-accent prose-h3:text-base md:prose-h3:text-lg prose-h3:font-bold prose-h3:mt-8
+        prose-p:text-[14px] md:prose-p:text-[15px] prose-p:leading-relaxed prose-p:font-medium prose-p:text-zinc-600 prose-p:dark:text-zinc-300
+        prose-li:text-[14px] md:prose-li:text-[15px] prose-li:text-zinc-600 prose-li:dark:text-zinc-300
+        prose-code:text-summit-accent prose-code:bg-zinc-100 prose-code:dark:bg-zinc-800/80 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-semibold prose-code:text-[12px] md:prose-code:text-[13px] prose-code:before:content-none prose-code:after:content-none
         ">
         <div class="flex items-center gap-3 text-zinc-400 text-sm italic">
           <span class="animate-pulse">Building course module...</span>
@@ -105,23 +127,33 @@
   </main>
 </div>
 
-<!-- Dependencies -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.2.0/mermaid.min.js"></script>
 
 <script>
-  // Initial Theme Sync
   const isLight = localStorage.getItem('theme') === 'light';
-  if (isLight) {
-    document.body.classList.add('light-theme');
-  } else {
-    document.documentElement.classList.add('dark');
-  }
+  if (isLight) { document.body.classList.add('light-theme'); } else { document.documentElement.classList.add('dark'); }
 
   const urlParams = new URLSearchParams(window.location.search);
   const topicId = urlParams.get('id');
+
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const isClosed = sidebar.classList.contains('mobile-closed');
+    
+    if (isClosed) {
+      sidebar.classList.remove('mobile-closed');
+      overlay.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    } else {
+      sidebar.classList.add('mobile-closed');
+      overlay.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+  }
 
   function copyToClipboard(btn) {
     const code = btn.nextElementSibling.innerText;
@@ -147,7 +179,6 @@
   async function renderMarkdown(md) {
     const contentArea = document.getElementById('markdown-content');
     const renderer = new marked.Renderer();
-    
     renderer.code = function(code, lang) {
       if (lang === 'mermaid') return `<div class="mermaid-raw" style="display:none">${code}</div><div class="mermaid-target"></div>`;
       const language = lang || 'javascript';
@@ -158,7 +189,6 @@
     marked.setOptions({ renderer });
     contentArea.innerHTML = marked.parse(md);
 
-    // Process details/summary
     document.querySelectorAll('details').forEach(det => {
       const summary = det.querySelector('summary');
       const wrap = document.createElement('div');
@@ -196,7 +226,7 @@
       const id = 'section-' + i;
       h.setAttribute('id', id);
       const li = document.createElement('li');
-      li.innerHTML = `<a href="#${id}" class="text-zinc-500 dark:text-zinc-400 hover:text-summit-accent text-[13px] py-1.5 px-3 block transition-all border-l-2 border-transparent hover:border-zinc-300 dark:hover:border-zinc-700 rounded-sm font-medium">${h.innerText}</a>`;
+      li.innerHTML = `<a href="#${id}" onclick="if(window.innerWidth < 1024) toggleSidebar()" class="text-zinc-500 dark:text-zinc-400 hover:text-summit-accent text-[13px] py-1.5 px-3 block transition-all border-l-2 border-transparent hover:border-zinc-300 dark:hover:border-zinc-700 rounded-sm font-medium">${h.innerText}</a>`;
       toc.appendChild(li);
     });
   }
