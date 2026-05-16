@@ -870,72 +870,47 @@ const STUDY_PROMPT_TEMPLATE = (topicName) => `You are my FAANG Frontend Lead int
 
 Today's topic: ${topicName}
 
-Teach me this topic as if you're preparing me for a FAANG Frontend Lead interview. Cover:
+---
+OUTPUT INSTRUCTIONS:
+Format your ENTIRE response as a high-fidelity Markdown (.md) document. 
+This is a Staff-level technical deep dive for a FAANG Frontend Lead candidate.
 
-1. Core Concept — deep technical explanation, not surface level
-2. Interview Context — exact question patterns, how it shows up at FAANG
-3. Lead-Level Answer vs Senior Dev Answer — what separates them
-4. Common Mistakes — what mid-level engineers get wrong
-5. Practice Questions — 3 questions with model Lead-level answers
-6. Mini-Test — 5 questions; score me and give follow-up exercises if I score below 7/10
+Structure:
+# ${topicName}
 
-Format your output as structured JSON matching this schema:
-{
-  "topic": {
-    "id": "<kebab-case-id>",
-    "name": "${topicName}",
-    "coreConcept": { "summary": "...", "keyPoints": [], "detailedExplanation": "..." },
-    "interviewContext": { "whyItMatters": "...", "frequencyInInterviews": "...", "commonQuestions": [] },
-    "leadVsSeniorAnswer": { "seniorDevAnswer": "...", "leadLevelAnswer": "...", "keyDifferences": [] },
-    "commonMistakes": [{ "mistake": "...", "whyItsMistaken": "...", "correctApproach": "..." }],
-    "practiceQuestions": [{ "question": "...", "modelAnswer": "..." }],
-    "miniTest": { "questions": [{ "id": 1, "question": "...", "expectedAnswer": "..." }] }
-  }
-}
+## 🎯 Executive Summary
+(A concise, high-impact summary of the topic and why it's a "must-know" for Leads.)
 
-Return ONLY valid JSON. No preamble, no markdown fences.`;
+## 🧠 Core Technical Deep Dive
+(Extensive explanation. Go deep into the JavaScript engine, browser runtime, memory management, or specific framework internals. Do not explain basics.)
 
-const TEST_PROMPT_TEMPLATE = (topicName) => `You are my FAANG Frontend Lead interview test generator. I am preparing for interviews at Meta, Google, Amazon, Microsoft. I have 11 years of frontend experience.
+## 📊 Visual Architecture & Logic
+(Provide at least TWO Mermaid.js diagrams:
+1. A flow diagram (graph TD) explaining the logic/execution process.
+2. A sequence or architectural diagram explaining the interaction between components.)
 
-Generate a comprehensive test for the topic: ${topicName}
+## 🏢 Interview Context & FAANG Signals
+(Where this appears in the interview loop and the specific "Lead signals" interviewers are looking for.)
 
-Requirements:
-- 10 questions total
-- Mix: 4 multiple-choice, 3 short-answer, 3 code-scenario
-- Difficulty: 3 easy, 4 medium, 3 hard
-- Standard: FAANG Frontend Lead level
-- Each question worth 10 points (total: 100)
-- Passing score: 70/100
+## ⚔️ Lead Level vs Senior Level
+(Contrast a Senior dev response with a Staff/Lead response. Focus on trade-offs, scalability, and system-wide impact.)
 
-Output as JSON matching this schema:
-{
-  "test": {
-    "topicId": "<kebab-case>",
-    "topicName": "${topicName}",
-    "totalQuestions": 10,
-    "totalPoints": 100,
-    "passingScore": 70,
-    "questions": [
-      {
-        "id": 1,
-        "type": "multiple-choice | short-answer | code-scenario",
-        "difficulty": "easy | medium | hard",
-        "question": "...",
-        "options": ["A) ...", "B) ...", "C) ...", "D) ..."],
-        "correctAnswer": "...",
-        "explanation": "...",
-        "points": 10
-      }
-    ],
-    "answerFormat": {
-      "candidateName": "Vinayak",
-      "testDate": "YYYY-MM-DD",
-      "answers": [{ "questionId": 1, "answer": "..." }]
-    }
-  }
-}
+## ⚠️ Common Pitfalls & Anti-Patterns
+(Use this specific format for each item:)
+> ### ✕ [Anti-Pattern Name]
+> **Why it's wrong:** ...
+> **✓ Correct Lead Approach:** ...
 
-Return ONLY valid JSON. No preamble, no markdown fences.`;
+## 🛠️ Practice Scenarios (5-10 Scenarios)
+(Provide 5 to 10 realistic, complex interview scenarios. Each should include a problem statement and a hidden "Staff-Level Solution" block using markdown details/summary tags if possible, or just clearly labeled.)
+
+Use professional technical language. Use \`\`\`javascript or \`\`\`typescript for all code blocks. Return ONLY the markdown content. No conversational preamble.`;
+
+const TEST_PROMPT_TEMPLATE = (topicName) => `You are my FAANG Frontend Lead interview coach. Generate a high-fidelity Markdown-based assessment for: ${topicName}.
+
+Focus on 5-10 complex, architectural scenarios that test Lead-level decision making rather than syntax. Include Mermaid diagrams in the explanations where relevant.
+
+Return ONLY markdown.`;
 
 // ─── State ───────────────────────────────────────────────────────────────────
 let allTopics = [];
@@ -1217,8 +1192,11 @@ function renderTopicRow(t) {
     <td><span class="week-badge">${escHtml(weekLabel)}</span></td>
     <td>
       <div class="actions">
-        <button class="action-btn dive" data-tip="Deep Dive Prompt" onclick="openModal('dive','${topicId}','${topicNameAttr}')">
+        <a class="action-btn dive" data-tip="Study Course" href="topic-detail.html?id=${topicId}" target="_blank" style="text-decoration:none">
           📖
+        </a>
+        <button class="action-btn dive" data-tip="Deep Dive Prompt" onclick="openModal('dive','${topicId}','${topicNameAttr}')">
+          💬
         </button>
         <button class="action-btn test" data-tip="Test Prompt" onclick="openModal('test','${topicId}','${topicNameAttr}')">
           ✏

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Study Course — FAANG Prep</title>
+<!-- Dependencies: Tailwind CSS + Typography -->
+<script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Prism for Syntax Highlighting -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          display: ['"Plus Jakarta Sans"', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'monospace'],
+        },
+        colors: {
+          summit: {
+            bg: '#0a0a0a',
+            paper: '#fdfcfb',
+            accent: '#3b82f6', 
+            'accent-dark': '#1d4ed8',
+          }
+        }
+      }
+    }
+  }
+</script>
+
+<style type="text/tailwindcss">
+  @layer base {
+    body { 
+      @apply bg-white text-zinc-900 transition-colors duration-200 dark:bg-summit-bg dark:text-zinc-100; 
+      font-feature-settings: "cv02", "cv03", "cv04", "ss01";
+    }
+    body.light-theme { @apply bg-summit-paper; }
+  }
+
+  
+  .code-wrap { @apply relative my-6; }
+  .copy-btn-code {
+    @apply absolute top-3 right-3 bg-zinc-800 text-zinc-400 text-[9px] px-2 py-1 rounded border border-zinc-700 
+    hover:bg-summit-accent hover:text-white transition-all opacity-0 pointer-events-none font-mono uppercase tracking-tighter;
+  }
+  .code-wrap:hover .copy-btn-code { @apply opacity-100 pointer-events-auto; }
+
+  pre[class*="language-"] { 
+    @apply m-0 rounded-lg text-sm border border-zinc-800 bg-zinc-950 p-5 leading-relaxed !important; 
+  }
+  
+  /* Interactive Elements */
+  details { @apply bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg mb-5 overflow-hidden transition-all; }
+  details[open] { @apply ring-1 ring-summit-accent/30; }
+  summary { @apply px-5 py-3 font-bold text-xs uppercase tracking-widest cursor-pointer select-none bg-zinc-100 dark:bg-zinc-800/30 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors; }
+  .details-content { @apply p-5 border-t border-zinc-200 dark:border-zinc-800 text-[15px]; }
+
+  /* Custom Markdown Alerts */
+  blockquote { @apply border-l-4 border-summit-accent bg-zinc-100/50 dark:bg-zinc-900/30 py-4 px-6 rounded-r-lg italic my-6 text-[15px]; }
+  
+  .mistake-card { @apply mb-6 rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden; }
+  .m-wrong { @apply bg-red-50 dark:bg-red-950/20 px-5 py-2 border-b border-zinc-200 dark:border-zinc-800 text-red-600 dark:text-red-400 font-bold text-[10px] uppercase tracking-widest; }
+  .m-correct { @apply bg-emerald-50 dark:bg-emerald-950/20 px-5 py-2 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] uppercase tracking-widest; }
+  .m-body { @apply p-5 bg-white dark:bg-zinc-900 text-[15px]; }
+</style>
+</head>
+<body class="antialiased">
+
+<div class="flex min-h-screen">
+  <!-- Sidebar -->
+  <aside class="hidden lg:flex w-64 flex-col border-r border-zinc-200 dark:border-zinc-800 sticky top-0 h-screen p-6 bg-zinc-50 dark:bg-zinc-950">
+    <a href="index.html" class="font-mono text-[9px] font-bold tracking-[0.2em] text-zinc-400 hover:text-summit-accent mb-10 transition-colors">← TRACKER</a>
+    
+    <div class="text-[9px] uppercase tracking-[0.2em] font-extrabold text-zinc-400/80 mb-4 px-2">On this page</div>
+    <nav>
+      <ul id="toc" class="space-y-0.5">
+        <!-- Injected -->
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 flex justify-center px-6 py-10 lg:px-16 lg:py-16">
+    <div class="w-full max-w-2xl">
+      <div id="markdown-content" class="prose prose-zinc dark:prose-invert max-w-none
+        prose-headings:font-display prose-headings:tracking-tight prose-headings:font-extrabold
+        prose-h1:text-4xl prose-h1:mb-10 prose-h1:text-zinc-900 prose-h1:dark:text-white
+        prose-h2:text-xl prose-h2:border-b prose-h2:border-zinc-200 prose-h2:dark:border-zinc-800 prose-h2:pb-2 prose-h2:mt-12 prose-h2:mb-6
+        prose-h3:text-summit-accent prose-h3:text-lg prose-h3:mt-8
+        prose-p:text-[15px] prose-p:leading-relaxed prose-p:font-medium prose-p:text-zinc-600 prose-p:dark:text-zinc-300
+        prose-li:text-[15px] prose-li:text-zinc-600 prose-li:dark:text-zinc-300
+        prose-code:text-summit-accent prose-code:bg-zinc-100 prose-code:dark:bg-zinc-800/80 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-semibold prose-code:text-[13px] prose-code:before:content-none prose-code:after:content-none
+        ">
+        <div class="flex items-center gap-3 text-zinc-400 text-sm italic">
+          <span class="animate-pulse">Building course module...</span>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Dependencies -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.2.0/mermaid.min.js"></script>
+
+<script>
+  // Initial Theme Sync
+  const isLight = localStorage.getItem('theme') === 'light';
+  if (isLight) {
+    document.body.classList.add('light-theme');
+  } else {
+    document.documentElement.classList.add('dark');
+  }
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const topicId = urlParams.get('id');
+
+  function copyToClipboard(btn) {
+    const code = btn.nextElementSibling.innerText;
+    navigator.clipboard.writeText(code).then(() => {
+      const old = btn.textContent;
+      btn.textContent = 'COPIED';
+      setTimeout(() => btn.textContent = old, 2000);
+    });
+  }
+
+  async function loadMarkdown() {
+    if (!topicId) return;
+    try {
+      const res = await fetch(`data/topics/${topicId}.md`);
+      if (!res.ok) throw new Error();
+      const markdown = await res.text();
+      renderMarkdown(markdown);
+    } catch (err) {
+      document.getElementById('markdown-content').innerHTML = `<h1>Topic Not Found</h1><p class="text-sm">Create <code>data/topics/${topicId}.md</code> to view content.</p>`;
+    }
+  }
+
+  async function renderMarkdown(md) {
+    const contentArea = document.getElementById('markdown-content');
+    const renderer = new marked.Renderer();
+    
+    renderer.code = function(code, lang) {
+      if (lang === 'mermaid') return `<div class="mermaid-raw" style="display:none">${code}</div><div class="mermaid-target"></div>`;
+      const language = lang || 'javascript';
+      const escapedCode = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      return `<div class="code-wrap"><button class="copy-btn-code" onclick="copyToClipboard(this)">Copy</button><pre class="language-${language}"><code class="language-${language}">${escapedCode}</code></pre></div>`;
+    };
+
+    marked.setOptions({ renderer });
+    contentArea.innerHTML = marked.parse(md);
+
+    // Process details/summary
+    document.querySelectorAll('details').forEach(det => {
+      const summary = det.querySelector('summary');
+      const wrap = document.createElement('div');
+      wrap.className = 'details-content';
+      while (det.childNodes.length > 0) {
+        if (det.childNodes[0] === summary) { det.removeChild(det.childNodes[0]); continue; }
+        wrap.appendChild(det.childNodes[0]);
+      }
+      det.appendChild(summary);
+      det.appendChild(wrap);
+    });
+
+    generateTOC();
+
+    mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'loose', fontFamily: '"Plus Jakarta Sans"' });
+    const targets = document.querySelectorAll('.mermaid-target');
+    const sources = document.querySelectorAll('.mermaid-raw');
+    for (let i = 0; i < targets.length; i++) {
+      try {
+        const { svg } = await mermaid.render('mermaid-' + i, sources[i].innerText);
+        targets[i].innerHTML = svg;
+      } catch (err) {
+        targets[i].innerHTML = `<div class="text-red-500 text-[10px] p-4">Diagram Error: ${err.message}</div>`;
+      }
+    }
+    Prism.highlightAll();
+    setupScrollSpy();
+  }
+
+  function generateTOC() {
+    const toc = document.getElementById('toc');
+    const headers = document.querySelectorAll('#markdown-content h2');
+    toc.innerHTML = '';
+    headers.forEach((h, i) => {
+      const id = 'section-' + i;
+      h.setAttribute('id', id);
+      const li = document.createElement('li');
+      li.innerHTML = `<a href="#${id}" class="text-zinc-500 dark:text-zinc-400 hover:text-summit-accent text-[13px] py-1.5 px-3 block transition-all border-l-2 border-transparent hover:border-zinc-300 dark:hover:border-zinc-700 rounded-sm font-medium">${h.innerText}</a>`;
+      toc.appendChild(li);
+    });
+  }
+
+  function setupScrollSpy() {
+    const sections = document.querySelectorAll('#markdown-content h2');
+    const navLinks = document.querySelectorAll('#toc a');
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        if (window.pageYOffset >= section.offsetTop - 150) current = section.getAttribute('id');
+      });
+      navLinks.forEach(link => {
+        const active = link.getAttribute('href').includes(current);
+        link.classList.toggle('text-summit-accent', active);
+        link.classList.toggle('font-bold', active);
+        link.classList.toggle('border-summit-accent', active);
+        link.classList.toggle('bg-zinc-100', active);
+        link.classList.toggle('dark:bg-zinc-900', active);
+      });
+    });
+  }
+  loadMarkdown();
+</script>
+</body>
+</html>
