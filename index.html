@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAANG Frontend Lead — Prep Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --surface: #161616;
+    --surface-2: #1e1e1e;
+    --border: #2a2a2a;
+    --border-active: #3f3f3f;
+    --text: #e8e6e0;
+    --text-muted: #888;
+    --text-dim: #555;
+    --accent: #c8f07d;
+    --accent-dim: #1a2a0a;
+    --bg-alt: #121212;
+
+    /* Badge Palette - Dark */
+    --badge-green: #7defa8;
+    --badge-green-bg: rgba(5, 32, 21, 0.6);
+    --badge-green-border: #0f5132;
+    
+    --badge-amber: #ffc96b;
+    --badge-amber-bg: rgba(42, 26, 0, 0.6);
+    --badge-amber-border: #856404;
+    
+    --badge-red: #ff7b7b;
+    --badge-red-bg: rgba(42, 10, 10, 0.6);
+    --badge-red-border: #a4262c;
+    
+    --badge-blue: #6eb5ff;
+    --badge-blue-bg: rgba(10, 26, 46, 0.6);
+    --badge-blue-border: #0056b3;
+    
+    --badge-gray: #888;
+    --badge-gray-bg: #1e1e1e;
+    --badge-gray-border: #2a2a2a;
+
+    --font-display: 'Syne', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+    --transition: 0.2s ease;
+  }
+
+  body.light-theme {
+    --bg: #f8f7f2;
+    --surface: #ffffff;
+    --surface-2: #f1f0ea;
+    --border: #e2e1d9;
+    --border-active: #c8c7bf;
+    --text: #2a2b26;
+    --text-muted: #5e5f58;
+    --text-dim: #8e8f85;
+    --accent: #4e7a00;
+    --accent-dim: #f4fce3;
+    --bg-alt: #f3f2e8;
+
+    /* Badge Palette - Light (Rich text on soft backgrounds) */
+    --badge-green: #0f5132;
+    --badge-green-bg: #d1e7dd;
+    --badge-green-border: #badbcc;
+    
+    --badge-amber: #856404;
+    --badge-amber-bg: #fff3cd;
+    --badge-amber-border: #ffeeba;
+    
+    --badge-red: #842029;
+    --badge-red-bg: #f8d7da;
+    --badge-red-border: #f5c2c7;
+    
+    --badge-blue: #084298;
+    --badge-blue-bg: #cfe2ff;
+    --badge-blue-border: #b6d4fe;
+    
+    --badge-gray: #41464b;
+    --badge-gray-bg: #e2e3e5;
+    --badge-gray-border: #d3d3d4;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    min-height: 100vh;
+    transition: background var(--transition), color var(--transition);
+  }
+
+  /* Header */
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+    transition: background var(--transition), border var(--transition);
+  }
+
+  .header-left h1 {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: var(--text);
+  }
+
+  .header-left p {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .theme-toggle {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all var(--transition);
+  }
+
+  .theme-toggle:hover {
+    border-color: var(--accent);
+  }
+
+  .countdown {
+    text-align: right;
+  }
+
+  .countdown .days {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .countdown .label {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+
+  .stat-cell {
+    padding: 14px 28px;
+    border-right: 1px solid var(--border);
+    min-width: 0;
+    flex-shrink: 0;
+  }
+
+  .stat-cell .val {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .stat-cell .lbl {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .val.accent { color: var(--accent); }
+  .val.green { color: var(--green); }
+  .val.amber { color: var(--amber); }
+  .val.muted { color: var(--text-muted); }
+
+  .progress-track {
+    height: 2px;
+    background: var(--border);
+    flex: 1;
+    margin: 0 28px;
+    align-self: center;
+    min-width: 60px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.6s ease;
+  }
+
+  /* Controls */
+  .controls {
+    padding: 12px 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    max-width: 300px;
+  }
+
+  .search-wrap input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 7px 10px 7px 30px;
+    outline: none;
+    border-radius: 4px;
+    transition: border-color 0.15s;
+  }
+
+  .search-wrap input:focus { border-color: var(--border-active); }
+  .search-wrap input::placeholder { color: var(--text-dim); }
+
+  .search-icon {
+    position: absolute;
+    left: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+
+  .filter-group {
+    display: flex;
+    gap: 4px;
+  }
+
+  .filter-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 5px 10px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .filter-btn:hover { border-color: var(--border-active); color: var(--text); }
+  .filter-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+  .status-select {
+    appearance: none;
+    background-color: var(--badge-gray-bg);
+    border: 1px solid var(--badge-gray-border);
+    border-radius: 4px;
+    color: var(--badge-gray);
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 20px 3px 8px;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+    transition: all var(--transition);
+  }
+
+  .status-select:hover { border-color: var(--border-active); }
+
+  .status-select.badge-not-started { 
+    background-color: var(--badge-gray-bg); 
+    color: var(--badge-gray); 
+    border-color: var(--badge-gray-border); 
+  }
+  .status-select.badge-in-progress { 
+    background-color: var(--badge-blue-bg); 
+    color: var(--badge-blue); 
+    border-color: var(--badge-blue-border); 
+  }
+  .status-select.badge-completed { 
+    background-color: var(--badge-green-bg); 
+    color: var(--badge-green); 
+    border-color: var(--badge-green-border); 
+  }
+
+  .sort-select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 5px 8px;
+    outline: none;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  /* Week Filter Styles */
+  .week-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 32px;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    background: var(--surface);
+  }
+
+  .week-filters-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-right: 8px;
+  }
+
+  .week-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--text-muted);
+    user-select: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.15s;
+  }
+
+  .week-checkbox:hover {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+
+  .week-checkbox input {
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+
+  /* Table */
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 700px;
+  }
+
+  thead tr {
+    border-bottom: 1px solid var(--border);
+  }
+
+  thead th {
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
+  }
+
+  thead th:hover { color: var(--text-muted); }
+  thead th.sorted { color: var(--accent); }
+  thead th.sorted::after { content: ' ↓'; }
+  thead th.sorted.asc::after { content: ' ↑'; }
+
+  .cat-row td {
+    padding: 14px 16px;
+    background: var(--accent-dim);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+  }
+
+  .cat-label {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .cat-count {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  tbody tr.topic-row {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+    cursor: default;
+  }
+
+  tbody tr.topic-row:nth-child(even) {
+    background: var(--bg-alt);
+  }
+
+  tbody tr.topic-row:hover { background: var(--surface) !important; }
+
+  tbody td {
+    padding: 11px 16px;
+    vertical-align: middle;
+  }
+
+  .topic-name {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text);
+    max-width: 420px;
+    line-height: 1.4;
+  }
+
+  .tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+  }
+
+  .tag {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: var(--surface-2);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    white-space: nowrap;
+    transition: all var(--transition);
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+
+  .badge-easy { background: var(--badge-green-bg); color: var(--badge-green); border-color: var(--badge-green-border); }
+  .badge-medium { background: var(--badge-amber-bg); color: var(--badge-amber); border-color: var(--badge-amber-border); }
+  .badge-hard { background: var(--badge-red-bg); color: var(--badge-red); border-color: var(--badge-red-border); }
+
+  .badge-high { background: var(--badge-red-bg); color: var(--badge-red); border-color: var(--badge-red-border); }
+  .badge-medium-p { background: var(--badge-amber-bg); color: var(--badge-amber); border-color: var(--badge-amber-border); }
+  .badge-low { background: var(--badge-gray-bg); color: var(--badge-gray); border-color: var(--badge-gray-border); }
+
+  .badge-not-started { background: var(--badge-gray-bg); color: var(--badge-gray); border-color: var(--badge-gray-border); }
+  .badge-in-progress { background: var(--badge-blue-bg); color: var(--badge-blue); border-color: var(--badge-blue-border); }
+  .badge-completed { background: var(--badge-green-bg); color: var(--badge-green); border-color: var(--badge-green-border); }
+
+  /* Score */
+  .score-cell {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 700;
+    min-width: 60px;
+  }
+
+  .score-cell .bar {
+    height: 2px;
+    background: var(--border);
+    margin-top: 4px;
+    border-radius: 1px;
+    overflow: hidden;
+  }
+
+  .score-cell .bar-fill {
+    height: 100%;
+    border-radius: 1px;
+    transition: width 0.4s ease;
+  }
+
+  .score-none { color: var(--text-dim); }
+  .score-low .bar-fill { background: var(--red); }
+  .score-mid .bar-fill { background: var(--orange); }
+  .score-good .bar-fill { background: var(--amber); }
+  .score-high .bar-fill { background: var(--green); }
+
+  .score-low { color: var(--red); }
+  .score-mid { color: var(--orange); }
+  .score-good { color: var(--amber); }
+  .score-high { color: var(--green); }
+
+  /* Readiness */
+  .readiness {
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
+  .readiness-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .r-ready .readiness-dot { background: var(--green); }
+  .r-review .readiness-dot { background: var(--amber); }
+  .r-not .readiness-dot { background: var(--text-dim); }
+  .r-ready { color: var(--green); }
+  .r-review { color: var(--amber); }
+  .r-not { color: var(--text-dim); }
+
+  /* Action icons */
+  .actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .action-btn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    position: relative;
+    font-size: 13px;
+  }
+
+  .action-btn:hover {
+    border-color: var(--border-active);
+    color: var(--text);
+    background: var(--surface);
+  }
+
+  .action-btn.dive:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-dim); }
+  .action-btn.test:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+  /* Tooltip */
+  .action-btn[data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface-2);
+    border: 1px solid var(--border-active);
+    color: var(--text);
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 200;
+  }
+
+  /* Modal / prompt overlay */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .modal-backdrop.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border-active);
+    border-radius: 6px;
+    width: 100%;
+    max-width: 620px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .modal-header h3 {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .modal-header .modal-type {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .close-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    width: 26px;
+    height: 26px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+
+  .close-btn:hover { border-color: var(--border-active); color: var(--text); }
+
+  .modal-body {
+    padding: 16px 20px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .modal-instruction {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    line-height: 1.6;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .prompt-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 14px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text);
+    white-space: pre-wrap;
+    line-height: 1.7;
+    max-height: 340px;
+    overflow-y: auto;
+  }
+
+  .modal-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .copy-btn {
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 7px 16px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex: 1;
+  }
+
+  .copy-btn:hover { background: var(--accent); color: var(--bg); }
+  .copy-btn.copied { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+
+  /* Week badge */
+  .week-badge {
+    font-size: 9px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  /* Empty / no results */
+  .no-results {
+    padding: 48px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .header { padding: 14px 16px; }
+    .controls { padding: 10px 16px; }
+    .stat-cell { padding: 12px 16px; }
+    tbody td { padding: 9px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Frontend Lead Prep</h1>
+    <p>FAANG Interview Tracker — Target: July 10, 2026</p>
+  </div>
+  <div class="header-right">
+    <div class="countdown">
+      <div class="days" id="days-count">—</div>
+      <div class="label">Days Left</div>
+    </div>
+    <button class="theme-toggle" id="theme-toggle" title="Toggle Light/Dark Theme">
+      <span class="mode-icon">🌙</span>
+    </button>
+  </div>
+</div>
+
+<div class="stats-bar" id="stats-bar">
+  <div class="stat-cell">
+    <div class="val muted" id="stat-total">—</div>
+    <div class="lbl">Topics</div>
+  </div>
+  <div class="stat-cell">
+    <div class="val green" id="stat-completed">—</div>
+    <div class="lbl">Completed</div>
+  </div>
+  <div class="stat-cell">
+    <div class="val accent" id="stat-in-progress">—</div>
+    <div class="lbl">In Progress</div>
+  </div>
+  <div class="stat-cell">
+    <div class="val muted" id="stat-not-started">—</div>
+    <div class="lbl">Not Started</div>
+  </div>
+  <div class="stat-cell" style="flex:1; display:flex; align-items:center; gap:0;">
+    <div class="val amber" id="stat-avg" style="white-space:nowrap; margin-right:16px;">—</div>
+    <div style="flex:1">
+      <div class="lbl" style="margin-bottom:6px;">Avg Score</div>
+      <div class="progress-track" style="margin:0; min-width:40px;">
+        <div class="progress-fill" id="avg-bar" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="search-wrap">
+    <span class="search-icon">⌕</span>
+    <input type="text" id="search" placeholder="Search topics..." autocomplete="off">
+  </div>
+  <div class="filter-group" id="status-filters">
+    <button class="filter-btn active" data-status="all">All</button>
+    <button class="filter-btn" data-status="not-started">Not Started</button>
+    <button class="filter-btn" data-status="in-progress">In Progress</button>
+    <button class="filter-btn" data-status="completed">Completed</button>
+  </div>
+  <div class="filter-group" id="priority-filters">
+    <button class="filter-btn active" data-priority="all">All Priority</button>
+    <button class="filter-btn" data-priority="High">High</button>
+    <button class="filter-btn" data-priority="Medium">Medium</button>
+    <button class="filter-btn" data-priority="Low">Low</button>
+  </div>
+  <select class="sort-select" id="sort-select">
+    <option value="default">Sort: Default</option>
+    <option value="name">Sort: Name</option>
+    <option value="score-desc">Sort: Score ↓</option>
+    <option value="score-asc">Sort: Score ↑</option>
+    <option value="priority">Sort: Priority</option>
+    <option value="difficulty">Sort: Difficulty</option>
+  </select>
+</div>
+
+<div class="week-filters" id="week-filters">
+  <span class="week-filters-label">Filter by Week:</span>
+  <!-- Checkboxes injected by JS -->
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th style="width:38%">Topic</th>
+        <th>Status</th>
+        <th>Difficulty</th>
+        <th>Priority</th>
+        <th>Score</th>
+        <th>Readiness</th>
+        <th>Week</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="topic-table-body">
+      <tr><td colspan="8" class="no-results">Loading plan.json…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Prompt Modal -->
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h3 id="modal-title">Prompt</h3>
+        <div class="modal-type" id="modal-type-label"></div>
+      </div>
+      <button class="close-btn" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-instruction" id="modal-instruction"></p>
+      <div class="prompt-box" id="modal-prompt-text"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="copy-btn" id="copy-btn">Copy Prompt</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STUDY_PROMPT_TEMPLATE = (topicName) => `You are my FAANG Frontend Lead interview coach. I am preparing for interviews at Meta, Google, Amazon, Microsoft, or similar companies. I have 11 years of frontend experience.
+
+Today's topic: ${topicName}
+
+Teach me this topic as if you're preparing me for a FAANG Frontend Lead interview. Cover:
+
+1. Core Concept — deep technical explanation, not surface level
+2. Interview Context — exact question patterns, how it shows up at FAANG
+3. Lead-Level Answer vs Senior Dev Answer — what separates them
+4. Common Mistakes — what mid-level engineers get wrong
+5. Practice Questions — 3 questions with model Lead-level answers
+6. Mini-Test — 5 questions; score me and give follow-up exercises if I score below 7/10
+
+Format your output as structured JSON matching this schema:
+{
+  "topic": {
+    "id": "<kebab-case-id>",
+    "name": "${topicName}",
+    "coreConcept": { "summary": "...", "keyPoints": [], "detailedExplanation": "..." },
+    "interviewContext": { "whyItMatters": "...", "frequencyInInterviews": "...", "commonQuestions": [] },
+    "leadVsSeniorAnswer": { "seniorDevAnswer": "...", "leadLevelAnswer": "...", "keyDifferences": [] },
+    "commonMistakes": [{ "mistake": "...", "whyItsMistaken": "...", "correctApproach": "..." }],
+    "practiceQuestions": [{ "question": "...", "modelAnswer": "..." }],
+    "miniTest": { "questions": [{ "id": 1, "question": "...", "expectedAnswer": "..." }] }
+  }
+}
+
+Return ONLY valid JSON. No preamble, no markdown fences.`;
+
+const TEST_PROMPT_TEMPLATE = (topicName) => `You are my FAANG Frontend Lead interview test generator. I am preparing for interviews at Meta, Google, Amazon, Microsoft. I have 11 years of frontend experience.
+
+Generate a comprehensive test for the topic: ${topicName}
+
+Requirements:
+- 10 questions total
+- Mix: 4 multiple-choice, 3 short-answer, 3 code-scenario
+- Difficulty: 3 easy, 4 medium, 3 hard
+- Standard: FAANG Frontend Lead level
+- Each question worth 10 points (total: 100)
+- Passing score: 70/100
+
+Output as JSON matching this schema:
+{
+  "test": {
+    "topicId": "<kebab-case>",
+    "topicName": "${topicName}",
+    "totalQuestions": 10,
+    "totalPoints": 100,
+    "passingScore": 70,
+    "questions": [
+      {
+        "id": 1,
+        "type": "multiple-choice | short-answer | code-scenario",
+        "difficulty": "easy | medium | hard",
+        "question": "...",
+        "options": ["A) ...", "B) ...", "C) ...", "D) ..."],
+        "correctAnswer": "...",
+        "explanation": "...",
+        "points": 10
+      }
+    ],
+    "answerFormat": {
+      "candidateName": "Vinayak",
+      "testDate": "YYYY-MM-DD",
+      "answers": [{ "questionId": 1, "answer": "..." }]
+    }
+  }
+}
+
+Return ONLY valid JSON. No preamble, no markdown fences.`;
+
+// ─── State ───────────────────────────────────────────────────────────────────
+let allTopics = [];
+let planData = null;
+let scheduleData = null;
+let statusFilter = 'all';
+let priorityFilter = 'all';
+let selectedWeeks = new Set(); 
+let searchQuery = '';
+let sortMode = 'default';
+
+// ─── Data loading ─────────────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    // Apply saved theme immediately to prevent flicker
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    if (savedTheme === 'light') {
+      document.body.classList.add('light-theme');
+      const icon = document.querySelector('.mode-icon');
+      if (icon) icon.textContent = '☀️';
+    }
+
+    // Restore selected weeks from localStorage
+    const savedWeeks = JSON.parse(localStorage.getItem('selected_weeks') || '[]');
+    selectedWeeks = new Set(savedWeeks);
+
+    const [planRes, scheduleRes] = await Promise.all([
+      fetch('data/plan.json'),
+      fetch('data/scedule.json')
+    ]);
+
+    if (!planRes.ok) throw new Error(`Plan HTTP ${planRes.status}`);
+    if (!scheduleRes.ok) throw new Error(`Schedule HTTP ${scheduleRes.status}`);
+
+    planData = await planRes.json();
+    scheduleData = await scheduleRes.json();
+    
+    // Merge local overrides (status updates)
+    mergeLocalOverrides();
+
+    buildTopicList();
+    renderWeekFilters(); 
+    updateHeaderInfo();
+    renderAll();
+  } catch (err) {
+    console.warn('Could not load JSON data, using sample fallbacks. Error:', err.message);
+    planData = getSamplePlan();
+    buildTopicList();
+    renderAll();
+  }
+}
+
+function mergeLocalOverrides() {
+  const overrides = JSON.parse(localStorage.getItem('topic_overrides') || '{}');
+  const categories = planData?.plan?.categories || [];
+  categories.forEach(cat => {
+    (cat.topics || []).forEach(t => {
+      if (overrides[t.id]) {
+        Object.assign(t, overrides[t.id]);
+      }
+    });
+  });
+}
+
+function updateTopicStatus(topicId, newStatus) {
+  const topic = allTopics.find(t => t.id === topicId);
+  if (topic) {
+    topic.status = newStatus;
+    const overrides = JSON.parse(localStorage.getItem('topic_overrides') || '{}');
+    if (!overrides[topicId]) overrides[topicId] = {};
+    overrides[topicId].status = newStatus;
+    localStorage.setItem('topic_overrides', JSON.stringify(overrides));
+    renderAll(); 
+  }
+}
+
+function buildTopicList() {
+  allTopics = [];
+  const categories = planData?.plan?.categories || [];
+  categories.forEach(cat => {
+    (cat.topics || []).forEach(t => {
+      let weekNum = null;
+      if (scheduleData) {
+        const weekMatch = scheduleData.schedule.weeks.find(w => 
+          w.days.some(d => d.topics.some(st => st.topicId === t.id))
+        );
+        if (weekMatch) weekNum = weekMatch.weekNumber;
+      }
+      allTopics.push({ 
+        ...t, 
+        categoryName: cat.name, 
+        categoryId: cat.id,
+        actualWeek: weekNum 
+      });
+    });
+  });
+}
+
+function renderWeekFilters() {
+  const container = document.getElementById('week-filters');
+  if (!scheduleData) return;
+  
+  const weeks = scheduleData.schedule.weeks;
+  const html = ['<span class="week-filters-label">Filter by Week:</span>'];
+  
+  weeks.forEach(w => {
+    const isChecked = selectedWeeks.has(w.weekNumber);
+    html.push(`
+      <label class="week-checkbox">
+        <input type="checkbox" value="${w.weekNumber}" ${isChecked ? 'checked' : ''} onchange="toggleWeekFilter(${w.weekNumber}, this.checked)">
+        W${w.weekNumber}
+      </label>
+    `);
+  });
+  
+  container.innerHTML = html.join('');
+}
+
+function toggleWeekFilter(num, isChecked) {
+  if (isChecked) selectedWeeks.add(num);
+  else selectedWeeks.delete(num);
+  
+  // Persist week selection
+  localStorage.setItem('selected_weeks', JSON.stringify(Array.from(selectedWeeks)));
+  
+  renderTable();
+}
+
+function updateHeaderInfo() {
+  if (!scheduleData) return;
+  const targetDateStr = scheduleData.schedule.targetDate;
+  const dateObj = new Date(targetDateStr);
+  const subtitle = document.querySelector('.header-left p');
+  if (subtitle) {
+    subtitle.textContent = `FAANG Interview Tracker — Target: ${dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+  }
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+function renderStats() {
+  const total = allTopics.length;
+  const completed = allTopics.filter(t => t.status === 'completed').length;
+  const inProgress = allTopics.filter(t => t.status === 'in-progress').length;
+  const notStarted = allTopics.filter(t => t.status === 'not-started').length;
+  const scored = allTopics.filter(t => t.score > 0);
+  const avg = scored.length ? Math.round(scored.reduce((s, t) => s + t.score, 0) / scored.length) : 0;
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-completed').textContent = completed;
+  document.getElementById('stat-in-progress').textContent = inProgress;
+  document.getElementById('stat-not-started').textContent = notStarted;
+  document.getElementById('stat-avg').textContent = avg ? avg + '%' : '—';
+  document.getElementById('avg-bar').style.width = avg + '%';
+}
+
+function renderCountdown() {
+  const targetDateStr = scheduleData?.schedule?.targetDate || '2026-07-10';
+  const target = new Date(targetDateStr);
+  const now = new Date();
+  const diff = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+  document.getElementById('days-count').textContent = diff > 0 ? diff : '0';
+}
+
+// ─── Filtering & Sorting ──────────────────────────────────────────────────────
+function getFilteredTopics() {
+  let list = [...allTopics];
+
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    list = list.filter(t =>
+      t.name.toLowerCase().includes(q) ||
+      t.categoryName.toLowerCase().includes(q) ||
+      (t.tags || []).some(tag => tag.toLowerCase().includes(q))
+    );
+  }
+
+  if (statusFilter !== 'all') list = list.filter(t => t.status === statusFilter);
+  if (priorityFilter !== 'all') list = list.filter(t => t.priority === priorityFilter);
+  
+  if (selectedWeeks.size > 0) {
+    list = list.filter(t => t.actualWeek && selectedWeeks.has(t.actualWeek));
+  }
+
+  const priorityOrder = { High: 0, Medium: 1, Low: 2 };
+  const difficultyOrder = { Easy: 0, Medium: 1, Hard: 2 };
+
+  switch (sortMode) {
+    case 'name': list.sort((a, b) => a.name.localeCompare(b.name)); break;
+    case 'score-desc': list.sort((a, b) => b.score - a.score); break;
+    case 'score-asc': list.sort((a, b) => a.score - b.score); break;
+    case 'priority': list.sort((a, b) => (priorityOrder[a.priority] ?? 9) - (priorityOrder[b.priority] ?? 9)); break;
+    case 'difficulty': list.sort((a, b) => (difficultyOrder[a.difficulty] ?? 9) - (difficultyOrder[b.difficulty] ?? 9)); break;
+    default: break;
+  }
+
+  return list;
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function renderAll() {
+  renderStats();
+  renderCountdown();
+  renderTable();
+}
+
+function renderTable() {
+  const filtered = getFilteredTopics();
+  const tbody = document.getElementById('topic-table-body');
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" class="no-results">No topics match your filters.</td></tr>`;
+    return;
+  }
+
+  const groupByCat = (sortMode === 'default' && !searchQuery);
+  let html = '';
+
+  if (groupByCat) {
+    const grouped = {};
+    const catOrder = [];
+    filtered.forEach(t => {
+      if (!grouped[t.categoryId]) { grouped[t.categoryId] = { name: t.categoryName, topics: [] }; catOrder.push(t.categoryId); }
+      grouped[t.categoryId].topics.push(t);
+    });
+    catOrder.forEach(catId => {
+      const cat = grouped[catId];
+      const completedInCat = cat.topics.filter(t => t.status === 'completed').length;
+      html += `<tr class="cat-row"><td colspan="8"><span class="cat-label">${escHtml(cat.name)} <span class="cat-count">${completedInCat}/${cat.topics.length} done</span></span></td></tr>`;
+      cat.topics.forEach(t => { html += renderTopicRow(t); });
+    });
+  } else {
+    filtered.forEach(t => { html += renderTopicRow(t); });
+  }
+
+  tbody.innerHTML = html;
+}
+
+function renderTopicRow(t) {
+  const statusClass = { 'not-started': 'badge-not-started', 'in-progress': 'badge-in-progress', 'completed': 'badge-completed' }[t.status] || 'badge-not-started';
+  
+  const statusSelect = `
+    <select class="status-select ${statusClass}" onchange="updateTopicStatus('${escAttr(t.id)}', this.value)">
+      <option value="not-started" ${t.status === 'not-started' ? 'selected' : ''}>Not Started</option>
+      <option value="in-progress" ${t.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+      <option value="completed" ${t.status === 'completed' ? 'selected' : ''}>Completed</option>
+    </select>
+  `;
+
+  const diffClass = { Easy: 'badge-easy', Medium: 'badge-medium', Hard: 'badge-hard' }[t.difficulty] || 'badge-medium';
+  const prioClass = { High: 'badge-high', Medium: 'badge-medium-p', Low: 'badge-low' }[t.priority] || 'badge-low';
+
+  let scoreHtml = `<div class="score-cell score-none">—</div>`;
+  if (t.score > 0) {
+    let sc = t.score >= 90 ? 'score-high' : t.score >= 70 ? 'score-good' : t.score >= 50 ? 'score-mid' : 'score-low';
+    scoreHtml = `<div class="score-cell ${sc}">${t.score}%<div class="bar"><div class="bar-fill" style="width:${t.score}%"></div></div></div>`;
+  }
+
+  let readiness;
+  if (t.score >= 70) readiness = `<div class="readiness r-ready"><div class="readiness-dot"></div>Ready</div>`;
+  else if (t.score > 0) readiness = `<div class="readiness r-review"><div class="readiness-dot"></div>Review</div>`;
+  else readiness = `<div class="readiness r-not"><div class="readiness-dot"></div>Untested</div>`;
+
+  const weekLabel = t.actualWeek ? `Week ${t.actualWeek}` : '—';
+  const tagsHtml = (t.tags || []).map(tag => `<span class="tag">${escHtml(tag)}</span>`).join('');
+
+  const topicId = escAttr(t.id);
+  const topicNameAttr = escAttr(t.name);
+
+  return `<tr class="topic-row">
+    <td>
+      <div class="topic-name">${escHtml(t.name)}</div>
+      <div class="tags-list">${tagsHtml}</div>
+    </td>
+    <td>${statusSelect}</td>
+    <td><span class="badge ${diffClass}">${escHtml(t.difficulty || 'Medium')}</span></td>
+    <td><span class="badge ${prioClass}">${escHtml(t.priority || 'Medium')}</span></td>
+    <td>${scoreHtml}</td>
+    <td>${readiness}</td>
+    <td><span class="week-badge">${escHtml(weekLabel)}</span></td>
+    <td>
+      <div class="actions">
+        <button class="action-btn dive" data-tip="Deep Dive Prompt" onclick="openModal('dive','${topicId}','${topicNameAttr}')">
+          📖
+        </button>
+        <button class="action-btn test" data-tip="Test Prompt" onclick="openModal('test','${topicId}','${topicNameAttr}')">
+          ✏
+        </button>
+      </div>
+    </td>
+  </tr>`;
+}
+
+// ─── Modal ────────────────────────────────────────────────────────────────────
+function openModal(type, topicId, topicName) {
+  const backdrop = document.getElementById('modal-backdrop');
+  const title = document.getElementById('modal-title');
+  const typeLabel = document.getElementById('modal-type-label');
+  const instruction = document.getElementById('modal-instruction');
+  const promptBox = document.getElementById('modal-prompt-text');
+  const copyBtn = document.getElementById('copy-btn');
+
+  const decodedName = topicName;
+
+  if (type === 'dive') {
+    title.textContent = topicName;
+    typeLabel.textContent = '📖 Deep Dive — Study Prompt';
+    instruction.textContent = 'Copy this prompt and paste it into a new Claude conversation. Claude will generate structured study materials including core concepts, interview patterns, Lead vs Senior answer comparisons, and a mini-test.';
+    promptBox.textContent = STUDY_PROMPT_TEMPLATE(decodedName);
+  } else {
+    title.textContent = topicName;
+    typeLabel.textContent = '✏ Test Prompt';
+    instruction.textContent = 'Copy this prompt and paste it into a new Claude conversation. Claude will generate a 10-question FAANG-level test. Save the output JSON to data/tests/' + topicId + '-test.json for later evaluation.';
+    promptBox.textContent = TEST_PROMPT_TEMPLATE(decodedName);
+  }
+
+  copyBtn.textContent = 'Copy Prompt';
+  copyBtn.classList.remove('copied');
+  copyBtn.onclick = () => {
+    navigator.clipboard.writeText(promptBox.textContent).then(() => {
+      copyBtn.textContent = 'Copied!';
+      copyBtn.classList.add('copied');
+      setTimeout(() => { copyBtn.textContent = 'Copy Prompt'; copyBtn.classList.remove('copied'); }, 2000);
+    });
+  };
+
+  backdrop.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('modal-backdrop').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+function closeModal() {
+  document.getElementById('modal-backdrop').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ─── Filters & Controls ───────────────────────────────────────────────────────
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  const isLight = document.body.classList.toggle('light-theme');
+  const icon = document.querySelector('.mode-icon');
+  if (icon) icon.textContent = isLight ? '☀️' : '🌙';
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+});
+
+document.getElementById('search').addEventListener('input', e => {
+  searchQuery = e.target.value.trim();
+  renderTable();
+});
+
+document.getElementById('status-filters').addEventListener('click', e => {
+  const btn = e.target.closest('[data-status]');
+  if (!btn) return;
+  statusFilter = btn.dataset.status;
+  document.querySelectorAll('[data-status]').forEach(b => b.classList.toggle('active', b === btn));
+  renderTable();
+});
+
+document.getElementById('priority-filters').addEventListener('click', e => {
+  const btn = e.target.closest('[data-priority]');
+  if (!btn) return;
+  priorityFilter = btn.dataset.priority;
+  document.querySelectorAll('[data-priority]').forEach(b => b.classList.toggle('active', b === btn));
+  renderTable();
+});
+
+document.getElementById('sort-select').addEventListener('change', e => {
+  sortMode = e.target.value;
+  renderTable();
+});
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function escAttr(s) {
+  return String(s || '').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+}
+
+// ─── Sample data (fallback when plan.json not found) ─────────────────────────
+function getSamplePlan() {
+  return {
+    plan: {
+      title: "FAANG Frontend Lead Interview Prep",
+      targetDate: "2026-07-10",
+      startDate: "2026-05-15",
+      categories: [
+        {
+          id: "category-1",
+          name: "JavaScript & Browser Internals",
+          description: "",
+          topics: [
+            { id: "event-loop-microtasks-macrotasks", name: "Event loop, call stack, microtasks vs macrotasks", difficulty: "Medium", estimatedHours: 3, priority: "High", status: "completed", score: 88, passingScore: 70, recommendedWeek: "Week 1-2", tags: ["javascript","async"] },
+            { id: "closures-scope-hoisting", name: "Closures, scope chain, and hoisting", difficulty: "Medium", estimatedHours: 2, priority: "High", status: "completed", score: 92, passingScore: 70, recommendedWeek: "Week 1-2", tags: ["javascript"] },
+            { id: "prototypes-inheritance", name: "Prototypal inheritance and prototype chain", difficulty: "Hard", estimatedHours: 3, priority: "High", status: "in-progress", score: 64, passingScore: 70, recommendedWeek: "Week 1-2", tags: ["javascript","oop"] },
+            { id: "memory-management-gc", name: "Memory management and garbage collection", difficulty: "Hard", estimatedHours: 3, priority: "Medium", status: "not-started", score: 0, passingScore: 70, recommendedWeek: "Week 2-3", tags: ["javascript","performance"] },
+            { id: "web-workers-service-workers", name: "Web Workers and Service Workers", difficulty: "Hard", estimatedHours: 4, priority: "Medium", status: "not-started", score: 0, passingScore: 70, recommendedWeek: "Week 3-4", tags: ["browser","async"] }
+          ]
+        },
+        {
+          id: "category-2",
+          name: "React & Frontend Frameworks (Deep)",
+          description: "",
+          topics: [
+            { id: "react-reconciliation", name: "React reconciliation and virtual DOM diffing", difficulty: "Hard", estimatedHours: 3, priority: "High", status: "completed", score: 85, passingScore: 70, recommendedWeek: "Week 1", tags: ["react"] },
+            { id: "react-fiber-concurrent", name: "React Fiber and concurrent rendering", difficulty: "Hard", estimatedHours: 4, priority: "High", status: "in-progress", score: 0, passingScore: 70, recommendedWeek: "Week 2", tags: ["react","performance"] },
+            { id: "react-hooks-deep", name: "React hooks internals (useState, useEffect, custom hooks)", difficulty: "Medium", estimatedHours: 3, priority: "High", status: "completed", score: 79, passingScore: 70, recommendedWeek: "Week 1-2", tags: ["react","hooks"] },
+            { id: "react-context-state-management", name: "Context API vs external state management patterns", difficulty: "Medium", estimatedHours: 3, priority: "High", status: "not-started", score: 0, passingScore: 70, recommendedWeek: "Week 2-3", tags: ["react","state"] },
+            { id: "react-performance-optimization", name: "React performance optimization (memo, useMemo, useCallback)", difficulty: "Medium", estimatedHours: 3, priority: "High", status: "not-started", score: 0, passingScore: 70, recommendedWeek: "Week 2", tags: ["react","performance"] }
+          ]
+        },
+        {
+          id: "category-3",
+          name: "Performance & Core Web Vitals",
+          description: "",
+          topics: [
+            { id: "core-web-vitals", name: "Core Web Vitals: LCP, CLS, INP — definitions, thresholds, improvements", difficulty: "Medium", estimatedHours: 3, priority: "High", status: "completed", score: 91, passingScore: 70, recommendedWeek: "Week 1", tags: ["performance","cwv"] },
+            { id: "rendering-performance", name: "Browser rendering pipeline and paint optimization", difficulty: "Hard", estimatedHours: 3, priority: "High", status: "not-started", score: 0, passingScore: 70, recommendedWeek: "Week 3", tags: ["performance","browser"] },
+            { id: "code-splitting-lazy-loading", name: "Code splitting, lazy loading, and dynamic imports", difficulty: "Medium", estimatedHours: 2, priority: "High", status: "in-progress", score: 45, passingScore: 70, recommendedWeek: "Week 3-4", tags: ["performance","webpack"] },
+            { id: "image-optimization", name: "Image optimization strategies (formats, lazy loading, responsive images)", difficulty: "Easy", estimatedHours: 2, priority: "Medium", status: "not-started", score: 0, passingScore: 70, recommendedWeek: "Week 4", tags: ["performance","images"] }
+          ]
+        },
+        {
+          id: "category-4",
+          name: "System Design (Frontend)",
+          description: "",
+          topics: [
+            { id: "component-architecture", name: "Component architecture and design systems at scale", difficulty: "Hard", estimatedHours: 4, priority: "High", status: "not-started", score: 0, passingScore: 70, recommendedWeek: "Week 5-6", tags: ["system-design","architecture"] },
+            { id: "micro-frontends", name: "Micro-frontends: patterns, trade-offs, implementation", difficulty: "Hard", estimatedHours: 4, priority: "High", status: "not-started", score: 0, passingScore: 70, recommendedWeek: "Week 5-6", tags: ["system-design","architecture"] },
+            { id: "caching-strategies", name: "Caching strategies: HTTP, service worker, in-memory", difficulty: "Medium", estimatedHours: 3, priority: "High", status: "not-started", score: 0, passingScore: 70, recommendedWeek: "Week 5", tags: ["system-design","performance"] },
+            { id: "real-time-data", name: "Real-time data: SSE, WebSockets, polling trade-offs", difficulty: "Medium", estimatedHours: 3, priority: "Medium", status: "not-started", score: 0, passingScore: 70, recommendedWeek: "Week 6", tags: ["system-design","networking"] }
+          ]
+        },
+        {
+          id: "category-5",
+          name: "Accessibility & Testing",
+          description: "",
+          topics: [
+            { id: "wcag-aria-semantics", name: "WCAG 2.1, ARIA roles, semantic HTML for accessibility", difficulty: "Medium", estimatedHours: 3, priority: "Medium", status: "not-started", score: 0, passingScore: 70, recommendedWeek: "Week 7", tags: ["a11y","html"] },
+            { id: "testing-strategies", name: "Testing pyramid: unit, integration, E2E for frontend", difficulty: "Medium", estimatedHours: 3, priority: "Medium", status: "not-started", score: 0, passingScore: 70, recommendedWeek: "Week 7", tags: ["testing"] }
+          ]
+        }
+      ]
+    }
+  };
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+loadData();
+
+</script>
+</body>
+</html>

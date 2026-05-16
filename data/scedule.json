@@ -1,0 +1,1187 @@
+{
+  "schedule": {
+    "startDate": "2026-05-15",
+    "targetDate": "2026-07-10",
+    "totalWeeks": 8,
+    "totalDays": 57,
+    "phases": [
+      {
+        "name": "Employed - Evening Study",
+        "dateRange": "May 15 - June 19",
+        "weeks": "Week 1-5",
+        "dailyHours": "1-1.5 hours weekdays",
+        "weeklyHours": "7.5 hours"
+      },
+      {
+        "name": "Notice Period - Lighter Study",
+        "dateRange": "June 20 - June 30",
+        "weeks": "Week 6",
+        "dailyHours": "2-3 hours",
+        "weeklyHours": "18 hours"
+      },
+      {
+        "name": "Full-Time Prep",
+        "dateRange": "July 1 - July 10",
+        "weeks": "Week 7-8",
+        "dailyHours": "6-8 hours",
+        "weeklyHours": "45 hours"
+      }
+    ],
+    "weeks": [
+      {
+        "weekNumber": 1,
+        "dateRange": "May 15 - May 21",
+        "phase": "Employed - Evening Study",
+        "availableHours": 10.5,
+        "focus": "High-priority React + Core Web Vitals + STAR method",
+        "days": [
+          {
+            "date": "2026-05-15",
+            "day": "Thursday",
+            "availableHours": 1.5,
+            "topics": [
+              {
+                "topicId": "react-reconciliation",
+                "topicName": "React reconciliation and virtual DOM diffing algorithm",
+                "category": "React & Frontend Frameworks (Deep)",
+                "estimatedHours": 1.5,
+                "activity": "Study (Part 1/3)"
+              }
+            ]
+          },
+          {
+            "date": "2026-05-16",
+            "day": "Friday",
+            "availableHours": 1.5,
+            "topics": [
+              {
+                "topicId": "react-reconciliation",
+                "topicName": "React reconciliation and virtual DOM diffing algorithm",
+                "category": "React & Frontend Frameworks (Deep)",
+                "estimatedHours": 1.5,
+                "activity": "Study (Part 2/3)"
+              }
+            ]
+          },
+          {
+            "date": "2026-05-17",
+            "day": "Saturday",
+            "availableHours": 3,
+            "topics": [
+              {
+                "topicId": "react-reconciliation",
+                "topicName": "React reconciliation and virtual DOM diffing algorithm",
+                "category": "React & Frontend Frameworks (Deep)",
+                "estimatedHours": 1,
+                "activity": "Study (Part 3/3) + Mini-test"
+              },
+              {
+                "topicId": "core-web-vitals",
+                "topicName": "Core Web Vitals: LCP, CLS, INP",
+                "category": "Performance Optimisation",
+                "estimatedHours": 2,
+                "activity": "Study (Part 1/2)"
+              }
+            ]
+          },
+          {
+            "date": "2026-05-18",
+            "day": "Sunday",
+            "availableHours": 3,
+            "topics": [
+              {
+                "topicId": "core-web-vitals",
+                "topicName": "Core Web Vitals: LCP, CLS, INP",
+                "category": "Performance Optimisation",
+                "estimatedHours": 2,
+                "activity": "Study (Part 2/2) + Mini-test"
+              },
+              {
+                "topicId": "star-method",
+                "topicName": "STAR method — structure and common pitfalls",
+                "category": "Leadership & Behavioural",
+                "estimatedHours": 1,
+                "activity": "Study + Start story bank"
+              }
+            ]
+          },
+          {
+            "date": "2026-05-19",
+            "day": "Monday",
+            "availableHours": 1.5,
+            "topics": [
+              {
+                "topicId": "react-fiber-concurrent",
+                "topicName": "Fiber architecture and concurrent rendering",
+                "category": "React & Frontend Frameworks (Deep)",
+                "estimatedHours": 1.5,
+                "activity": "Study (Part 1/3)"
+              }
+            ]
+          },
+          {
+            "date": "2026-05-20",
+            "day": "Tuesday",
+            "availableHours": 0,
+            "topics": [],
+            "note": "Rest day"
+          },
+          {
+            "date": "2026-05-21",
+            "day": "Wednesday",
+            "availableHours": 0,
+            "topics": [],
+            "note": "Rest day"
+          }
+        ],
+        "weeklyGoals": [
+          "Complete React reconciliation topic",
+          "Complete Core Web Vitals topic",
+          "Start STAR method and story bank",
+          "Begin Fiber architecture"
+        ],
+        "topicsCompleted": 2
+      },
+      {
+        "weekNumber": 2,
+        "dateRange": "May 22 - May 28",
+        "phase": "Employed - Evening Study",
+        "availableHours": 10.5,
+        "focus": "React Fiber, Memoization, DevTools Profiler",
+        "days": [
+          {
+            "date": "2026-05-22",
+            "day": "Thursday",
+            "availableHours": 1.5,
+            "topics": [
+              {
+                "topicId": "react-fiber-concurrent",
+                "topicName": "Fiber architecture and concurrent rendering",
+                "category": "React & Frontend Frameworks (Deep)",
+                "estimatedHours": 1.5,
+                "activity": "Study (Part 2/3)"
+              }
+            ]
+          },
+          {
+            "date": "2026-05-23",
+            "day": "Friday",
+            "availableHours": 1.5,
+            "topics": [
+              {
+                "topicId": "react-fiber-concurrent",
+                "topicName": "Fiber architecture and concurrent rendering",
+                "category": "React & Frontend Frameworks (Deep)",
+                "estimatedHours": 1.5,
+                "activity": "Study (Part 3/3) + Mini-test"
+              }
+            ]
+          },
+          {
+            "date": "2026-05-24",
+            "day": "Saturday",
+            "availableHours": 3,
+            "topics": [
+              {
+                "topicId": "react-memoization",
+                "topicName": "useMemo, useCallback, React.memo",
+                "category": "React & Frontend Frameworks (Deep)",
+                "estimatedHours": 3,
+                "activity": "Complete study + Mini-test"
+              }
+            ]
+          },
+          {
+            "date": "2026-05-25",
+            "day": "Sunday",
+            "availableHours": 3,
+            "topics": [
+              {
+                "topicId": "react-devtools-profiler",
+                "topicName": "React DevTools Profiler",
+                "category": "React & Frontend Frameworks (Deep)",
+                "estimatedHours": 3,
+                "activity": "Complete study + Mini-test"
+              }
+            ]
+          },
+          {
+            "date": "2026-05-26",
+            "day": "Monday",
+            "availableHours": 1.5,
+            "topics": [
+              {
+                "topicId": "event-loop-microtasks-macrotasks",
+                "topicName": "Event loop, call stack, microtasks vs macrotasks",
+                "category": "JavaScript & Browser Internals",
+                "estimatedHours": 1.5,
+                "activity": "Study (Part 1/2)"
+              }
+            ]
+          },
+          {
+            "date": "2026-05-27",
+            "day": "Tuesday",
+            "availableHours": 0,
+            "topics": [],
+            "note": "Rest day"
+          },
+          {
+            "date": "2026-05-28",
+            "day": "Wednesday",
+            "availableHours": 0,
+            "topics": [],
+            "note": "Rest day"
+          }
+        ],
+        "weeklyGoals": [
+          "Complete React Fiber architecture",
+          "Complete React memoization patterns",
+          "Master React DevTools Profiler",
+          "Start Event loop topic"
+        ],
+        "topicsCompleted": 3
+      },
+      {
+        "weekNumber": 3,
+        "dateRange": "May 29 - June 4",
+        "phase": "Employed - Evening Study",
+        "availableHours": 10.5,
+        "focus": "JavaScript fundamentals, System Design framework, Leadership",
+        "days": [
+          {
+            "date": "2026-05-29",
+            "day": "Thursday",
+            "availableHours": 1.5,
+            "topics": [
+              {
+                "topicId": "event-loop-microtasks-macrotasks",
+                "topicName": "Event loop, call stack, microtasks vs macrotasks",
+                "category": "JavaScript & Browser Internals",
+                "estimatedHours": 1.5,
+                "activity": "Study (Part 2/2) + Mini-test"
+              }
+            ]
+          },
+          {
+            "date": "2026-05-30",
+            "day": "Friday",
+            "availableHours": 1.5,
+            "topics": [
+              {
+                "topicId": "closures-scope-hoisting",
+                "topicName": "Closures, scope, and hoisting",
+                "category": "JavaScript & Browser Internals",
+                "estimatedHours": 1.5,
+                "activity": "Study (Part 1/2)"
+              }
+            ]
+          },
+          {
+            "date": "2026-05-31",
+            "day": "Saturday",
+            "availableHours": 3,
+            "topics": [
+              {
+                "topicId": "closures-scope-hoisting",
+                "topicName": "Closures, scope, and hoisting",
+                "category": "JavaScript & Browser Internals",
+                "estimatedHours": 0.5,
+                "activity": "Complete study + Mini-test"
+              },
+              {
+                "topicId": "frontend-system-design-framework",
+                "topicName": "How to structure a frontend system design answer",
+                "category": "Frontend System Design",
+                "estimatedHours": 2.5,
+                "activity": "Study framework (Part 1/2)"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-01",
+            "day": "Sunday",
+            "availableHours": 3,
+            "topics": [
+              {
+                "topicId": "frontend-system-design-framework",
+                "topicName": "How to structure a frontend system design answer",
+                "category": "Frontend System Design",
+                "estimatedHours": 1.5,
+                "activity": "Complete framework + Practice"
+              },
+              {
+                "topicId": "amazon-leadership-principles",
+                "topicName": "Amazon Leadership Principles (all 14)",
+                "category": "Leadership & Behavioural",
+                "estimatedHours": 1.5,
+                "activity": "Study (Part 1/3)"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-02",
+            "day": "Monday",
+            "availableHours": 1.5,
+            "topics": [
+              {
+                "topicId": "amazon-leadership-principles",
+                "topicName": "Amazon Leadership Principles (all 14)",
+                "category": "Leadership & Behavioural",
+                "estimatedHours": 1.5,
+                "activity": "Study (Part 2/3) + Map stories"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-03",
+            "day": "Tuesday",
+            "availableHours": 0,
+            "topics": [],
+            "note": "Rest day"
+          },
+          {
+            "date": "2026-06-04",
+            "day": "Wednesday",
+            "availableHours": 0,
+            "topics": [],
+            "note": "Rest day"
+          }
+        ],
+        "weeklyGoals": [
+          "Complete Event loop topic",
+          "Complete Closures/scope/hoisting",
+          "Master Frontend System Design framework",
+          "Start Amazon Leadership Principles"
+        ],
+        "topicsCompleted": 3
+      },
+      {
+        "weekNumber": 4,
+        "dateRange": "June 5 - June 11",
+        "phase": "Employed - Evening Study",
+        "availableHours": 10.5,
+        "focus": "Browser internals, React 18 features, System Design practice",
+        "days": [
+          {
+            "date": "2026-06-05",
+            "day": "Thursday",
+            "availableHours": 1.5,
+            "topics": [
+              {
+                "topicId": "amazon-leadership-principles",
+                "topicName": "Amazon Leadership Principles (all 14)",
+                "category": "Leadership & Behavioural",
+                "estimatedHours": 1.5,
+                "activity": "Complete + Map all stories"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-06",
+            "day": "Friday",
+            "availableHours": 1.5,
+            "topics": [
+              {
+                "topicId": "browser-rendering-pipeline",
+                "topicName": "Browser rendering pipeline",
+                "category": "JavaScript & Browser Internals",
+                "estimatedHours": 1.5,
+                "activity": "Study (Part 1/3)"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-07",
+            "day": "Saturday",
+            "availableHours": 3,
+            "topics": [
+              {
+                "topicId": "browser-rendering-pipeline",
+                "topicName": "Browser rendering pipeline",
+                "category": "JavaScript & Browser Internals",
+                "estimatedHours": 2.5,
+                "activity": "Study (Part 2-3/3) + Mini-test"
+              },
+              {
+                "topicId": "web-security",
+                "topicName": "Web security: XSS, CSRF, CSP headers",
+                "category": "JavaScript & Browser Internals",
+                "estimatedHours": 0.5,
+                "activity": "Study (Part 1/3)"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-08",
+            "day": "Sunday",
+            "availableHours": 3,
+            "topics": [
+              {
+                "topicId": "web-security",
+                "topicName": "Web security: XSS, CSRF, CSP headers",
+                "category": "JavaScript & Browser Internals",
+                "estimatedHours": 2.5,
+                "activity": "Study (Part 2-3/3) + Mini-test"
+              },
+              {
+                "topicId": "react-18-features",
+                "topicName": "React 18: useTransition, useDeferredValue, Suspense",
+                "category": "React & Frontend Frameworks (Deep)",
+                "estimatedHours": 0.5,
+                "activity": "Study (Part 1/3)"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-09",
+            "day": "Monday",
+            "availableHours": 1.5,
+            "topics": [
+              {
+                "topicId": "react-18-features",
+                "topicName": "React 18: useTransition, useDeferredValue, Suspense",
+                "category": "React & Frontend Frameworks (Deep)",
+                "estimatedHours": 1.5,
+                "activity": "Study (Part 2/3)"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-10",
+            "day": "Tuesday",
+            "availableHours": 0,
+            "topics": [],
+            "note": "Rest day"
+          },
+          {
+            "date": "2026-06-11",
+            "day": "Wednesday",
+            "availableHours": 0,
+            "topics": [],
+            "note": "Rest day"
+          }
+        ],
+        "weeklyGoals": [
+          "Complete Amazon Leadership Principles with mapped stories",
+          "Complete Browser rendering pipeline",
+          "Complete Web security topic",
+          "Start React 18 features"
+        ],
+        "topicsCompleted": 3
+      },
+      {
+        "weekNumber": 5,
+        "dateRange": "June 12 - June 19",
+        "phase": "Employed - Evening Study",
+        "availableHours": 10.5,
+        "focus": "Server components, Performance topics, Design patterns",
+        "days": [
+          {
+            "date": "2026-06-12",
+            "day": "Thursday",
+            "availableHours": 1.5,
+            "topics": [
+              {
+                "topicId": "react-18-features",
+                "topicName": "React 18: useTransition, useDeferredValue, Suspense",
+                "category": "React & Frontend Frameworks (Deep)",
+                "estimatedHours": 1.5,
+                "activity": "Study (Part 3/3) + Mini-test"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-13",
+            "day": "Friday",
+            "availableHours": 1.5,
+            "topics": [
+              {
+                "topicId": "server-client-components",
+                "topicName": "Server components vs client components (Next.js)",
+                "category": "React & Frontend Frameworks (Deep)",
+                "estimatedHours": 1.5,
+                "activity": "Study (Part 1/3)"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-14",
+            "day": "Saturday",
+            "availableHours": 3,
+            "topics": [
+              {
+                "topicId": "server-client-components",
+                "topicName": "Server components vs client components (Next.js)",
+                "category": "React & Frontend Frameworks (Deep)",
+                "estimatedHours": 2.5,
+                "activity": "Study (Part 2-3/3) + Mini-test"
+              },
+              {
+                "topicId": "code-splitting",
+                "topicName": "Code splitting: dynamic import(), route-based, component-based",
+                "category": "Performance Optimisation",
+                "estimatedHours": 0.5,
+                "activity": "Study (Part 1/2)"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-15",
+            "day": "Sunday",
+            "availableHours": 3,
+            "topics": [
+              {
+                "topicId": "code-splitting",
+                "topicName": "Code splitting: dynamic import(), route-based, component-based",
+                "category": "Performance Optimisation",
+                "estimatedHours": 1,
+                "activity": "Study (Part 2/2) + Mini-test"
+              },
+              {
+                "topicId": "design-component-library",
+                "topicName": "Design a component library / design system",
+                "category": "Frontend System Design",
+                "estimatedHours": 2,
+                "activity": "Study (Part 1/3)"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-16",
+            "day": "Monday",
+            "availableHours": 1.5,
+            "topics": [
+              {
+                "topicId": "design-component-library",
+                "topicName": "Design a component library / design system",
+                "category": "Frontend System Design",
+                "estimatedHours": 1.5,
+                "activity": "Study (Part 2/3)"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-17",
+            "day": "Tuesday",
+            "availableHours": 0,
+            "topics": [],
+            "note": "Rest day"
+          },
+          {
+            "date": "2026-06-18",
+            "day": "Wednesday",
+            "availableHours": 0,
+            "topics": [],
+            "note": "Rest day"
+          },
+          {
+            "date": "2026-06-19",
+            "day": "Thursday",
+            "availableHours": 0,
+            "topics": [],
+            "note": "Last day at work - Rest"
+          }
+        ],
+        "weeklyGoals": [
+          "Complete React 18 features",
+          "Complete Server vs Client components",
+          "Complete Code splitting",
+          "Start Component library design"
+        ],
+        "topicsCompleted": 3
+      },
+      {
+        "weekNumber": 6,
+        "dateRange": "June 20 - June 30",
+        "phase": "Notice Period - Lighter Study",
+        "availableHours": 22,
+        "focus": "Review weak topics, Complete remaining React/Performance topics",
+        "days": [
+          {
+            "date": "2026-06-20",
+            "day": "Friday",
+            "availableHours": 2,
+            "topics": [
+              {
+                "topicId": "design-component-library",
+                "topicName": "Design a component library / design system",
+                "category": "Frontend System Design",
+                "estimatedHours": 2,
+                "activity": "Complete study + Practice"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-21",
+            "day": "Saturday",
+            "availableHours": 3,
+            "topics": [
+              {
+                "topicId": "context-api-alternatives",
+                "topicName": "Context API pitfalls and alternatives",
+                "category": "React & Frontend Frameworks (Deep)",
+                "estimatedHours": 3,
+                "activity": "Complete study + Mini-test"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-22",
+            "day": "Sunday",
+            "availableHours": 3,
+            "topics": [
+              {
+                "topicId": "custom-hooks-patterns",
+                "topicName": "Custom hooks — patterns and anti-patterns",
+                "category": "React & Frontend Frameworks (Deep)",
+                "estimatedHours": 2,
+                "activity": "Complete study + Mini-test"
+              },
+              {
+                "topicId": "error-suspense-boundaries",
+                "topicName": "Error boundaries and suspense boundaries",
+                "category": "React & Frontend Frameworks (Deep)",
+                "estimatedHours": 1,
+                "activity": "Study (Part 1/2)"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-23",
+            "day": "Monday",
+            "availableHours": 2,
+            "topics": [
+              {
+                "topicId": "error-suspense-boundaries",
+                "topicName": "Error boundaries and suspense boundaries",
+                "category": "React & Frontend Frameworks (Deep)",
+                "estimatedHours": 1,
+                "activity": "Complete + Mini-test"
+              },
+              {
+                "topicId": "tree-shaking",
+                "topicName": "Tree shaking and dead code elimination",
+                "category": "Performance Optimisation",
+                "estimatedHours": 1,
+                "activity": "Study (Part 1/2)"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-24",
+            "day": "Tuesday",
+            "availableHours": 2,
+            "topics": [
+              {
+                "topicId": "tree-shaking",
+                "topicName": "Tree shaking and dead code elimination",
+                "category": "Performance Optimisation",
+                "estimatedHours": 1,
+                "activity": "Complete + Mini-test"
+              },
+              {
+                "topicId": "bundle-analysis",
+                "topicName": "Bundle analysis tools",
+                "category": "Performance Optimisation",
+                "estimatedHours": 1,
+                "activity": "Study (Part 1/2)"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-25",
+            "day": "Wednesday",
+            "availableHours": 2,
+            "topics": [
+              {
+                "topicId": "bundle-analysis",
+                "topicName": "Bundle analysis tools",
+                "category": "Performance Optimisation",
+                "estimatedHours": 1.5,
+                "activity": "Complete + Mini-test"
+              },
+              {
+                "topicId": "review",
+                "topicName": "Review topics from Week 1-2",
+                "category": "Review",
+                "estimatedHours": 0.5,
+                "activity": "Quick review of React reconciliation & Fiber"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-26",
+            "day": "Thursday",
+            "availableHours": 2,
+            "topics": [
+              {
+                "topicId": "image-optimization",
+                "topicName": "Image optimisation: formats, lazy loading, srcset",
+                "category": "Performance Optimisation",
+                "estimatedHours": 2,
+                "activity": "Complete study + Mini-test"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-27",
+            "day": "Friday",
+            "availableHours": 2,
+            "topics": [
+              {
+                "topicId": "caching-strategies",
+                "topicName": "Caching strategies",
+                "category": "Performance Optimisation",
+                "estimatedHours": 2,
+                "activity": "Complete study + Mini-test"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-28",
+            "day": "Saturday",
+            "availableHours": 2,
+            "topics": [
+              {
+                "topicId": "font-loading",
+                "topicName": "Font loading strategies",
+                "category": "Performance Optimisation",
+                "estimatedHours": 2,
+                "activity": "Complete study + Mini-test"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-29",
+            "day": "Sunday",
+            "availableHours": 2,
+            "topics": [
+              {
+                "topicId": "critical-rendering-path",
+                "topicName": "Critical rendering path optimisation",
+                "category": "Performance Optimisation",
+                "estimatedHours": 2,
+                "activity": "Complete study + Mini-test"
+              }
+            ]
+          },
+          {
+            "date": "2026-06-30",
+            "day": "Monday",
+            "availableHours": 0,
+            "topics": [],
+            "note": "Mental rest day before intensive prep"
+          }
+        ],
+        "weeklyGoals": [
+          "Complete all remaining React topics (9/9)",
+          "Complete 7/10 Performance topics",
+          "Light review of high-priority topics",
+          "Mental preparation for intensive week"
+        ],
+        "topicsCompleted": 8
+      },
+      {
+        "weekNumber": 7,
+        "dateRange": "July 1 - July 7",
+        "phase": "Full-Time Prep",
+        "availableHours": 48,
+        "focus": "System Design, DSA intensive, Remaining topics, Mock interviews",
+        "days": [
+          {
+            "date": "2026-07-01",
+            "day": "Tuesday",
+            "availableHours": 7,
+            "topics": [
+              {
+                "topicId": "design-news-feed",
+                "topicName": "Design a news feed",
+                "category": "Frontend System Design",
+                "estimatedHours": 3,
+                "activity": "Complete + Practice"
+              },
+              {
+                "topicId": "design-autocomplete",
+                "topicName": "Design an autocomplete component",
+                "category": "Frontend System Design",
+                "estimatedHours": 2,
+                "activity": "Complete + Practice"
+              },
+              {
+                "topicId": "arrays-strings-patterns",
+                "topicName": "Arrays and strings: sliding window, two pointers",
+                "category": "Coding / DSA",
+                "estimatedHours": 2,
+                "activity": "Study + Practice 3 problems"
+              }
+            ]
+          },
+          {
+            "date": "2026-07-02",
+            "day": "Wednesday",
+            "availableHours": 7,
+            "topics": [
+              {
+                "topicId": "hashmaps-sets",
+                "topicName": "Hash maps and sets: frequency counts, grouping",
+                "category": "Coding / DSA",
+                "estimatedHours": 2,
+                "activity": "Study + Practice 3 problems"
+              },
+              {
+                "topicId": "trees-traversal",
+                "topicName": "Trees: BFS, DFS, binary search trees",
+                "category": "Coding / DSA",
+                "estimatedHours": 3,
+                "activity": "Study + Practice 4 problems"
+              },
+              {
+                "topicId": "frontend-coding-challenges",
+                "topicName": "Frontend coding: debounce/throttle, virtual list",
+                "category": "Coding / DSA",
+                "estimatedHours": 2,
+                "activity": "Study + Implement"
+              }
+            ]
+          },
+          {
+            "date": "2026-07-03",
+            "day": "Thursday",
+            "availableHours": 7,
+            "topics": [
+              {
+                "topicId": "general-system-design-framework",
+                "topicName": "How to structure a general system design answer",
+                "category": "General System Design",
+                "estimatedHours": 2,
+                "activity": "Study framework"
+              },
+              {
+                "topicId": "design-url-shortener",
+                "topicName": "Design a URL shortener",
+                "category": "General System Design",
+                "estimatedHours": 2,
+                "activity": "Complete + Practice"
+              },
+              {
+                "topicId": "design-notification-system",
+                "topicName": "Design a notification system",
+                "category": "General System Design",
+                "estimatedHours": 2,
+                "activity": "Complete + Practice"
+              },
+              {
+                "topicId": "api-design-tradeoffs",
+                "topicName": "API design: REST vs GraphQL vs tRPC",
+                "category": "General System Design",
+                "estimatedHours": 1,
+                "activity": "Study"
+              }
+            ]
+          },
+          {
+            "date": "2026-07-04",
+            "day": "Friday",
+            "availableHours": 7,
+            "topics": [
+              {
+                "topicId": "design-drag-drop-kanban",
+                "topicName": "Design a drag-and-drop kanban board",
+                "category": "Frontend System Design",
+                "estimatedHours": 3,
+                "activity": "Complete + Practice"
+              },
+              {
+                "topicId": "state-management-scale",
+                "topicName": "State management at scale",
+                "category": "Frontend System Design",
+                "estimatedHours": 2,
+                "activity": "Complete study"
+              },
+              {
+                "topicId": "websockets-sse-polling",
+                "topicName": "WebSockets vs SSE vs long polling",
+                "category": "General System Design",
+                "estimatedHours": 2,
+                "activity": "Complete study"
+              }
+            ]
+          },
+          {
+            "date": "2026-07-05",
+            "day": "Saturday",
+            "availableHours": 7,
+            "topics": [
+              {
+                "topicId": "micro-frontend-architecture",
+                "topicName": "Micro-frontend architecture",
+                "category": "Frontend System Design",
+                "estimatedHours": 2,
+                "activity": "Complete study"
+              },
+              {
+                "topicId": "monorepo-architecture",
+                "topicName": "Monorepo architecture: Turborepo, Nx",
+                "category": "Frontend System Design",
+                "estimatedHours": 2,
+                "activity": "Complete study"
+              },
+              {
+                "topicId": "mock-interview-1",
+                "topicName": "Full Mock Interview #1",
+                "category": "Mock Interview",
+                "estimatedHours": 3,
+                "activity": "System Design + Coding round simulation"
+              }
+            ]
+          },
+          {
+            "date": "2026-07-06",
+            "day": "Sunday",
+            "availableHours": 7,
+            "topics": [
+              {
+                "topicId": "accessibility-scale",
+                "topicName": "Accessibility at scale",
+                "category": "Frontend System Design",
+                "estimatedHours": 2,
+                "activity": "Complete study"
+              },
+              {
+                "topicId": "web-apis-advanced",
+                "topicName": "Web APIs: requestAnimationFrame, IntersectionObserver",
+                "category": "JavaScript & Browser Internals",
+                "estimatedHours": 2,
+                "activity": "Complete study"
+              },
+              {
+                "topicId": "mock-interview-2",
+                "topicName": "Full Mock Interview #2",
+                "category": "Mock Interview",
+                "estimatedHours": 3,
+                "activity": "Behavioral + Technical round simulation"
+              }
+            ]
+          },
+          {
+            "date": "2026-07-07",
+            "day": "Monday",
+            "availableHours": 6,
+            "topics": [
+              {
+                "topicId": "conflict-resolution",
+                "topicName": "Conflict resolution scenarios",
+                "category": "Leadership & Behavioural",
+                "estimatedHours": 2,
+                "activity": "Complete + Map stories"
+              },
+              {
+                "topicId": "tech-debt-management",
+                "topicName": "Managing tech debt while shipping features",
+                "category": "Leadership & Behavioural",
+                "estimatedHours": 2,
+                "activity": "Complete + Map stories"
+              },
+              {
+                "topicId": "mentoring-juniors",
+                "topicName": "Mentoring and growing junior developers",
+                "category": "Leadership & Behavioural",
+                "estimatedHours": 2,
+                "activity": "Complete + Map stories"
+              }
+            ]
+          }
+        ],
+        "weeklyGoals": [
+          "Complete 6 Frontend System Design topics",
+          "Complete 4 General System Design topics",
+          "Complete 4 DSA topics with practice problems",
+          "Complete 2 full mock interviews",
+          "Complete 3 Leadership topics"
+        ],
+        "topicsCompleted": 17
+      },
+      {
+        "weekNumber": 8,
+        "dateRange": "July 8 - July 10",
+        "phase": "Full-Time Prep - Final Review",
+        "availableHours": 15,
+        "focus": "Final topics, Mock interviews, Review only",
+        "days": [
+          {
+            "date": "2026-07-08",
+            "day": "Tuesday",
+            "availableHours": 6,
+            "topics": [
+              {
+                "topicId": "remaining-topics-batch",
+                "topicName": "Remaining topics speedrun",
+                "category": "Multiple",
+                "estimatedHours": 3,
+                "activity": "Study remaining JavaScript/Performance/Leadership topics (quick coverage)"
+              },
+              {
+                "topicId": "mock-interview-3",
+                "topicName": "Full Mock Interview #3",
+                "category": "Mock Interview",
+                "estimatedHours": 3,
+                "activity": "Complete interview simulation (all rounds)"
+              }
+            ],
+            "note": "Cover: prototypal-inheritance, memory-management-gc, cors-storage-cookies, service-workers-pwa, compression, react-runtime-performance"
+          },
+          {
+            "date": "2026-07-09",
+            "day": "Wednesday",
+            "availableHours": 6,
+            "topics": [
+              {
+                "topicId": "review-high-priority",
+                "topicName": "Review all high-priority topics",
+                "category": "Review",
+                "estimatedHours": 3,
+                "activity": "Quick review: React internals, Core Web Vitals, System Design frameworks, STAR stories"
+              },
+              {
+                "topicId": "final-dsa-practice",
+                "topicName": "Final DSA practice",
+                "category": "Coding / DSA",
+                "estimatedHours": 2,
+                "activity": "Practice 5-6 medium problems (arrays, trees, hashmaps)"
+              },
+              {
+                "topicId": "story-bank-review",
+                "topicName": "Review STAR story bank",
+                "category": "Leadership & Behavioural",
+                "estimatedHours": 1,
+                "activity": "Practice delivering 3-4 key stories out loud"
+              }
+            ]
+          },
+          {
+            "date": "2026-07-10",
+            "day": "Thursday",
+            "availableHours": 3,
+            "topics": [
+              {
+                "topicId": "final-review",
+                "topicName": "Final light review",
+                "category": "Review",
+                "estimatedHours": 2,
+                "activity": "Skim notes, review frameworks, relax"
+              },
+              {
+                "topicId": "mental-prep",
+                "topicName": "Mental preparation",
+                "category": "Interview Prep",
+                "estimatedHours": 1,
+                "activity": "Confidence building, interview day checklist, early night"
+              }
+            ],
+            "note": "Interview Day - You're ready!"
+          }
+        ],
+        "weeklyGoals": [
+          "Complete all remaining topics (speedrun if needed)",
+          "1 final full mock interview",
+          "Comprehensive review of all high-priority topics",
+          "DSA practice to stay sharp",
+          "STAR story delivery practice",
+          "Mental preparation and rest"
+        ],
+        "topicsCompleted": 6
+      }
+    ],
+    "milestones": [
+      {
+        "date": "2026-05-21",
+        "milestone": "Complete Week 1: React reconciliation, Core Web Vitals, STAR method started"
+      },
+      {
+        "date": "2026-05-28",
+        "milestone": "Complete Week 2: React Fiber, Memoization, DevTools Profiler mastered"
+      },
+      {
+        "date": "2026-06-04",
+        "milestone": "Complete Week 3: Event loop, Closures, System Design framework, Leadership principles"
+      },
+      {
+        "date": "2026-06-11",
+        "milestone": "Complete Week 4: Browser rendering, Web security, React 18 features"
+      },
+      {
+        "date": "2026-06-19",
+        "milestone": "Complete Week 5: Server components, Code splitting, Design patterns. Last day at work!"
+      },
+      {
+        "date": "2026-06-30",
+        "milestone": "Complete Week 6 (Notice Period): All React topics done (9/9), 7/10 Performance topics done"
+      },
+      {
+        "date": "2026-07-07",
+        "milestone": "Complete Week 7 (Intensive): System Design, DSA intensive, 2 mock interviews completed"
+      },
+      {
+        "date": "2026-07-10",
+        "milestone": "INTERVIEW READY - All 68 topics covered, mocks completed, confident and prepared!"
+      }
+    ],
+    "summary": {
+      "totalTopics": 68,
+      "coveredInSchedule": 68,
+      "highPriorityFirst": true,
+      "balancedCategories": true,
+      "mockInterviews": 3,
+      "expectedReadiness": "Interview Ready - 85%+ average score across all topics"
+    },
+    "categoryBreakdown": {
+      "JavaScript & Browser Internals": {
+        "totalTopics": 9,
+        "weeksCovered": "Week 1-7",
+        "priority": "High-Medium mix"
+      },
+      "React & Frontend Frameworks": {
+        "totalTopics": 9,
+        "weeksCovered": "Week 1-6",
+        "priority": "Highest - completed early"
+      },
+      "Performance Optimisation": {
+        "totalTopics": 10,
+        "weeksCovered": "Week 1-6",
+        "priority": "High - spread throughout"
+      },
+      "Frontend System Design": {
+        "totalTopics": 12,
+        "weeksCovered": "Week 3-7",
+        "priority": "High - intensive in Week 7"
+      },
+      "General System Design": {
+        "totalTopics": 8,
+        "weeksCovered": "Week 7",
+        "priority": "Medium - concentrated study"
+      },
+      "Leadership & Behavioural": {
+        "totalTopics": 11,
+        "weeksCovered": "Week 1-7",
+        "priority": "High - continuous throughout"
+      },
+      "Coding / DSA": {
+        "totalTopics": 9,
+        "weeksCovered": "Week 7-8",
+        "priority": "High - intensive practice"
+      }
+    },
+    "studyTips": [
+      "Week 1-5: Strict 1-1.5 hours weekday evenings, maximize weekends",
+      "Week 6: Lighter study during notice period - review and consolidation",
+      "Week 7: Full-time intensive - 6-8 hours daily with breaks",
+      "Week 8: Final review only, no new heavy topics",
+      "Always take rest days to avoid burnout",
+      "Complete mini-tests after each topic to validate understanding",
+      "Build STAR story bank continuously from Week 1",
+      "Mock interviews in Week 7-8 are critical for timing practice",
+      "Last 2 days: review only, mental preparation, early sleep"
+    ]
+  }
+}
