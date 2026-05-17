@@ -1,0 +1,21 @@
+{
+  "result": {
+    "topicId": "event-loop-call-stack-microtasks-macrotasks",
+    "topicName": "Event loop, call stack, microtasks vs macrotasks",
+    "score": 100,
+    "testDate": "2026-05-17",
+    "passed": true,
+    "answers": {
+      "1": "C",
+      "2": "B",
+      "3": "When a function is called in javascript. The function is pushed to call-stack. And picked up for execution. In case there is another function within that, The new function is pushed into the stack and its execution starts. Until it newer function execution is complete the first function remains in the stack. Once the second function is done it is popped and the control moves back to first.\n\nEx: \nfunc foo() { \n    console.log(\"Hi\");\n   bar();\n   console.log(\"Bye\"); \n} \nfunc bar() { \n   console.log(\"My name is Eve\");\n}\n Executions: \nStack: foo() ----> Console ---> Hi \nStack: foo(), bar() ----> Console ---> Hi, My Name is Ever \nStack: foo() ----> Console ---> Hi, My Name is Ever, Bye",
+      "4": "C",
+      "5": "D",
+      "6": "The rendering and the JS evaluation is done on the same single thread in a JS Engine. \nWhen event loop is freed up, it run towards emptying the micro task queue first before leaping forward to other tasks or marcro job queues.\n\nIf the code has too many promises or has recursive micro tasks. The loop goes on, thus blocking the rendering. \nEx: \nfunction foo() { \n  return new Promise((resolve) => { resolve(foo()); } \n}",
+      "7": "async function foo() { console.log('1'); await Promise.resolve(); console.log('2'); } console.log('3'); foo(); console.log('4'); \n\n=====Execution starts===== \nEvent loop picks the first line foo() gets initialised and memory references are created. \nEvent loop picks the next line of code in order \n3 ---> Prints \nEvent loop picks the next line of code in order \nfoo() ---> function is called \nEvent loop now run foo synchronously as there is no await before foo(); picks the next line of code \n1 --> Prints \nEvent loop sees await and pushes the task in micro queue and picks the next line of code in order \n4 ---> Prints No more lines of code/tasks to do so the event loop is free. \nIt checks Micro-task queue now. It sees a task and picks it \n2 --> Prints ",
+      "8": "Reacts decision to use macro-task over micro-task is to ensure that the rendering is not starving the event loop. If this starts yielding on the micro-tasks then any priority tasks might get blocked. For instance a user starts typing which is an important task which needs to be given more importance. This prevent janky experience.",
+      "9": "console.log('start'); setTimeout(() => { console.log('timeout 1'); Promise.resolve().then(() => console.log('promise inside timeout')); }, 0); Promise.resolve() .then(() => { console.log('promise 1'); setTimeout(() => console.log('timeout inside promise'),0); }) .then(() => console.log('promise 2')); console.log('end'); \n\nstart\nend\npromise 1\npromise 2\ntimeout 1\npromise inside timeout\ntimeout inside promise",
+      "10": "function batchUpdates(items) { items.forEach(item => { Promise.resolve().then(() => updateDOM(item)); }); }\n\nAlthough the Promises are async they are still apart of Micro tasks which are flushed out before moving on. It would be better if we can wrap it around a debounce function which will ensure the batches are clubbed together when executed\n"
+    }
+  }
+}

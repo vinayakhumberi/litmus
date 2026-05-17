@@ -810,14 +810,20 @@
     <button class="filter-btn" data-priority="Medium">Medium</button>
     <button class="filter-btn" data-priority="Low">Low</button>
   </div>
-  <select class="sort-select" id="sort-select">
-    <option value="default">Sort: Default</option>
-    <option value="name">Sort: Name</option>
-    <option value="score-desc">Sort: Score ↓</option>
-    <option value="score-asc">Sort: Score ↑</option>
-    <option value="priority">Sort: Priority</option>
-    <option value="difficulty">Sort: Difficulty</option>
-  </select>
+  <div style="display:flex; gap:8px;">
+    <select class="sort-select" id="sort-select">
+      <option value="default">Sort: Default</option>
+      <option value="name">Sort: Name</option>
+      <option value="score-desc">Sort: Score ↓</option>
+      <option value="score-asc">Sort: Score ↑</option>
+      <option value="priority">Sort: Priority</option>
+      <option value="difficulty">Sort: Difficulty</option>
+    </select>
+    <button onclick="document.getElementById('result-upload').click()" class="filter-btn" style="background: var(--surface-2); border-color: var(--accent); color: var(--accent); font-weight: bold;">
+      ↑ Upload Result
+    </button>
+    <input type="file" id="result-upload" style="display:none;" accept=".json" onchange="handleResultUpload(event)">
+  </div>
 </div>
 
 <div class="week-filters" id="week-filters">
@@ -889,6 +895,11 @@ Structure:
 1. A flow diagram (graph TD) explaining the logic/execution process.
 2. A sequence or architectural diagram explaining the interaction between components.)
 
+**Mermaid Syntax Requirements (v10+):**
+- ALWAYS wrap node text in double quotes if it contains symbols, punctuation, or mathematical notation (e.g., ":", "/", "(n)", "←", "?").
+- NEVER use "\\n" for line breaks inside nodes. Use HTML "<br>" tags instead.
+- Ensure notations like "O(n)" or "fn()" are strictly wrapped in double quotes to avoid breaking the parser.
+
 ## 🏢 Interview Context & FAANG Signals
 (Where this appears in the interview loop and the specific "Lead signals" interviewers are looking for.)
 
@@ -906,11 +917,42 @@ Structure:
 
 Use professional technical language. Use \`\`\`javascript or \`\`\`typescript for all code blocks. Return ONLY the markdown content. No conversational preamble.`;
 
-const TEST_PROMPT_TEMPLATE = (topicName) => `You are my FAANG Frontend Lead interview coach. Generate a high-fidelity Markdown-based assessment for: ${topicName}.
+const TEST_PROMPT_TEMPLATE = (topicName) => `You are my FAANG Frontend Lead interview coach. I am preparing for interviews at Meta, Google, Amazon, Microsoft.
 
-Focus on 5-10 complex, architectural scenarios that test Lead-level decision making rather than syntax. Include Mermaid diagrams in the explanations where relevant.
+Generate a comprehensive test for the topic: ${topicName}
 
-Return ONLY markdown.`;
+Requirements:
+- 10 questions total
+- Mix: 4 multiple-choice, 3 short-answer, 3 code-scenario
+- Difficulty: 3 easy, 4 medium, 3 hard
+- Standard: FAANG Frontend Lead level
+- Each question worth 10 points (total: 100)
+- Passing score: 70/100
+
+Format your output as structured JSON matching this schema:
+{
+  "test": {
+    "topicId": "[topic-id-kebab-case]",
+    "topicName": "${topicName}",
+    "totalQuestions": 10,
+    "totalPoints": 100,
+    "passingScore": 70,
+    "questions": [
+      {
+        "id": 1,
+        "type": "multiple-choice | short-answer | code-scenario",
+        "difficulty": "easy | medium | hard",
+        "question": "...",
+        "options": ["A) ...", "B) ...", "C) ...", "D) ..."],
+        "correctAnswer": "...",
+        "explanation": "...",
+        "points": 10
+      }
+    ]
+  }
+}
+
+Return ONLY valid JSON. No preamble, no markdown fences.`;
 
 // ─── State ───────────────────────────────────────────────────────────────────
 let allTopics = [];
@@ -925,7 +967,7 @@ let sortMode = 'default';
 // ─── Data loading ─────────────────────────────────────────────────────────────
 async function loadData() {
   try {
-    // Apply saved theme immediately to prevent flicker
+    // 1. Theme sync
     const savedTheme = localStorage.getItem('theme') || 'dark';
     if (savedTheme === 'light') {
       document.body.classList.add('light-theme');
@@ -933,10 +975,10 @@ async function loadData() {
       if (icon) icon.textContent = '☀️';
     }
 
-    // Restore selected weeks from localStorage
     const savedWeeks = JSON.parse(localStorage.getItem('selected_weeks') || '[]');
     selectedWeeks = new Set(savedWeeks);
 
+    // 2. Fetch base files
     const [planRes, scheduleRes] = await Promise.all([
       fetch('data/plan.json'),
       fetch('data/scedule.json')
@@ -948,30 +990,59 @@ async function loadData() {
     planData = await planRes.json();
     scheduleData = await scheduleRes.json();
     
-    // Merge local overrides (status updates)
+    buildTopicList(); // Flatten categories to allTopics
+
+    // 3. AUTO-SYNC: Check for result files for every topic
+    await syncResultFiles();
+
+    // 4. Merge local overrides (highest priority)
     mergeLocalOverrides();
 
-    buildTopicList();
-    renderWeekFilters(); 
     updateHeaderInfo();
     renderAll();
   } catch (err) {
-    console.warn('Could not load JSON data, using sample fallbacks. Error:', err.message);
+    console.warn('Load Error:', err.message);
     planData = getSamplePlan();
     buildTopicList();
     renderAll();
   }
 }
 
+async function syncResultFiles() {
+  // We check for both [topicId].json and [topicId]-result.json
+  const syncs = allTopics.map(async (topic) => {
+    const paths = [
+      `data/results/${topic.id}.json`,
+      `data/results/${topic.id}-result.json`
+    ];
+
+    for (const path of paths) {
+      try {
+        const res = await fetch(path);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.result && data.result.score !== undefined) {
+            topic.score = data.result.score;
+            topic.status = data.result.passed ? 'completed' : 'in-progress';
+            console.log(`Auto-synced result for: ${topic.id} from ${path}`);
+            return; // Found and synced, no need to check other paths
+          }
+        }
+      } catch (e) {
+        // Continue to next path
+      }
+    }
+  });
+
+  await Promise.allSettled(syncs);
+}
+
 function mergeLocalOverrides() {
   const overrides = JSON.parse(localStorage.getItem('topic_overrides') || '{}');
-  const categories = planData?.plan?.categories || [];
-  categories.forEach(cat => {
-    (cat.topics || []).forEach(t => {
-      if (overrides[t.id]) {
-        Object.assign(t, overrides[t.id]);
-      }
-    });
+  allTopics.forEach(t => {
+    if (overrides[t.id]) {
+      Object.assign(t, overrides[t.id]);
+    }
   });
 }
 
@@ -1011,7 +1082,7 @@ function buildTopicList() {
 
 function renderWeekFilters() {
   const container = document.getElementById('week-filters');
-  if (!scheduleData) return;
+  if (!container || !scheduleData) return;
   
   const weeks = scheduleData.schedule.weeks;
   const html = ['<span class="week-filters-label">Filter by Week:</span>'];
@@ -1195,15 +1266,50 @@ function renderTopicRow(t) {
         <a class="action-btn dive" data-tip="Study Course" href="topic-detail.html?id=${topicId}" target="_blank" style="text-decoration:none">
           📖
         </a>
-        <button class="action-btn dive" data-tip="Deep Dive Prompt" onclick="openModal('dive','${topicId}','${topicNameAttr}')">
+        <button class="action-btn dive" data-tip="Course Prompt" onclick="openModal('dive','${topicId}','${topicNameAttr}')">
           💬
         </button>
-        <button class="action-btn test" data-tip="Test Prompt" onclick="openModal('test','${topicId}','${topicNameAttr}')">
-          ✏
+        <button class="action-btn test" data-tip="Generate Test" onclick="openModal('test','${topicId}','${topicNameAttr}')">
+          🧪
         </button>
+        <a class="action-btn test" data-tip="Take Test" href="test-portal.html?id=${topicId}" target="_blank" style="text-decoration:none">
+          ✏
+        </a>
       </div>
     </td>
   </tr>`;
+}
+
+function handleResultUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.result || !data.result.topicId) {
+        alert("Invalid result format. Please upload a JSON exported from the Test Portal.");
+        return;
+      }
+
+      const { topicId, score, passed } = data.result;
+      
+      const overrides = JSON.parse(localStorage.getItem('topic_overrides') || '{}');
+      overrides[topicId] = {
+        ...(overrides[topicId] || {}),
+        score: score,
+        status: passed ? 'completed' : 'in-progress'
+      };
+      localStorage.setItem('topic_overrides', JSON.stringify(overrides));
+
+      loadData();
+      alert(`Success! Updated tracker with score: ${score}%`);
+    } catch (err) {
+      alert("Error parsing JSON file.");
+    }
+  };
+  reader.readAsText(file);
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────

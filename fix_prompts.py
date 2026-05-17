@@ -1,95 +1,87 @@
 import json
 import os
 
-# Using absolute path for safety
-FILE_PATH = '/Users/carollucas/Desktop/Summit/data/deep-dive.json'
+# Target the evaluation prompts specifically
+EVAL_FILE_PATH = '/Users/carollucas/Desktop/Summit/data/evaluation.json'
 
-MARKDOWN_INSTRUCTION_TEMPLATE = """
+TEST_JSON_TEMPLATE = """
 
----
-OUTPUT INSTRUCTIONS:
-Format your ENTIRE response as a high-fidelity Markdown (.md) document. 
-This is a Staff-level technical deep dive for a FAANG Frontend Lead candidate.
+Format your ENTIRE response as structured JSON matching this EXACT schema. Return ONLY valid JSON. No preamble.
 
-Structure:
-# [Topic Name]
-
-## 🎯 Executive Summary
-(A concise, high-impact summary of the topic and why it's a "must-know" for Leads.)
-
-## 🧠 Core Technical Deep Dive
-(Extensive explanation. Go deep into the JavaScript engine, browser runtime, memory management, or specific framework internals. Do not explain basics.)
-
-## 📊 Visual Architecture & Logic
-(Provide at least TWO Mermaid.js diagrams:
-1. A flow diagram (graph TD) explaining the logic/execution process.
-2. A sequence or architectural diagram explaining the interaction between components.)
-
-**Mermaid Syntax Requirements (v10+):**
-- ALWAYS wrap node text in double quotes if it contains symbols, punctuation, or mathematical notation (e.g., ":", "/", "(n)", "←", "?").
-- NEVER use "\\n" for line breaks inside nodes. Use HTML "<br>" tags instead.
-- Ensure notations like "O(n)" or "fn()" are strictly wrapped in double quotes to avoid breaking the parser.
-
-## 🏢 Interview Context & FAANG Signals
-(Where this appears in the interview loop and the specific "Lead signals" interviewers are looking for.)
-
-## ⚔️ Lead Level vs Senior Level
-(Contrast a Senior dev response with a Staff/Lead response. Focus on trade-offs, scalability, and system-wide impact.)
-
-## ⚠️ Common Pitfalls & Anti-Patterns
-(Use this specific format for each item:)
-> ### ✕ [Anti-Pattern Name]
-> **Why it's wrong:** ...
-> **✓ Correct Lead Approach:** ...
-
-## 🛠️ Practice Scenarios (5-10 Scenarios)
-(Provide 5 to 10 realistic, complex interview scenarios. Each should include a problem statement and a hidden "Staff-Level Solution" block using markdown details/summary tags.)
-
-Use professional technical language. Use ```javascript or ```typescript for all code blocks. Return ONLY the markdown content. No conversational preamble.
+{
+  "test": {
+    "topicId": "[topic-id]",
+    "topicName": "[Topic Name]",
+    "category": "[Category]",
+    "totalQuestions": 10,
+    "totalPoints": 100,
+    "passingScore": 70,
+    "questions": [
+      {
+        "id": 1,
+        "type": "multiple-choice",
+        "difficulty": "easy | medium | hard",
+        "question": "...",
+        "options": ["A) Option text", "B) Option text", "C) Option text", "D) Option text"],
+        "correctAnswer": "A",
+        "explanation": "Detailed lead-level explanation...",
+        "points": 10
+      },
+      {
+        "id": 5,
+        "type": "short-answer",
+        "difficulty": "medium",
+        "question": "...",
+        "sampleAnswer": "Comprehensive lead-level model answer...",
+        "explanation": "Key points that must be covered for full credit.",
+        "points": 10
+      },
+      {
+        "id": 8,
+        "type": "code-scenario",
+        "difficulty": "hard",
+        "scenario": "Architectural problem statement...",
+        "code": "// JavaScript/TypeScript snippet for context",
+        "correctAnswer": "Complete solution including fix and trade-off analysis.",
+        "explanation": "Scoring rubric and technical rationale.",
+        "points": 10
+      }
+    ]
+  }
+}
 """
 
-def fix_prompts():
-    if not os.path.exists(FILE_PATH):
-        print(f"Error: {FILE_PATH} not found.")
+def fix_evaluation_prompts():
+    if not os.path.exists(EVAL_FILE_PATH):
+        print(f"Error: {EVAL_FILE_PATH} not found.")
         return
 
-    with open(FILE_PATH, 'r') as f:
+    with open(EVAL_FILE_PATH, 'r') as f:
         data = json.load(f)
-
-    # Markers that indicate the start of instruction blocks we want to remove
-    STRIP_MARKERS = [
-        "Generate the complete study content",
-        "Format your ENTIRE output",
-        "Return ONLY valid JSON",
-        "OUTPUT INSTRUCTIONS:",
-        "\n\n{", # Start of a JSON block
-        "---"
-    ]
 
     updated_count = 0
     for topic_id, prompt in data.items():
-        # Find the earliest occurrence of any strip marker
-        cut_index = len(prompt)
-        for marker in STRIP_MARKERS:
-            idx = prompt.find(marker)
-            if idx != -1 and idx < cut_index:
-                cut_index = idx
-
-        # Truncate the prompt to remove old instructions
-        clean_prompt = prompt[:cut_index].strip()
+        # Clean up legacy instructions or formatting requirements
+        if 'Generate the test in this' in prompt:
+            prompt = prompt.split('Generate the test in this')[0]
+        if 'IMPORTANT GUIDELINES:' in prompt:
+            prompt = prompt.split('IMPORTANT GUIDELINES:')[0]
+        if 'Format your ENTIRE output' in prompt:
+            prompt = prompt.split('Format your ENTIRE output')[0]
         
-        # Extract topic name
+        # Clean topic name
         topic_name = topic_id.replace('-', ' ').title()
         
-        # Create and append the new instruction
-        instruction = MARKDOWN_INSTRUCTION_TEMPLATE.replace('[Topic Name]', topic_name)
-        data[topic_id] = clean_prompt + instruction
+        # Create the new instruction block
+        instruction = TEST_JSON_TEMPLATE.replace('[topic-id]', topic_id).replace('[Topic Name]', topic_name)
+        
+        data[topic_id] = prompt.strip() + instruction
         updated_count += 1
 
-    with open(FILE_PATH, 'w') as f:
+    with open(EVAL_FILE_PATH, 'w') as f:
         json.dump(data, f, indent=2)
 
-    print(f"Successfully updated {updated_count} prompts with Mermaid v10 rules in {FILE_PATH}.")
+    print(f"Successfully updated {updated_count} evaluation prompts in {EVAL_FILE_PATH}.")
 
 if __name__ == "__main__":
-    fix_prompts()
+    fix_evaluation_prompts()

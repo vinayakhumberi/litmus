@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test Portal — FAANG Prep</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style type="text/tailwindcss">
+  @layer base {
+    body { 
+      @apply bg-white text-zinc-900 transition-colors duration-200 dark:bg-[#0a0a0a] dark:text-zinc-100;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    body.light-theme { @apply bg-[#fdfcfb]; }
+  }
+  .sidebar-link.active { @apply bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 border-l-2 border-blue-600; }
+  .code-font { font-family: 'JetBrains Mono', monospace; }
+</style>
+</head>
+<body class="antialiased">
+
+<div class="flex min-h-screen">
+  <!-- Sidebar -->
+  <aside class="hidden lg:flex w-72 flex-col border-r border-zinc-200 dark:border-zinc-800 sticky top-0 h-screen bg-zinc-50 dark:bg-zinc-950 p-6">
+    <a href="index.html" class="text-[10px] font-bold tracking-widest text-zinc-400 hover:text-blue-500 mb-8 block uppercase">← Back to Tracker</a>
+    <div id="test-meta" class="mb-8">
+        <h2 id="sidebar-topic-name" class="font-bold text-lg leading-tight mb-2">Loading Test...</h2>
+        <div class="text-[10px] uppercase tracking-wider text-zinc-500 font-bold" id="sidebar-category">---</div>
+    </div>
+    
+    <div class="text-[10px] uppercase tracking-widest font-extrabold text-zinc-400 mb-4 px-2">Questions</div>
+    <nav class="flex-1 overflow-y-auto">
+      <ul id="question-nav" class="space-y-1"></ul>
+    </nav>
+
+    <div class="mt-auto pt-6 border-t border-zinc-200 dark:border-zinc-800">
+        <button id="finish-btn" onclick="completeTest()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20">
+            Finish Test
+        </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="flex-1 overflow-y-auto px-6 py-12 lg:px-20 lg:py-20">
+    <div id="test-container" class="max-w-3xl mx-auto">
+        <!-- Questions will be injected here -->
+        <div id="questions-list" class="space-y-16"></div>
+        
+        <!-- Results Section (Hidden initially) -->
+        <div id="results-view" class="hidden space-y-12">
+            <header class="text-center mb-16">
+                <div class="inline-block px-4 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full text-xs font-bold uppercase tracking-widest mb-4">Assessment Complete</div>
+                <h1 class="text-4xl font-extrabold mb-4">Your Results</h1>
+                <div class="text-6xl font-black text-blue-600" id="final-score">0%</div>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="score-breakdown">
+                <!-- Breakdown cards -->
+            </div>
+
+            <div class="bg-zinc-100 dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                <h3 class="font-bold text-xl mb-4">Export Results</h3>
+                <p class="text-zinc-500 text-sm mb-6">Download this JSON to update your main tracker or send for Staff-level evaluation.</p>
+                <button onclick="exportResults()" class="bg-zinc-900 dark:bg-white dark:text-black text-white px-6 py-3 rounded-lg font-bold text-sm hover:scale-105 transition-transform">
+                    Download Result JSON
+                </button>
+            </div>
+
+            <div id="detailed-feedback" class="space-y-8">
+                <!-- Comparison view -->
+            </div>
+        </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  // Initial Theme Sync
+  if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-theme');
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const topicId = urlParams.get('id');
+  let currentTestData = null;
+  let userAnswers = {};
+  let isFinished = false;
+
+  // Persistence Helpers
+  const getStorageKey = () => `test_session_${topicId}`;
+
+  async function loadTest() {
+    if (!topicId) return;
+    
+    // Check for existing session
+    const savedSession = JSON.parse(localStorage.getItem(getStorageKey()) || 'null');
+    if (savedSession) {
+        userAnswers = savedSession.answers || {};
+        isFinished = savedSession.isFinished || false;
+    }
+
+    const paths = [`data/tests/${topicId}-test.json`, `data/tests/${topicId}.json` ];
+    for (const path of paths) {
+      try {
+        const res = await fetch(path);
+        if (res.ok) {
+          currentTestData = await res.json();
+          if (isFinished && savedSession.resultData) {
+            renderResults(savedSession.score, savedSession.resultData, true);
+          } else {
+            renderTest();
+          }
+          return;
+        }
+      } catch (err) {}
+    }
+    // ... (error handling remains same)
+  }
+
+  function renderTest() {
+    const test = currentTestData.test;
+    document.getElementById('sidebar-topic-name').textContent = test.topicName;
+    document.getElementById('sidebar-category').textContent = test.category || 'General Assessment';
+    
+    const list = document.getElementById('questions-list');
+    const nav = document.getElementById('question-nav');
+    list.innerHTML = '';
+    nav.innerHTML = '';
+    
+    test.questions.forEach((q, i) => {
+      const navLi = document.createElement('li');
+      const hasAnswer = userAnswers[q.id] !== undefined;
+      navLi.innerHTML = `<a href="#q-${q.id}" id="nav-q-${q.id}" class="sidebar-link block px-4 py-2 text-sm ${hasAnswer ? 'text-blue-500 font-bold' : 'text-zinc-500'} hover:text-zinc-900 dark:hover:text-white transition-all rounded-lg">${hasAnswer ? '✓' : ''} Question ${i+1}</a>`;
+      nav.appendChild(navLi);
+
+      const qDiv = document.createElement('div');
+      qDiv.id = `q-${q.id}`;
+      qDiv.className = "question-card bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 shadow-sm scroll-mt-24";
+      
+      let inputHtml = '';
+      if (q.type === 'multiple-choice') {
+        inputHtml = `<div class="space-y-3 mt-6">
+            ${q.options.map(opt => {
+              const checked = userAnswers[q.id] === opt[0];
+              return `
+              <label class="flex items-center gap-4 p-4 border ${checked ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10' : 'border-zinc-100 dark:border-zinc-800'} rounded-xl cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all">
+                <input type="radio" name="q-${q.id}" value="${opt[0]}" ${checked ? 'checked' : ''} onchange="recordAnswer(${q.id}, '${opt[0]}')" class="w-4 h-4 accent-blue-600">
+                <span class="text-sm font-medium">${opt}</span>
+              </label>`;
+            }).join('')}
+          </div>`;
+      } else {
+        inputHtml = `<div class="mt-6">
+            ${q.code ? `<pre class="bg-zinc-950 text-zinc-300 p-4 rounded-lg mb-4 text-xs code-font overflow-x-auto"><code>${q.code}</code></pre>` : ''}
+            <textarea oninput="recordAnswer(${q.id}, this.value)" placeholder="Provide your Lead-level technical explanation..." class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 h-48 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all">${userAnswers[q.id] || ''}</textarea>
+          </div>`;
+      }
+
+      qDiv.innerHTML = `
+        <div class="flex items-center justify-between mb-6">
+            <span class="text-[10px] font-bold uppercase tracking-widest text-blue-500">${q.type.replace('-', ' ')}</span>
+            <span class="text-[10px] font-mono text-zinc-500">${q.points} Points</span>
+        </div>
+        <h3 class="text-xl font-bold leading-tight">${q.question || q.scenario}</h3>
+        ${inputHtml}
+      `;
+      list.appendChild(qDiv);
+    });
+  }
+
+  function recordAnswer(qId, val) {
+    userAnswers[qId] = val;
+    const navLink = document.getElementById(`nav-q-${qId}`);
+    if (navLink) {
+        navLink.classList.add('text-blue-500', 'font-bold');
+        if (!navLink.innerText.includes('✓')) navLink.innerText = '✓ ' + navLink.innerText;
+    }
+    // Auto-save draft
+    localStorage.setItem(getStorageKey(), JSON.stringify({ answers: userAnswers, isFinished: false }));
+  }
+
+  function completeTest() {
+    const test = currentTestData.test;
+    let totalPossible = 0;
+    let totalEarned = 0;
+    const resultData = [];
+
+    test.questions.forEach(q => {
+      totalPossible += q.points;
+      const userAns = userAnswers[q.id] || "";
+      let pointsEarned = 0;
+
+      if (q.type === 'multiple-choice') {
+        // Robust check: compare letter prefix (e.g., "A") with correct answer string
+        const userLetter = userAns.trim().charAt(0).toUpperCase();
+        const correctLetter = q.correctAnswer.trim().charAt(0).toUpperCase();
+        pointsEarned = userLetter === correctLetter ? q.points : 0;
+      } else {
+        pointsEarned = userAns.length > 50 ? q.points : q.points / 2; 
+      }
+      
+      totalEarned += pointsEarned;
+      resultData.push({
+        id: q.id, type: q.type, question: q.question || q.scenario,
+        userAnswer: userAns, correctAnswer: q.correctAnswer || q.sampleAnswer,
+        explanation: q.explanation || "Review based on Lead criteria.",
+        pointsEarned, pointsPossible: q.points
+      });
+    });
+
+    const scorePercent = Math.round((totalEarned / totalPossible) * 100);
+    
+    // Global sync: Update the shared tracker overrides
+    const globalOverrides = JSON.parse(localStorage.getItem('topic_overrides') || '{}');
+    globalOverrides[topicId] = {
+        ...(globalOverrides[topicId] || {}),
+        score: scorePercent,
+        status: scorePercent >= 70 ? 'completed' : 'in-progress'
+    };
+    localStorage.setItem('topic_overrides', JSON.stringify(globalOverrides));
+
+    // Portal-specific session persistence
+    localStorage.setItem(getStorageKey(), JSON.stringify({ 
+        answers: userAnswers, 
+        isFinished: true, 
+        score: scorePercent, 
+        resultData: resultData 
+    }));
+
+    renderResults(scorePercent, resultData);
+  }
+
+  function renderResults(score, results, fromCache = false) {
+    document.getElementById('questions-list').classList.add('hidden');
+    document.getElementById('finish-btn').classList.add('hidden');
+    const view = document.getElementById('results-view');
+    view.classList.remove('hidden');
+    
+    document.getElementById('final-score').textContent = `${score}%`;
+    
+    const feedbackContainer = document.getElementById('detailed-feedback');
+    feedbackContainer.innerHTML = `
+        <div class="flex justify-between items-center border-b border-zinc-200 dark:border-zinc-800 pb-4 mb-8">
+            <h2 class="text-2xl font-bold">Detailed Review</h2>
+            <button onclick="resetTest()" class="text-xs font-bold text-red-500 hover:underline">Retake Test</button>
+        </div>
+    `;
+
+    results.forEach(res => {
+        const card = document.createElement('div');
+        card.className = "border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden mb-8";
+        card.innerHTML = `
+            <div class="p-6 bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-bold text-zinc-500 uppercase">${res.type}</span>
+                    <span class="text-sm font-bold ${res.pointsEarned > 0 ? 'text-green-500' : 'text-red-500'}">${res.pointsEarned}/${res.pointsPossible}</span>
+                </div>
+                <h4 class="font-bold">${res.question}</h4>
+            </div>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-zinc-400 mb-2 block">Your Answer</span>
+                    <div class="text-sm opacity-80 italic">${res.userAnswer || "No answer provided"}</div>
+                </div>
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-blue-500 mb-2 block">Lead Reference</span>
+                    <div class="text-sm">${res.correctAnswer}</div>
+                    <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-300 text-xs rounded-lg">
+                        <strong>Insight:</strong> ${res.explanation}
+                    </div>
+                </div>
+            </div>`;
+        feedbackContainer.appendChild(card);
+    });
+    if (!fromCache) window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function resetTest() {
+    if (confirm("This will clear your answers and results for this topic. Continue?")) {
+        localStorage.removeItem(getStorageKey());
+        location.reload();
+    }
+  }
+
+  function exportResults() {
+    const test = currentTestData.test;
+    const finalScore = parseInt(document.getElementById('final-score').textContent);
+    const exportData = {
+      result: {
+        topicId: test.topicId,
+        topicName: test.topicName,
+        score: finalScore,
+        testDate: new Date().toISOString().split('T')[0],
+        passed: finalScore >= 70,
+        answers: userAnswers
+      }
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${test.topicId}-result.json`;
+    a.click();
+  }
+
+  loadTest();
+</script>
+</body>
+</html>

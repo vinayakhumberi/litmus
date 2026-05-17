@@ -1,0 +1,131 @@
+{
+  "test": {
+    "topicId": "event-loop-call-stack-microtasks-macrotasks",
+    "topicName": "Event loop, call stack, microtasks vs macrotasks",
+    "totalQuestions": 10,
+    "totalPoints": 100,
+    "passingScore": 70,
+    "questions": [
+      {
+        "id": 1,
+        "type": "multiple-choice",
+        "difficulty": "easy",
+        "question": "Which of the following is processed by the microtask queue?",
+        "options": [
+          "A) setTimeout callbacks",
+          "B) setInterval callbacks",
+          "C) Promise .then() callbacks",
+          "D) requestAnimationFrame callbacks"
+        ],
+        "correctAnswer": "C) Promise .then() callbacks",
+        "explanation": "Promise .then() callbacks are microtasks and are queued in the microtask queue. setTimeout, setInterval, and requestAnimationFrame callbacks are macrotasks (task queue). The microtask queue is fully drained after each task before the next macrotask is picked up.",
+        "points": 10
+      },
+      {
+        "id": 2,
+        "type": "multiple-choice",
+        "difficulty": "easy",
+        "question": "What is the correct order of execution for the JavaScript event loop?",
+        "options": [
+          "A) Call stack → Macrotask queue → Microtask queue",
+          "B) Call stack → Microtask queue → Macrotask queue",
+          "C) Microtask queue → Call stack → Macrotask queue",
+          "D) Call stack → Macrotask queue → Macrotask queue"
+        ],
+        "correctAnswer": "B) Call stack → Microtask queue → Macrotask queue",
+        "explanation": "The event loop first runs all synchronous code on the call stack. When the stack is empty, it drains the entire microtask queue (including any microtasks enqueued during draining), and only then picks the next macrotask. This cycle repeats.",
+        "points": 10
+      },
+      {
+        "id": 3,
+        "type": "short-answer",
+        "difficulty": "easy",
+        "question": "What happens when a function is called in JavaScript? Describe in 2–3 sentences how the call stack is involved.",
+        "options": null,
+        "correctAnswer": "When a function is invoked, a new execution context (stack frame) is pushed onto the call stack. As the function executes, any inner function calls push additional frames. When a function returns, its frame is popped off the stack. JavaScript is single-threaded, so only one frame executes at a time.",
+        "explanation": "A strong answer should mention: (1) push on call, (2) pop on return, (3) single-threaded implication. A Lead-level answer may also mention that stack overflow occurs when recursion exceeds the engine's stack limit (typically ~10k–15k frames in V8).",
+        "points": 10
+      },
+      {
+        "id": 4,
+        "type": "multiple-choice",
+        "difficulty": "medium",
+        "question": "Given the following code, what is the console output order?\n\nconsole.log('A');\nsetTimeout(() => console.log('B'), 0);\nPromise.resolve().then(() => console.log('C'));\nconsole.log('D');",
+        "options": [
+          "A) A, B, C, D",
+          "B) A, D, B, C",
+          "C) A, D, C, B",
+          "D) A, C, D, B"
+        ],
+        "correctAnswer": "C) A, D, C, B",
+        "explanation": "'A' and 'D' are synchronous and log in order. After the stack clears, the microtask queue is drained first — Promise.then fires 'C'. Only then does the event loop pick the next macrotask (setTimeout), logging 'B'. setTimeout with 0ms delay does not mean immediate — it means 'at least 0ms, after current task and all microtasks'.",
+        "points": 10
+      },
+      {
+        "id": 5,
+        "type": "multiple-choice",
+        "difficulty": "medium",
+        "question": "Which of the following APIs queues a macrotask?",
+        "options": [
+          "A) queueMicrotask()",
+          "B) Promise.resolve().then()",
+          "C) MutationObserver callback",
+          "D) MessageChannel postMessage()"
+        ],
+        "correctAnswer": "D) MessageChannel postMessage()",
+        "explanation": "MessageChannel's message event is a macrotask. queueMicrotask() and Promise.then() are microtasks. MutationObserver callbacks are also microtasks — a common trap. MessageChannel is often used as a performant macrotask scheduler (e.g., in React's legacy scheduler) precisely because it fires faster than setTimeout's 4ms minimum clamp.",
+        "points": 10
+      },
+      {
+        "id": 6,
+        "type": "short-answer",
+        "difficulty": "medium",
+        "question": "Explain why starving the microtask queue can block rendering in a browser, and give a concrete example of code that would cause this.",
+        "options": null,
+        "correctAnswer": "The browser's rendering pipeline (style recalculation, layout, paint) runs between macrotasks — but only after the microtask queue is fully empty. If microtasks continuously enqueue new microtasks (e.g., a Promise chain that schedules another resolved Promise in each .then()), the queue never empties, blocking rendering indefinitely. Example: function loop() { Promise.resolve().then(loop); } loop(); — this creates an infinite microtask loop that freezes the UI because the browser never gets to the render step.",
+        "explanation": "A Lead-level answer must identify: (1) rendering happens between tasks not between microtasks, (2) the queue drains completely before rendering, (3) self-enqueuing microtasks create starvation. Bonus: contrast with setTimeout-based loops which do yield to the renderer each iteration.",
+        "points": 10
+      },
+      {
+        "id": 7,
+        "type": "code-scenario",
+        "difficulty": "medium",
+        "question": "What does this code output? Explain each step.\n\nasync function foo() {\n  console.log('1');\n  await Promise.resolve();\n  console.log('2');\n}\n\nconsole.log('3');\nfoo();\nconsole.log('4');",
+        "options": null,
+        "correctAnswer": "Output: 3, 1, 4, 2\n\nStep-by-step:\n1. '3' logs synchronously.\n2. foo() is called — '1' logs synchronously inside foo.\n3. await suspends foo, scheduling the remainder (console.log('2')) as a microtask.\n4. Control returns to the call site — '4' logs synchronously.\n5. Call stack is now empty; microtask queue drains — '2' logs.",
+        "explanation": "The key insight: async/await is syntactic sugar over Promises. Everything before the first await runs synchronously. The code after await is wrapped in a .then() and queued as a microtask. A common mistake is outputting 3,1,2,4 — which misunderstands that await yields execution back to the caller before resuming.",
+        "points": 10
+      },
+      {
+        "id": 8,
+        "type": "short-answer",
+        "difficulty": "hard",
+        "question": "React's concurrent renderer uses a scheduler that deliberately yields to the browser via macrotasks rather than running all work in microtasks. Why is this architectural decision necessary, and what tradeoffs does it introduce?",
+        "options": null,
+        "correctAnswer": "React's scheduler uses MessageChannel (macrotask) to yield control back to the browser between units of work. If it used microtasks (Promises), the microtask queue would drain completely before the browser could render or handle user input — negating the point of time-slicing. By yielding via macrotasks, React lets the browser paint, process events, and remain responsive between render chunks. The tradeoff: macrotask scheduling has overhead (MessageChannel is faster than setTimeout but still slower than Promise), and work can be interrupted mid-tree — requiring React to track work-in-progress state and handle partial renders correctly. This is why concurrent features (useTransition, useDeferredValue) can cause 'tearing' without explicit synchronization primitives like useSyncExternalStore.",
+        "explanation": "A passing Lead answer must cover: (1) why microtasks block rendering, (2) why macrotasks yield to the browser, (3) at least one real tradeoff. A strong answer mentions MessageChannel specifically, React's scheduler internals, and the tearing problem.",
+        "points": 10
+      },
+      {
+        "id": 9,
+        "type": "code-scenario",
+        "difficulty": "hard",
+        "question": "Predict the full console output and explain why:\n\nconsole.log('start');\n\nsetTimeout(() => {\n  console.log('timeout 1');\n  Promise.resolve().then(() => console.log('promise inside timeout'));\n}, 0);\n\nPromise.resolve()\n  .then(() => {\n    console.log('promise 1');\n    setTimeout(() => console.log('timeout inside promise'), 0);\n  })\n  .then(() => console.log('promise 2'));\n\nconsole.log('end');",
+        "options": null,
+        "correctAnswer": "Output: start, end, promise 1, promise 2, timeout 1, promise inside timeout, timeout inside promise\n\nReasoning:\n1. 'start' and 'end' — synchronous.\n2. Microtask queue drains: 'promise 1' fires, which synchronously schedules 'timeout inside promise' as a new macrotask, then the chained .then() schedules 'promise 2' as the next microtask. 'promise 2' logs.\n3. Macrotask queue now has: [timeout 1, timeout inside promise]. 'timeout 1' fires. Its .then() enqueues 'promise inside timeout' as a microtask — drained immediately before next macrotask: 'promise inside timeout' logs.\n4. Final macrotask: 'timeout inside promise' logs.",
+        "explanation": "This is a classic multi-queue interleaving trap. The critical insight is that after each macrotask, the full microtask queue drains again. So 'promise inside timeout' fires before 'timeout inside promise' even though both are async — because one is a microtask within a macrotask cycle and the other is a queued macrotask.",
+        "points": 10
+      },
+      {
+        "id": 10,
+        "type": "code-scenario",
+        "difficulty": "hard",
+        "question": "You are reviewing a PR for a high-traffic analytics dashboard. A teammate has written the following to batch DOM updates:\n\nfunction batchUpdates(items) {\n  items.forEach(item => {\n    Promise.resolve().then(() => updateDOM(item));\n  });\n}\n\nThe dashboard has 500 items and updateDOM triggers layout reads (getBoundingClientRect). Your teammate argues 'Promises are async so this won't block the UI.' Are they correct? What would you recommend instead, and why?",
+        "options": null,
+        "correctAnswer": "The teammate is wrong. Microtasks do not yield to the browser renderer — all 500 Promise.then() callbacks will fire in a single microtask queue drain before any frame is painted. If each updateDOM call reads layout (getBoundingClientRect), it forces synchronous reflow, and with 500 items this causes layout thrashing in a tight microtask loop — effectively a 500-reflow synchronous block from the browser's perspective.\n\nRecommendations:\n1. Use requestAnimationFrame to schedule DOM updates at the start of the next frame, yielding to the renderer between batches.\n2. Batch reads first (all getBoundingClientRect calls), then writes — the read-then-write pattern prevents interleaved reflow.\n3. For 500 items, chunk the work using a scheduler: process N items per frame using rAF + a work loop, or use a MessageChannel-based scheduler similar to React's.\n4. Consider virtualizing the list so only visible items are updated.\n5. Use ResizeObserver or IntersectionObserver for layout-dependent reactions rather than polling with getBoundingClientRect.",
+        "explanation": "This tests whether the candidate understands that 'async' does not mean 'interruptible by the renderer.' A Lead-level answer must identify the microtask starvation problem, layout thrashing from interleaved reads/writes, and provide a concrete alternative. Bonus: mentioning the read-write batching pattern (FastDOM pattern) or scheduler chunking shows production-level thinking.",
+        "points": 10
+      }
+    ]
+  }
+}
