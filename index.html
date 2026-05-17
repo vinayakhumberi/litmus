@@ -998,6 +998,7 @@ async function loadData() {
     // 4. Merge local overrides (highest priority)
     mergeLocalOverrides();
 
+    renderWeekFilters(); // Restored: Generate week checkboxes
     updateHeaderInfo();
     renderAll();
   } catch (err) {
