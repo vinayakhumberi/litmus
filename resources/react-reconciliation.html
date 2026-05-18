@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mastering React Reconciliation & Fiber</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #61dafb;
+            --dark: #20232a;
+            --text: #ffffff;
+            --gray: #282c34;
+            --accent: #f08d49;
+            --code-bg: #1e1e1e;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--dark);
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: var(--gray);
+            padding: 3rem 2rem;
+            text-align: center;
+            border-bottom: 4px solid var(--primary);
+        }
+        nav {
+            position: sticky;
+            top: 0;
+            background: var(--gray);
+            padding: 1rem;
+            z-index: 100;
+            text-align: center;
+            border-bottom: 1px solid #444;
+        }
+        nav a {
+            color: var(--primary);
+            margin: 0 15px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        main {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        section {
+            margin-bottom: 4rem;
+            padding: 2.5rem;
+            background: var(--gray);
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+        }
+        h1, h2, h3 { color: var(--primary); }
+        pre, code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: "Fira Code", "Courier New", monospace;
+        }
+        pre {
+            padding: 1rem;
+            overflow-x: auto;
+            border-left: 3px solid var(--primary);
+        }
+        .diagram {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+        .playground {
+            border: 2px dashed var(--accent);
+            padding: 2rem;
+            margin: 2rem 0;
+            border-radius: 12px;
+            background: rgba(240, 141, 73, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .demo-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .interactivity-test {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+        .hover-box {
+            width: 80px;
+            height: 80px;
+            background: #444;
+            display: flex;
+            align-items: center;
+            text-align: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            border-radius: 8px;
+            transition: background 0.2s, transform 0.2s;
+            cursor: pointer;
+        }
+        .hover-box:hover {
+            background: var(--accent);
+            transform: scale(1.1);
+        }
+        .counter-btn {
+            background: #333;
+            color: white;
+            border: 1px solid var(--primary);
+        }
+        #animation-box {
+            width: 60px;
+            height: 60px;
+            background: var(--accent);
+            border-radius: 12px;
+            animation: rotate 1s linear infinite;
+        }
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .jank-explanation {
+            font-size: 0.9rem;
+            color: #aaa;
+            font-style: italic;
+        }
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        .card {
+            background: rgba(255,255,255,0.05);
+            padding: 1.5rem;
+            border-left: 4px solid var(--primary);
+            border-radius: 4px;
+        }
+        .lane-box {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            border-radius: 3px;
+            vertical-align: middle;
+        }
+        .sync-demo-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 24px;
+            background: #444;
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #a2e9ff);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+        button {
+            padding: 1rem 2rem;
+            background: var(--primary);
+            color: var(--dark);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+        .warning { color: var(--accent); font-weight: bold; }
+        .fiber-node {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+        .fiber-key { color: #888; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>The React Deep-Dive ⚛️</h1>
+    <p>Reconciliation, Fiber Architecture, and Concurrency Explained</p>
+</header>
+
+<nav>
+    <a href="#intro">Reconciliation</a>
+    <a href="#diffing">Diffing</a>
+    <a href="#history">Stack vs Fiber</a>
+    <a href="#eventloop">Event Loop</a>
+    <a href="#lanes">Lanes</a>
+</nav>
+
+<main>
+    <section id="intro">
+        <h2>1. What is Reconciliation?</h2>
+        <p>In React, you don't manipulate the DOM directly. Instead, you describe the <em>state</em> of your UI. React takes that description and ensures the DOM matches it.</p>
+        <p><strong>Reconciliation</strong> is the process where React compares the new "Virtual DOM" tree with the previous one to calculate the minimal set of changes required.</p>
+    </section>
+
+    <section id="diffing">
+        <h2>2. The Diffing Algorithm</h2>
+        <p>Comparing two trees has a complexity of <code>O(n³)</code>. To keep things fast, React uses a <strong>heuristic O(n) algorithm</strong> based on two assumptions:</p>
+        <div class="card">
+            <ol>
+                <li><strong>Different Types:</strong> Two elements of different types will produce different trees. React will tear down the old tree and build the new one from scratch.</li>
+                <li><strong>Keys:</strong> Developers can hint which elements are stable across renders with a <code>key</code> prop.</li>
+            </ol>
+        </div>
+        <h3>The Logic Flow:</h3>
+        <ul>
+            <li>If <code>Type</code> changes (e.g., <code>&lt;div&gt;</code> to <code>&lt;span&gt;</code>) → <strong>Unmount & Remount</strong>.</li>
+            <li>If <code>Type</code> is the same but <code>Props</code> change → <strong>Update</strong> the underlying instance.</li>
+            <li>When diffing children → React iterates over both lists and matches them by <strong>index</strong> or <strong>key</strong>.</li>
+        </ul>
+    </section>
+
+    <section id="history">
+        <h2>3. React 15: The Stack Reconciler</h2>
+        <p>React 15 used a <strong>synchronous recursive</strong> approach. It followed the call stack.</p>
+        <div class="warning">The "Stack" Problem:</div>
+        <p>Once React started reconciling, the main thread was <strong>locked</strong>. If you had 2,000 components to diff, and it took 200ms, the user couldn't click anything during those 200ms. Frames were dropped, and the UI felt frozen.</p>
+        
+        <div class="diagram">
+            <pre class="mermaid">
+            sequenceDiagram
+                participant Browser
+                participant React15
+                Browser->>React15: State Update Triggered
+                Note over React15: Recursively walking tree...
+                Note over React15: Component 1 Diff
+                Note over React15: Component 2 Diff
+                Note over React15: ...Component 2000 Diff
+                React15->>Browser: Update DOM
+                Note over Browser: Finally responsive again!
+            </pre>
+        </div>
+    </section>
+
+    <section id="fiber-internals">
+        <h2>4. React 16+: The Fiber Architecture</h2>
+        <p>Fiber is a <strong>reimplementation of the stack</strong> specifically for React components. You can think of a Fiber as a <strong>virtual stack frame</strong>.</p>
+        
+        <h3>The Anatomy of a Fiber Node</h3>
+        <p>Unlike React 15's internal elements, a Fiber is a persistent object that holds:</p>
+        <div class="card">
+            <div class="fiber-node"><span class="fiber-key">type:</span> The component type (div, MyComponent)</div>
+            <div class="fiber-node"><span class="fiber-key">key:</span> The unique identifier</div>
+            <div class="fiber-node"><span class="fiber-key">child:</span> Pointer to the first child</div>
+            <div class="fiber-node"><span class="fiber-key">sibling:</span> Pointer to the next sibling</div>
+            <div class="fiber-node"><span class="fiber-key">return:</span> Pointer to the parent (where to return after work)</div>
+            <div class="fiber-node"><span class="fiber-key">pendingProps:</span> Props from the new element</div>
+            <div class="fiber-node"><span class="fiber-key">memoizedState:</span> The actual state (hooks are stored here in a linked list)</div>
+            <div class="fiber-node"><span class="fiber-key">lanes:</span> Priority level of this update</div>
+        </div>
+    </section>
+
+    <section id="eventloop">
+        <h2>5. Integration with the Event Loop</h2>
+        <p>The "Magic" of Fiber is that it can <strong>pause work</strong>. It does this by leveraging the Browser's Event Loop.</p>
+        
+        <h3>The 16ms Rule</h3>
+        <p>To keep 60 FPS, a frame must be rendered every <strong>16.6ms</strong>. If JS runs for 30ms, the frame is skipped.</p>
+        
+        <h3>How React Yields:</h3>
+        <ol>
+            <li>React starts a "Work Loop".</li>
+            <li>After processing <em>each</em> Fiber, it checks: <code>shouldYieldToHost()</code>.</li>
+            <li>If the 5ms time slice is up, React <strong>pauses</strong>, saves its place (the current Fiber pointer), and schedules a new task on the browser's message queue.</li>
+            <li>The browser handles clicks/paints, then gives control back to React to resume.</li>
+        </ol>
+
+        <div class="playground">
+            <h3>Interactive Demo: The "Jank" Test</h3>
+            <p class="jank-explanation">Instructions: Start the task, then immediately try to <strong>hover</strong> over the box, <strong>click</strong> the counter, or watch the <strong>rotating square</strong>.</p>
+            
+            <div class="demo-controls">
+                <button onclick="runBlocking(event)">Run Blocking (React 15)</button>
+                <button onclick="runFiber(event)">Run Concurrent (React 18)</button>
+            </div>
+
+            <div class="interactivity-test">
+                <div id="animation-box"></div>
+                <div class="hover-box">HOVER ME</div>
+                <button class="counter-btn" onclick="updateCounter()">Clicks: <span id="counter">0</span></button>
+            </div>
+
+            <div class="sync-demo-container">
+                <div class="progress-bar"><div id="progress" class="progress-fill"></div></div>
+                <p id="status">Status: Idle (Ready for stress test)</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="lanes">
+        <h2>6. Priority Lanes: The Bitmask Engine</h2>
+        <p>React 18 replaced "Expiration Times" with <strong>Lanes</strong>. While the old system was linear, Lanes are <strong>multi-dimensional</strong>. This allows React to work on multiple updates at once without them blocking each other.</p>
+        
+        <div class="card">
+            <h3>A. How the Bitmask Works</h3>
+            <p>React uses a 32-bit integer to represent lanes. Each bit is a "lane." There are 31 available lanes (the 32nd bit is reserved). <strong>Lower bits have higher priority.</strong></p>
+            <pre><code>
+// High Priority (Sync)
+0b0000000000000000000000000000001 
+
+// Low Priority (Transition)
+0b0000000000000000000000001000000 
+            </code></pre>
+            <p>Because it's a bitmask, React can check for multiple priorities at once using the <code>&</code> (AND) operator. If a bit is "on," work is pending in that lane.</p>
+        </div>
+
+        <h3>B. Parallel Worlds (Interleaving)</h3>
+        <p>This is the most powerful feature. Imagine you have a <strong>SyncLane</strong> update (typing in a box) and a <strong>TransitionLane</strong> update (filtering a list of 10,000 items).</p>
+        <ul>
+            <li>In the old system, the list filter would have to finish before the typing could show up.</li>
+            <li>With <strong>Lanes</strong>, React can pause the "List Filter" lane, jump over to the "Typing" lane, commit it to the DOM, and then jump <em>back</em> to the list filter.</li>
+            <li>If the typing changed the filter parameters, React simply <strong>discards</strong> the old list filter work and starts a new one. This is "Parallel Worlds" in action.</li>
+        </ul>
+
+        <h3>C. Lane Expiration (Starvation Prevention)</h3>
+        <p>What if a low-priority update (like a background data fetch) is constantly interrupted by high-priority clicks? It would never finish. This is called <strong>Starvation</strong>.</p>
+        <div class="card">
+            <p><strong>The Fix:</strong> Every lane has an <strong>Expiration Time</strong>. When a lane is created, React calculates a timestamp (e.g., 5 seconds in the future). If that time passes and the work still isn't done, React <strong>promotes</strong> that lane to a SyncLane. It then forces the update to complete synchronously, ensuring the UI eventually stays consistent.</p>
+        </div>
+
+        <h3>D. Entanglements</h3>
+        <p>Sometimes updates in different lanes depend on each other. React "entangles" them so they commit at the exact same time. This prevents <strong>"UI Tearing"</strong>—where part of the screen shows new data and another part shows old data.</p>
+    </section>
+
+    <section id="expert-dive">
+        <h2>7. Expert Deep Dive: The Inner Mechanics</h2>
+        
+        <h3>A. Double Buffering (The "WIP" Tree)</h3>
+        <p>React uses a technique called <strong>Double Buffering</strong> to prevent users from seeing partially rendered UI. It maintains two trees:</p>
+        <ul>
+            <li><strong>Current Tree:</strong> What is currently on the screen.</li>
+            <li><strong>Work-In-Progress (WIP) Tree:</strong> The tree being built during the Render phase.</li>
+        </ul>
+        <p>Once the WIP tree is complete, React simply swaps the pointer (<code>root.current = wip</code>) during the Commit phase. This is atomic and instantaneous.</p>
+
+        <h3>B. The Lifecycle of a Unit of Work</h3>
+        <p>Every Fiber goes through two main functions in the Work Loop:</p>
+        <div class="card">
+            <p><strong>1. beginWork():</strong> "Going down" the tree. React checks if the component needs an update. If it doesn't (due to <code>memo</code> or unchanged props), it "bails out" and skips the subtree.</p>
+            <p><strong>2. completeWork():</strong> "Coming up" the tree. After children are processed, React builds the physical DOM nodes (if they don't exist) and bubbles up "Effect Tags" (e.g., "this whole subtree has a deletion").</p>
+        </div>
+
+        <h3>C. Scheduler vs. Reconciler</h3>
+        <p>Expert-level understanding requires distinguishing these two packages:</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Package</th>
+                    <th>Responsibility</th>
+                    <th>Analogy</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Scheduler</strong></td>
+                    <td>Determines <em>when</em> work should happen based on priority.</td>
+                    <td>The Traffic Controller</td>
+                </tr>
+                <tr>
+                    <td><strong>Reconciler</strong></td>
+                    <td>Determines <em>what</em> needs to change (Diffing).</td>
+                    <td>The Construction Worker</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="scheduler-deep">
+        <h2>8. The Scheduler: The Engine of Concurrency</h2>
+        <p>You might wonder: <em>"How does React actually pause JS?"</em> It doesn't use <code>requestIdleCallback</code> (too inconsistent). Instead, it uses a <strong>MessageChannel</strong>.</p>
+        
+        <div class="card">
+            <h4>The MessageChannel Trick</h4>
+            <ol>
+                <li>React starts work.</li>
+                <li>After each fiber, it checks if 5ms have passed.</li>
+                <li>If yes, it creates a <code>MessageChannel</code> and sends a message to itself: <code>port.postMessage(null)</code>.</li>
+                <li>This message goes into the <strong>Browser's Task Queue (Macro-task)</strong>.</li>
+                <li>The browser finishes its paint/input handling, then sees the message and gives control back to React.</li>
+            </ol>
+        </div>
+
+        <h3>The `alternate` Pointer: The Secret to Resuming</h3>
+        <p>Every Fiber node has an <code>alternate</code> property. This is the link between the <strong>Current</strong> (on-screen) and <strong>Work-In-Progress</strong> (building) versions of a component.</p>
+        <div class="diagram">
+            <pre class="mermaid">
+            graph LR
+                C[Current Fiber] -- alternate --> W[WIP Fiber]
+                W -- alternate --> C
+                style C fill:#4d79ff,color:#fff
+                style W fill:#f96,color:#fff
+            </pre>
+        </div>
+        <p>When React pauses, it simply stores a reference to the "Current WIP Fiber." When it resumes, it follows the <code>alternate</code> pointer to see what the previous state was and continues from there. This "Clone-on-Update" strategy ensures that if an update is aborted, the original "Current" tree remains untouched and stable.</p>
+    </section>
+
+    <section id="commit-phases">
+        <h2>9. The 3 Steps of the Commit Phase</h2>
+        <p>Once the WIP tree is complete, React enters the <strong>Commit Phase</strong>. This is synchronous and divided into three sub-phases:</p>
+        <div class="card">
+            <ul>
+                <li><strong>Phase 1: Before Mutation:</strong> React calls <code>getSnapshotBeforeUpdate</code>. The DOM hasn't changed yet.</li>
+                <li><strong>Phase 2: Mutation:</strong> <strong>This is where the swap happens.</strong> React traverses the effect list and performs DOM operations (append, remove, update text). The <code>root.current</code> pointer is swapped here.</li>
+                <li><strong>Phase 3: Layout:</strong> The DOM is updated, but the browser hasn't painted yet. React calls <code>useLayoutEffect</code> and <code>componentDidMount</code>.</li>
+            </ul>
+        </div>
+    </section>
+
+    <section id="the-trace">
+        <h2>10. The Grand Unified Trace: From Click to Screen</h2>
+        <p>This is the "Full Stack" view of a React update. Follow the numbers:</p>
+        
+        <div class="card">
+            <h4>Step 1: The Browser Event</h4>
+            <p>You click a button. The Browser puts a "Click Event" into its <strong>Task Queue</strong>.</p>
+            
+            <h4>Step 2: React's Synthetic Event System</h4>
+            <p>React doesn't attach listeners to every button. It attaches <strong>one listener to the Root DOM container</strong>. When the click bubbles up:</p>
+            <ul>
+                <li>React intercepts it and creates a <strong>SyntheticEvent</strong>.</li>
+                <li>It looks at the <code>nativeEvent.target</code> and finds the corresponding <strong>Fiber Node</strong> (React stores this as a property on the DOM node).</li>
+                <li>It finds your <code>onClick</code> handler in that Fiber's <code>memoizedProps</code>.</li>
+            </ul>
+
+            <h4>Step 3: Lane Assignment</h4>
+            <p>Before running your code, React asks the <strong>Scheduler</strong>: <em>"What is the priority of this user interaction?"</em></p>
+            <ul>
+                <li>Since it's a <code>click</code>, it assigns the <strong>SyncLane</strong> (highest priority).</li>
+                <li>If it were a <code>mousemove</code>, it might assign a lower priority lane.</li>
+            </ul>
+
+            <h4>Step 4: Scheduling the Work</h4>
+            <p>React calls <code>scheduleUpdateOnFiber</code>. It marks the Fiber and all its ancestors with the new Lane (dirty checking). Then it tells the Scheduler: <em>"I have work for Root X at SyncLane priority."</em></p>
+
+            <h4>Step 5: The Concurrent Work Loop (The "Heart")</h4>
+            <p>The Scheduler eventually calls React's <code>workLoopConcurrent</code>. This is where the <strong>yielding</strong> happens. Here is the actual logic in pseudo-code:</p>
+            <pre><code>
+function workLoopConcurrent() {
+  // Perform work until we run out of fibers OR the browser needs the thread
+  while (workInProgress !== null && !shouldYield()) {
+    performUnitOfWork(workInProgress); 
+  }
+}
+
+function performUnitOfWork(unitOfWork) {
+  const current = unitOfWork.alternate;
+  // 1. beginWork: Diffing happens here. Returns the 'child' Fiber.
+  let next = beginWork(current, unitOfWork, renderLanes);
+  
+  unitOfWork.memoizedProps = unitOfWork.pendingProps;
+  if (next === null) {
+    // 2. No more children? Move to siblings or complete this branch
+    completeUnitOfWork(unitOfWork);
+  } else {
+    workInProgress = next;
+  }
+}
+            </code></pre>
+
+            <h4>Step 6: Pausing and Resuming</h4>
+            <p>If <code>shouldYield()</code> returns <code>true</code> (meaning the 5ms is up):</p>
+            <ul>
+                <li>The <code>while</code> loop breaks.</li>
+                <li>React <strong>remembers</strong> the current <code>workInProgress</code> fiber pointer.</li>
+                <li>It tells the Scheduler: <em>"I'm not done, call me back when the browser is free."</em></li>
+                <li>The browser paints. Then the Scheduler calls <code>workLoopConcurrent</code> again.</li>
+                <li>Because <code>workInProgress</code> was saved, React **resumes** exactly where it left off.</li>
+            </ul>
+
+            <h4>Step 7: The Double-Buffer Swap</h4>
+            <p>Once <code>workInProgress</code> is <code>null</code>, the entire WIP tree is built. React enters the <strong>Commit Phase</strong> (Sync), swaps <code>root.current = WIP</code>, and the changes appear on the screen.</p>
+        </div>
+
+        <div class="diagram">
+            <pre class="mermaid">
+            sequenceDiagram
+                participant User
+                participant Browser
+                participant ReactScheduler
+                participant ReactReconciler
+                participant DOM
+                User->>Browser: Clicks Button
+                Browser->>ReactReconciler: SyntheticEvent (SyncLane)
+                ReactReconciler->>ReactScheduler: "I have Sync work"
+                ReactScheduler->>ReactReconciler: "Go ahead (5ms start)"
+                loop WorkLoop
+                    ReactReconciler->>ReactReconciler: performUnitOfWork (Fiber)
+                    Note over ReactReconciler: shouldYield? No.
+                end
+                ReactReconciler->>DOM: Commit (Atomic Swap)
+                DOM->>User: Visual Update
+            </pre>
+        </div>
+    </section>
+
+    <section id="summary">
+        <h2>Expert Conclusion</h2>
+        <p>You now have the full chain. React is no longer a "black box" that magically updates. It is a <strong>sophisticated task orchestrator</strong> that treats your UI tree as a virtual instruction set, executing it in chunks while constantly checking with the browser's hardware clock to ensure your mouse and keyboard feel instant.</p>
+    </section>
+</main>
+
+<style>
+table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #444; }
+th { color: var(--primary); }
+</style>
+
+<style>
+@keyframes pulse {
+    from { transform: scale(1); opacity: 1; }
+    to { transform: scale(1.5); opacity: 0.5; }
+}
+</style>
+
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+    let count = 0;
+    function updateCounter() {
+        count++;
+        document.getElementById('counter').innerText = count;
+    }
+
+    function runBlocking(event) {
+        const status = document.getElementById('status');
+        const progress = document.getElementById('progress');
+        const btn = event.target;
+        
+        btn.disabled = true;
+        status.innerText = "Status: ❌ THREAD BLOCKED! (Try interacting now...)";
+        status.style.color = "var(--accent)";
+        
+        // Use a slight timeout so the DOM updates before we freeze it
+        setTimeout(() => {
+            const start = Date.now();
+            const duration = 3000; // 3 full seconds of total freeze
+            
+            // We simulate a massive synchronous reconciliation
+            while (Date.now() - start < duration) {
+                // This is the "black hole" of JS
+                for(let i=0; i<5000000; i++) { Math.sqrt(i); }
+            }
+            
+            progress.style.width = "100%";
+            status.innerText = "Status: Finished. Did you notice the freeze?";
+            status.style.color = "var(--primary)";
+            btn.disabled = false;
+            setTimeout(() => { progress.style.width = "0%"; }, 2000);
+        }, 50);
+    }
+
+    function runFiber(event) {
+        const status = document.getElementById('status');
+        const progress = document.getElementById('progress');
+        const btn = event.target;
+        
+        btn.disabled = true;
+        status.innerText = "Status: ✅ CONCURRENT (Yielding to browser...)";
+        status.style.color = "var(--primary)";
+        
+        let workDone = 0;
+        const totalWork = 800; // Increased significantly for a longer demo
+        
+        function workLoop() {
+            const startTime = performance.now();
+            
+            // Process chunks for 5ms, then YIELD
+            while (workDone < totalWork && performance.now() - startTime < 5) {
+                // Moderate unit of work
+                for(let i=0; i<2500000; i++) { Math.sqrt(i); } 
+                workDone++;
+                progress.style.width = (workDone / totalWork * 100) + "%";
+            }
+            
+            if (workDone < totalWork) {
+                // Yield control to the browser!
+                requestAnimationFrame(workLoop);
+            } else {
+                status.innerText = "Status: Idle (Everything stayed smooth!)";
+                btn.disabled = false;
+                setTimeout(() => { progress.style.width = "0%"; }, 2000);
+            }
+        }
+        
+        workLoop();
+    }
+</script>
+
+</body>
+</html>
