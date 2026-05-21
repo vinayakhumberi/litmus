@@ -1,0 +1,21 @@
+{
+  "result": {
+    "topicId": "react-fiber-concurrent",
+    "topicName": "Fiber architecture and concurrent rendering",
+    "score": 100,
+    "testDate": "2026-05-21",
+    "passed": true,
+    "answers": {
+      "1": "B",
+      "2": "C",
+      "3": "C",
+      "4": "B",
+      "5": "Render Phase: This is where the fiber nodes are built and diffing work goes on. This depends on the priority lanes and a scheduler takes care of running, pausing, prioritising and aborting execution. Thus is interruptible and asynchronous. \n\nCommit Phase: This i a synchronous task, once the commit phase starts it cannot be stopped. This starts when the WIP tree is flushed into Current Tree.",
+      "6": "Time slicing is a technique used in concurrent rendering to break down rendering work into smaller chunks, allowing the main thread to remain responsive to user interactions. This approach helps prevent the UI from freezing or becoming unresponsive during heavy rendering tasks.",
+      "7": "There are 4 priority lanes:\nSync lane: Has the highest priority and needs immediate attention, any user interactions like click\nInput continuous lane: When user drags or scrolls. Next to Sync lane\nTransition lane: This is deferred lane for low priority tasks\nIdle Lane: For the least when there is no other work.",
+      "8": "Scenario: A search input updates a large filtered list. Typing becomes laggy because rendering the list blocks the main thread. Code: \nfunction SearchPage() {\n    const [query, setQuery] = useState('');\n    const filtered = expensiveFilter(query);\n\n    const [isPending, startTransition] = useTransition();\n\n    const handleChange = (e) => {\n        const value = e.target.value;\n        startTransition(() => {\n            setQuery(value);\n        });\n    }\n\n    return (\n        <>\n            <input value={query} onChange={handleChange} />\n            <BigList items={filtered} />\n        </>\n    );\n}\nExplain how concurrent rendering features can improve responsiveness here, and identify the React API most appropriate for this scenario.",
+      "9": "It is intentional, and\nis not directly related to concurrent rendering.\nStrict Mode is a development tool that helps identify potential issues in an application by intentionally invoking \ncertain lifecycle methods and effects more than once. ",
+      "10": "Scenario: A team mutates shared state during render.\nCode: \nlet cache = [];\nfunction ProductList({ products }) {\n    cache.push(products.length);\n    return products.map((p) => <ProductItem key={p.id} product={p} />);\n}\nWhy is this implementation dangerous under concurrent rendering, and what architectural principle is being violated?\n\nThe architectural principle being violated is the principle of immutability and pure functions in React components. This is dangerous as the cache array is directly being mutauted\nduring the render phase, which can lead to unpredictable behavior and bugs, especially in concurrent rendering scenarios where multiple renders can happen simultaneously. \nIn concurrent rendering, React may pause and resume renders, which can cause the cache to be updated in an inconsistent way, leading to race conditions and making it difficult to debug. \nThis violates the principle of pure functions, which should not have side effects or mutate shared state during rendering.\n"
+    }
+  }
+}

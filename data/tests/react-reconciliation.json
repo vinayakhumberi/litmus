@@ -1,0 +1,131 @@
+{
+    "test": {
+        "topicId": "react-reconciliation-virtual-dom-diffing",
+        "topicName": "React reconciliation and virtual DOM diffing algorithm",
+        "totalQuestions": 10,
+        "totalPoints": 100,
+        "passingScore": 70,
+        "questions": [
+            {
+                "id": 1,
+                "type": "multiple-choice",
+                "difficulty": "easy",
+                "question": "What is the primary visual complexity optimization React achieves by using a heuristic diffing algorithm instead of a generic O(n^3) tree diffing algorithm?",
+                "options": [
+                    "A) It reduces the diffing time complexity from O(n^3) to O(n).",
+                    "B) It reduces space complexity from O(n) to O(1).",
+                    "C) It allows React to bypass the Virtual DOM entirely for minor updates.",
+                    "D) It ensures that the real DOM is updated on every single frame regardless of changes."
+                ],
+                "correctAnswer": "A) It reduces the diffing time complexity from O(n^3) to O(n).",
+                "explanation": "React implements a heuristic O(n) algorithm based on two assumptions: two elements of different types will produce different trees, and the developer can hint at which child elements may be stable across renders with a 'key' prop.",
+                "points": 10
+            },
+            {
+                "id": 2,
+                "type": "multiple-choice",
+                "difficulty": "easy",
+                "question": "During the reconciliation of two elements of different types (e.g., changing from  to ), what action does React take regarding the underlying DOM tree?",
+                "options": [
+                    "A) React updates only the changed attributes and preserves the DOM node.",
+                    "B) React tears down the old tree, destroying old DOM nodes and state, and builds the new tree from scratch.",
+                    "C) React reorders the elements using a hidden layout algorithm.",
+                    "D) React pauses reconciliation until the component types match."
+                ],
+                "correctAnswer": "B) React tears down the old tree, destroying old DOM nodes and state, and builds the new tree from scratch.",
+                "explanation": "When the root elements have different types, React tears down the old tree. Any state associated with the old tree is destroyed, and component lifecycles or hook cleanups are triggered.",
+                "points": 10
+            },
+            {
+                "id": 3,
+                "type": "multiple-choice",
+                "difficulty": "medium",
+                "question": "When diffing two Fiber nodes of the same component type, how does React handle the component instance and props?",
+                "options": [
+                    "A) It creates a brand new instance of the component and replaces the old props.",
+                    "B) It flushes all updates immediately to the browser layout thread before comparing props.",
+                    "C) It glass-boxes the fiber and delegates comparison to the browser's native engine.",
+                    "D) It retains the underlying component instance, updates the props on that instance to match the new element, and processes updates via its hooks or lifecycles."
+                ],
+                "correctAnswer": "D) It retains the underlying component instance, updates the props on that instance to match the new element, and processes updates via its hooks or lifecycles.",
+                "explanation": "When a component updates, the instance stays the same so that state is maintained across renders. React updates the props of the underlying component instance to match the new element.",
+                "points": 10
+            },
+            {
+                "id": 4,
+                "type": "multiple-choice",
+                "difficulty": "hard",
+                "question": "In React Fiber, reconciliation is split into two primary phases: Render and Commit. Which of the following accurately describes a characteristic difference between these phases regarding interruptibility?",
+                "options": [
+                    "A) The Render phase is synchronous and non-interruptible, while the Commit phase can be paused to avoid blocking user interactions.",
+                    "B) The Render phase is asynchronous and can be paused or aborted by the scheduler, whereas the Commit phase is synchronous and non-interruptible.",
+                    "C) Both the Render and Commit phases are highly interruptible and run concurrently on separate Web Worker threads.",
+                    "D) Neither phase is interruptible; Fiber only optimizes memory allocation rather than scheduling priority."
+                ],
+                "correctAnswer": "B) The Render phase is asynchronous and can be paused or aborted by the scheduler, whereas the Commit phase is synchronous and non-interruptible.",
+                "explanation": "The Render phase works with the Virtual DOM/Fiber tree and computes mutations safely in memory; this can be split into chunks and paused. The Commit phase applies these changes directly to the host DOM and must execute synchronously to avoid inconsistent, flickering UI states.",
+                "points": 10
+            },
+            {
+                "id": 5,
+                "type": "short-answer",
+                "difficulty": "easy",
+                "question": "Why is using an array index as a 'key' prop considered an anti-pattern when rendering a dynamic list that can be sorted, filtered, or reordered?",
+                "options": [],
+                "correctAnswer": "Using an array index as a key causes React to map elements based on their position rather than their true identity. When the list reorders, React updates the existing DOM nodes at those indices with new prop data instead of moving the actual DOM elements, leading to rendering bugs, state leakages across list items, and suboptimal performance.",
+                "explanation": "Keys must be stable, predictable, and unique identifiers so that React can track which items have changed, been added, or been removed across updates.",
+                "points": 10
+            },
+            {
+                "id": 6,
+                "type": "short-answer",
+                "difficulty": "medium",
+                "question": "Explain the concept of 'Double Buffering' as implemented by React Fiber's reconciliation architecture.",
+                "options": [],
+                "correctAnswer": "React Fiber manages updates using two trees simultaneously: the 'current' tree, which reflects what is currently visible on the screen, and the 'workInProgress' tree, which is compiled asynchronously during the render phase. Once the workInProgress tree is fully evaluated and prepared, React switches a single pointer to make it the new 'current' tree during the commit phase, minimizing visible layout thrashing.",
+                "explanation": "Double buffering is a graphics technique adapted by React to allow interruptible computation without exposing partially rendered frames to the user.",
+                "points": 10
+            },
+            {
+                "id": 7,
+                "type": "short-answer",
+                "difficulty": "hard",
+                "question": "Explain how React's single-child vs. multi-child diffing algorithm operates under the hood to detect element reordering without checking every permutation, particularly regarding the 'lastPlacedIndex' pointer.",
+                "options": [],
+                "correctAnswer": "React loops through the new children array and compares them to the current Fiber chain using a single-pass index iteration. It tracks a pointer named 'lastPlacedIndex', which represents the highest index in the old tree where an element was reused. If an old element is found at an index less than 'lastPlacedIndex', it means that element moved to the right relative to its original position, and a placement effect is flagged.",
+                "explanation": "This allows React to detect shifted items efficiently in O(n) time by assuming elements generally move forward or new elements are inserted, trading absolute mathematical minimum-move alignment for extreme runtime performance.",
+                "points": 10
+            },
+            {
+                "id": 8,
+                "type": "code-scenario",
+                "difficulty": "medium",
+                "question": "Scenario: You observe that a heavy component  re-renders every time its parent's state changes, even though the data object passed to it looks identical.\n\nCode snippet:\njsx\nfunction Parent() {\n  const [count, setCount] = useState(0);\n  return (\n    <div>\n      <button onClick={() => setCount(c => c + 1)}>Increment</button>\n      <ExpensiveChart config={{ metrics: ['latency', 'throughput'] }} />\n    </div>\n  );\n}\n\nIdentify the reconciliation bottleneck and provide the refactored JSX pattern to fix it.",
+                "options": [],
+                "correctAnswer": "The bottleneck is that the inline object literal 'config={{ metrics: [...] }}' creates a new object reference on every single render of Parent. React's shallow prop comparison fails to see them as equivalent, triggering reconciliation of . Fix this by either moving the config object outside the component or wrapping it in useMemo if it depends on internal state.",
+                "explanation": "Refactored solution:\njsx\nconst CHART_CONFIG = { metrics: ['latency', 'throughput'] };\nfunction Parent() {\n  const [count, setCount] = useState(0);\n  return (\n    <div>\n      <button onClick={() => setCount(c => c + 1)}>Increment</button>\n      <ExpensiveChart config={CHART_CONFIG} />\n    </div>\n  );\n}\n",
+                "points": 10
+            },
+            {
+                "id": 9,
+                "type": "code-scenario",
+                "difficulty": "medium",
+                "question": "Scenario: Review the following implementation intended to reset a form's UI state when switching view modes.\n\njsx\nfunction ProfileEditor({ userId, isViewMode }) {\n  return (\n    <div>\n      {isViewMode ? (\n        <section>\n          <UserInfoForm userId={userId} />\n        </section>\n      ) : (\n        <main>\n          <UserInfoForm userId={userId} />\n        </main>\n      )}\n    </div>\n  );\n}\n\nWhat will happen to the state of  when isViewMode toggles from true to false, and why?",
+                "options": [],
+                "correctAnswer": "The state of  will be completely destroyed and reset. This happens because its parent element wrapper changes from a  to a . According to React's diffing rules, when a parent element type changes, React immediately tears down that entire subtree and builds a new one from scratch, rather than diffing the children.",
+                "explanation": "Even though  is at the same location structurally in both branches, changing the wrapper tag breaks element-type structural continuity, forcing unmounting and fresh remounting.",
+                "points": 10
+            },
+            {
+                "id": 10,
+                "type": "code-scenario",
+                "difficulty": "hard",
+                "question": "Scenario: An engineer is debugging an animation mismatch in an infinite scrolling feed. The code currently assigns keys like this:\n\njsx\nfunction FeedList({ items }) {\n  return (\n    <ul>\n      {items.map((item) => (\n        <FeedItem key={item.id + '_' + Math.random()} data={item} />\n      ))}\n    </ul>\n  );\n}\n\nExplain how this key structure sabotages the Virtual DOM diffing process during subsequent renders, and state the exact operational fix.",
+                "options": [],
+                "correctAnswer": "Appending Math.random() to the key causes every item to receive a totally unique, un-matchable key on every single render cycle. During the reconciliation phase, React cannot find any matching old key in the previous fiber map, concluding that every single item is completely new. It unmounts every existing DOM element and mounts new ones from scratch, destroying DOM nodes, layout positioning, animations, and local input focus states.",
+                "explanation": "The fix is to remove the random suffix entirely and rely strictly on a stable unique identifier: key={item.id}. This allows React to map identical entities accurately across frames.",
+                "points": 10
+            }
+        ]
+    }
+}

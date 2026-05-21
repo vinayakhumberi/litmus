@@ -87,26 +87,60 @@
   async function loadTest() {
     if (!topicId) return;
     
-    // Check for result file on file system
-    await checkExistingResult();
+    // 1. Check for result file on file system (Non-blocking)
+    checkExistingResult();
 
-    // Check for ongoing draft
+    // 2. Check for ongoing draft in LocalStorage
     const savedSession = JSON.parse(localStorage.getItem(getStorageKey()) || 'null');
     if (savedSession) {
         userAnswers = savedSession.answers || {};
     }
 
-    const paths = [`data/tests/${topicId}-test.json`, `data/tests/${topicId}.json` ];
+    // 3. Attempt to load the test JSON
+    const paths = [`data/tests/${topicId}.json`, `data/tests/${topicId}-test.json` ];
+    let loaded = false;
+
     for (const path of paths) {
       try {
         const res = await fetch(path);
         if (res.ok) {
           currentTestData = await res.json();
           renderTest();
-          return;
+          loaded = true;
+          break;
         }
       } catch (err) {}
     }
+
+    // 4. Handle Failure: Show the 'Not Found' UI immediately
+    if (!loaded) {
+        showNotFoundUI();
+    }
+  }
+
+  function showNotFoundUI() {
+    document.getElementById('test-container').innerHTML = `
+      <div class="text-center py-20 px-6">
+          <div class="text-6xl mb-8 animate-bounce">📝</div>
+          <h1 class="text-3xl font-black mb-4 tracking-tight">Test Module Missing</h1>
+          <p class="text-zinc-500 mb-10 max-w-md mx-auto leading-relaxed">
+            The assessment JSON for <span class="text-zinc-900 dark:text-zinc-100 font-bold underline decoration-blue-500/30">${topicId}</span> hasn't been generated yet.
+          </p>
+          
+          <div class="bg-zinc-100 dark:bg-zinc-900/50 p-6 rounded-2xl text-left mb-10 max-w-md mx-auto border border-zinc-200 dark:border-zinc-800 shadow-inner">
+            <p class="text-[10px] font-bold uppercase tracking-widest mb-3 text-zinc-400">Next Steps:</p>
+            <ol class="text-xs space-y-3 text-zinc-600 dark:text-zinc-400">
+                <li class="flex gap-2"><span>1.</span> <span>Go to the <b>Tracker</b> and click the 🧪 icon.</span></li>
+                <li class="flex gap-2"><span>2.</span> <span>Paste the prompt into Claude and save the output.</span></li>
+                <li class="flex gap-2"><span>3.</span> <span>Save as: <code class="text-blue-500 font-bold">data/tests/${topicId}.json</code></span></li>
+            </ol>
+          </div>
+
+          <a href="index.html" class="inline-flex items-center gap-2 bg-zinc-900 dark:bg-white dark:text-black text-white px-8 py-4 rounded-2xl font-bold hover:scale-105 transition-all shadow-xl shadow-blue-500/10">
+            <span>←</span> Back to Tracker
+          </a>
+      </div>
+    `;
   }
 
   async function checkExistingResult() {

@@ -1,0 +1,131 @@
+{
+    "test": {
+        "topicId": "fiber-architecture-and-concurrent-rendering",
+        "topicName": "Fiber architecture and concurrent rendering",
+        "totalQuestions": 10,
+        "totalPoints": 100,
+        "passingScore": 70,
+        "questions": [
+            {
+                "id": 1,
+                "type": "multiple-choice",
+                "difficulty": "easy",
+                "question": "What core problem was React Fiber primarily designed to solve compared to the old stack reconciler?",
+                "options": [
+                    "A) Reduce bundle size by tree-shaking components",
+                    "B) Allow interruptible and prioritized rendering work",
+                    "C) Eliminate the Virtual DOM entirely",
+                    "D) Replace hooks with a class-based architecture"
+                ],
+                "correctAnswer": "B) Allow interruptible and prioritized rendering work",
+                "explanation": "The old stack reconciler performed rendering synchronously and recursively, making long renders block the main thread. Fiber introduced incremental, interruptible work with prioritization and scheduling.",
+                "points": 10
+            },
+            {
+                "id": 2,
+                "type": "multiple-choice",
+                "difficulty": "easy",
+                "question": "In React Fiber, what does a Fiber node primarily represent?",
+                "options": [
+                    "A) A browser DOM node only",
+                    "B) A scheduled network request",
+                    "C) A unit of work and linked-list-based representation of a component",
+                    "D) A Redux store subscription"
+                ],
+                "correctAnswer": "C) A unit of work and linked-list-based representation of a component",
+                "explanation": "A Fiber node represents both a component instance and a unit of work. Fibers are linked using child, sibling, and return pointers instead of recursive stack frames.",
+                "points": 10
+            },
+            {
+                "id": 3,
+                "type": "multiple-choice",
+                "difficulty": "medium",
+                "question": "Which statement best describes the render phase in concurrent rendering?",
+                "options": [
+                    "A) It is always synchronous and cannot be interrupted",
+                    "B) It mutates the DOM immediately during reconciliation",
+                    "C) It can be paused, resumed, aborted, or restarted before commit",
+                    "D) It skips diffing and directly commits updates"
+                ],
+                "correctAnswer": "C) It can be paused, resumed, aborted, or restarted before commit",
+                "explanation": "Concurrent rendering allows React to split rendering work into chunks and schedule them cooperatively. The render phase is interruptible; the commit phase remains synchronous.",
+                "points": 10
+            },
+            {
+                "id": 4,
+                "type": "multiple-choice",
+                "difficulty": "hard",
+                "question": "Why does React maintain both a current Fiber tree and a work-in-progress Fiber tree?",
+                "options": [
+                    "A) To support server-side rendering and hydration simultaneously",
+                    "B) To allow double buffering during reconciliation before atomic commit",
+                    "C) To store Redux state snapshots for rollback",
+                    "D) To avoid using garbage collection in JavaScript"
+                ],
+                "correctAnswer": "B) To allow double buffering during reconciliation before atomic commit",
+                "explanation": "React builds updates on a work-in-progress tree while preserving the current UI tree. Once rendering completes, React atomically swaps the trees during commit.",
+                "points": 10
+            },
+            {
+                "id": 5,
+                "type": "short-answer",
+                "difficulty": "easy",
+                "question": "Explain the difference between the render phase and commit phase in React Fiber.",
+                "options": [],
+                "correctAnswer": "The render phase computes what changes are needed by reconciling the Fiber tree. It is interruptible in concurrent rendering. The commit phase applies mutations, refs, and lifecycle/effect executions to the DOM and is synchronous and non-interruptible.",
+                "explanation": "Candidates should demonstrate understanding that rendering and committing are separate phases with different scheduling guarantees.",
+                "points": 10
+            },
+            {
+                "id": 6,
+                "type": "short-answer",
+                "difficulty": "medium",
+                "question": "What problem does time slicing solve in concurrent rendering, and how does it improve user experience?",
+                "options": [],
+                "correctAnswer": "Time slicing prevents long rendering tasks from monopolizing the main thread. React breaks rendering into smaller chunks and yields control back to the browser between units of work, allowing user input, animations, and higher-priority tasks to remain responsive.",
+                "explanation": "Strong answers mention responsiveness, cooperative scheduling, yielding, and prioritization.",
+                "points": 10
+            },
+            {
+                "id": 7,
+                "type": "short-answer",
+                "difficulty": "hard",
+                "question": "Describe how update priorities (lanes/priorities) influence scheduling behavior in concurrent rendering.",
+                "options": [],
+                "correctAnswer": "React assigns updates to priority lanes. High-priority updates like user input are processed before lower-priority work such as transitions. Lower-priority rendering can be interrupted, deferred, or restarted if higher-priority work arrives. This enables responsive UIs while still processing expensive updates incrementally.",
+                "explanation": "Strong answers mention prioritization, interruption, preemption behavior, and responsiveness tradeoffs.",
+                "points": 10
+            },
+            {
+                "id": 8,
+                "type": "code-scenario",
+                "difficulty": "medium",
+                "question": "Scenario: A search input updates a large filtered list. Typing becomes laggy because rendering the list blocks the main thread.\n\nCode:\n\nfunction SearchPage() {\n  const [query, setQuery] = useState('');\n  const filtered = expensiveFilter(query);\n\n  return (\n    <>\n      <input value={query} onChange={(e) => setQuery(e.target.value)} />\n      <BigList items={filtered} />\n    </>\n  );\n}\n\nExplain how concurrent rendering features can improve responsiveness here, and identify the React API most appropriate for this scenario.",
+                "options": [],
+                "correctAnswer": "The expensive list rendering should be deprioritized so typing remains responsive. React concurrent rendering can interrupt lower-priority rendering work and prioritize urgent input updates. The appropriate API is startTransition or useTransition to mark the expensive list update as non-urgent.",
+                "explanation": "Expected understanding: urgent vs non-urgent updates, transitions, interruptible rendering, and responsiveness.",
+                "points": 10
+            },
+            {
+                "id": 9,
+                "type": "code-scenario",
+                "difficulty": "hard",
+                "question": "Scenario: An engineer observes that a component renders twice during development in Strict Mode and assumes concurrent rendering is causing duplicate commits.\n\nCode:\n\nfunction Dashboard() {\n  useEffect(() => {\n    console.log('Effect mounted');\n  }, []);\n\n  console.log('Render');\n\n  return <Widget />;\n}\n\nExplain why this behavior happens and clarify the relationship between Strict Mode and concurrent rendering.",
+                "options": [],
+                "correctAnswer": "Strict Mode intentionally double-invokes render and certain lifecycle/effect behaviors in development to surface unsafe side effects and non-idempotent logic. This is not duplicate DOM committing caused by concurrent rendering. Concurrent rendering enables interruptible rendering and scheduling, while Strict Mode is a development-only diagnostic tool.",
+                "explanation": "Candidates should distinguish development diagnostics from concurrent scheduling behavior.",
+                "points": 10
+            },
+            {
+                "id": 10,
+                "type": "code-scenario",
+                "difficulty": "hard",
+                "question": "Scenario: A team mutates shared state during render.\n\nCode:\n\nlet cache = [];\n\nfunction ProductList({ products }) {\n  cache.push(products.length);\n\n  return products.map((p) => <Item key={p.id} product={p} />);\n}\n\nWhy is this implementation dangerous under concurrent rendering, and what architectural principle is being violated?",
+                "options": [],
+                "correctAnswer": "Concurrent rendering may restart, replay, or abandon renders before commit. Mutating shared external state during render causes inconsistent side effects because render is expected to be pure and repeatable. The violated principle is render phase purity/idempotency.",
+                "explanation": "Strong candidates explain that render can run multiple times before commit, so side effects during render create bugs, tearing, and nondeterministic behavior.",
+                "points": 10
+            }
+        ]
+    }
+}

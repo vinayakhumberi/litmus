@@ -1,0 +1,20 @@
+{
+  "result": {
+    "topicId": "react-reconciliation",
+    "topicName": "React reconciliation and virtual DOM diffing algorithm",
+    "score": 95,
+    "testDate": "2026-05-21",
+    "passed": true,
+    "answers": {
+      "1": "A",
+      "2": "B",
+      "3": "D",
+      "4": "B",
+      "5": "This hampers the reacts diffing algorithm. React uses the keys to keep track of what needs to be updated and reconcile. When we use index and an element is inserted at the top or in-between. React diffing algorithm treats it as the same element and does not reconcile rather inserts an element at the end. If the right key is used, it would, rather carefully add the element at the given place and renders everything below",
+      "6": "In the React fiber architecture each component is denoted by a JS object, these object have a field called alternate which is used to store the reference to its counterpart. There are 2 trees the WIP and Current Tree. If the WIP tree node has alternate as null then the entire component needs to be rendered. In case there is a component already present, then its reference is stored here.\n\nDepending on the priority lane? Fast,  Medium, Slow. These fibers can be paused and its WIP data is stored in the object. And resumed when the lanes are free. This allows double buffering. ",
+      "8": "Code snippet: jsx \nfunction Parent() { \n    const [count, setCount] = useState(0);\n    return (\n        <button onClick={() => setCount(c => c + 1)}>Increment</button>\n    );\n} \n\nThis happens because button uses IIFE which generates a new function on every render:\n\nFix:\n\nfunction Parent() { \n    const [count, setCount] = useState(0);\n    const handleClick = useCallback(() => setCount(c => c + 1), []);\n    return (\n        <button onClick={handleClick}>Increment</button>\n    );\n}",
+      "9": "Scenario: Review the following implementation intended to reset a form's UI state when switching view modes.\n\nfunction UserProfile({ userId }) {\n  const [name, setName] = useState(\"\");\n\n  return (\n    <input\n      value={name}\n      onChange={(e) => setName(e.target.value)}\n    />\n  );\n}\n\nfunction ProfileEditor({ userId, isViewMode }) {\n  return (\n    <>\n      {isViewMode ? (\n        <UserProfile key=\"view\" userId={userId} />\n      ) : (\n        <UserProfile key=\"edit\" userId={userId} />\n      )}\n    </>\n  );\n}\n\nQuestion:\n\nWhat will happen to the state inside UserProfile when isViewMode toggles from true to false, and why?\nWhen isViewMode changes, React sees different keys (\"view\" vs \"edit\").\n\nBecause the keys are different:\n\nReact treats them as entirely different component instances\nThe old component is unmounted\nA new component is mounted\n\nAs a result, all local state inside UserProfile (such as name) is reset.\n\nThis happens because keys are part of component identity in React’s reconciliation algorithm. Changing the key forces React to discard the previous Fiber and create a new one.",
+      "10": "Scenario: An engineer is debugging animation glitches and incorrect state preservation in an infinite scrolling feed. The code currently assigns keys like this:\n\nfunction FeedList({ items }) {\n  return (\n    <>\n      {items.map((item, index) => (\n        <FeedCard\n          key={index}\n          item={item}\n        />\n      ))}\n    </>\n  );\n}\n\nQuestion:\n\nExplain how using the array index as the key sabotages React’s Virtual DOM reconciliation process during subsequent renders, especially when new items are inserted, removed, or reordered in the feed.\n\nWhat user-facing bugs can this cause, and what is the exact operational fix?\n\n\nfunction FeedList({ items }) {\n  return (\n    <>\n      {items.map((item) => (\n        <FeedCard\n          key={item.id}\n          item={item}\n        />\n      ))}\n    </>\n  );\n}\n\n"
+    }
+  }
+}
