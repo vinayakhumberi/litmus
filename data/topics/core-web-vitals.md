@@ -9,7 +9,7 @@ Core Web Vitals are Google's distillation of user-perceived performance into thr
 The three signals measure distinct user experience dimensions:
 
 | Metric | Measures | Good | Needs Improvement | Poor |
-|--------|----------|------|-------------------|------|
+| --- | --- | --- | --- | --- |
 | **LCP** (Largest Contentful Paint) | Perceived load speed | ≤ 2.5s | 2.5s – 4.0s | > 4.0s |
 | **CLS** (Cumulative Layout Shift) | Visual stability | ≤ 0.1 | 0.1 – 0.25 | > 0.25 |
 | **INP** (Interaction to Next Paint) | Runtime responsiveness | ≤ 200ms | 200ms – 500ms | > 500ms |
@@ -17,6 +17,77 @@ The three signals measure distinct user experience dimensions:
 CWV is measured at the **75th percentile** of page loads across real users (field data via CrUX), not median, not p95. That threshold choice is intentional and architecturally significant — your optimization strategy must target the slow cohort, not average users.
 
 **Why this is a must-know for Leads:** CWV failures are rarely caused by a single component. They're systemic — caused by architectural decisions around resource loading, render scheduling, third-party script governance, and framework hydration patterns. A Lead who can only recite definitions will be filtered out; one who maps CWV degradation to root causes in the rendering pipeline gets the offer.
+
+---
+
+## 🧩 The Full Web Vitals Family (Not Just the Big Three)
+
+"Core Web Vitals" (LCP, CLS, INP) are just the three metrics Google chose to use for Search ranking. They sit inside a longer timeline of metrics that describe different moments in a page's life — and the non-Core metrics are usually where you find the *root cause* of a Core Web Vital failure.
+
+### The page-load timeline, in order
+
+```
+Navigation Start
+      │
+      ▼
+   TTFB ─────── "How long until the server said anything at all?"
+      │           (Time to First Byte — network + server latency)
+      ▼
+   FCP ────────  "How long until the user saw *something*?"
+      │           (First Contentful Paint — first text/image pixel painted)
+      ▼
+   LCP ────────  "How long until the user saw the *main* thing?"  ⭐ CORE WEB VITAL
+      │           (Largest Contentful Paint)
+      ▼
+   TTI ────────  "How long until the page reliably responds to input?"
+      │           (Time to Interactive — deprecated from Lighthouse, but still referenced)
+      ▼
+   TBT ────────  "How much was the main thread clogged along the way?"
+      │           (Total Blocking Time — lab-only stand-in for INP)
+      ▼
+   INP ────────  "How sluggish did it FEEL to actually use the page?" ⭐ CORE WEB VITAL
+      │           (Interaction to Next Paint — measured on real clicks/taps/keys)
+      ▼
+   CLS ────────  "Did anything jump around while they were using it?" ⭐ CORE WEB VITAL
+                  (Cumulative Layout Shift — measured across the WHOLE page lifespan,
+                   not just at load, so it doesn't sit at one fixed point on this timeline)
+```
+
+### Full reference table
+
+| Metric | Full name | Measures | Field or Lab? | Role today |
+| --- | --- | --- | --- | --- |
+| **TTFB** | Time to First Byte | Server/network latency before HTML starts arriving | Both | Diagnostic — root-cause input to LCP |
+| **FCP** | First Contentful Paint | Time to *any* first pixel of content | Both | Diagnostic — root-cause input to LCP |
+| **LCP** | Largest Contentful Paint | Time to the *largest* visible content | Both | ⭐ Core Web Vital |
+| **TTI** | Time to Interactive | Time until the page is reliably ready for input | Lab only | Deprecated from Lighthouse scoring (2023), superseded by TBT/INP |
+| **TBT** | Total Blocking Time | Sum of main-thread time blocked between FCP and TTI | Lab only | Diagnostic — Lighthouse's stand-in for INP, since a lab run has no real interaction to time |
+| **FID** | First Input Delay | Delay before the *first* interaction's handler ran | Field only | Deprecated — replaced by INP in March 2024 (it only measured "input delay," one-third of the real pipeline) |
+| **INP** | Interaction to Next Paint | Worst-case full-pipeline latency across *all* interactions | Field only | ⭐ Core Web Vital |
+| **CLS** | Cumulative Layout Shift | Unexpected visual movement across the whole session | Both | ⭐ Core Web Vital |
+| **Speed Index** | Speed Index | How quickly the viewport visually fills in over time | Lab only | Diagnostic — mostly seen in Lighthouse reports only |
+
+**How they relate to each other:**
+
+- TTFB and FCP are **inputs** to LCP's causal chain (see below) — they aren't judged on their own, but a slow TTFB slows everything downstream of it.
+- TBT is what Lighthouse reports **instead of** INP, because a lab run has no real user clicking anything — there's nothing to measure input/processing/presentation delay *on*. TBT approximates "how bad would INP probably be" by summing up blocked main-thread time.
+- FID was INP's predecessor. It only measured the delay *before* a handler started running — sub-part 1 of the pipeline you'll see in the INP section below. It missed processing time and presentation delay entirely, which is why it was retired.
+
+### Priority order: which vital matters most?
+
+There are two different "priority orders" here, and conflating them is a common mistake:
+
+**1. For Search ranking, there is no priority order — all three must pass.** Google doesn't average LCP/CLS/INP or weight one above another. A page is only classified "Good" if **all three** are in the "Good" band at p75. Fail *any one* and the page is downgraded — your worst metric effectively becomes your grade.
+
+**2. For triage — what a Lead fixes first — use impact × cost:**
+
+| Priority | Metric | Why it's usually first / last |
+| --- | --- | --- |
+| 1st | **LCP** | Affects every page load (not just interactive ones), has the most well-understood fixes (image/CDN/preload), and is usually the cheapest, biggest win. |
+| 2nd | **CLS** | Root causes are usually structural CSS (missing dimensions, unreserved space) — mechanical fixes, low engineering risk, fast to ship. |
+| 3rd | **INP** | Requires profiling real interactions and is the most architecturally invasive to fix (splitting handlers, offloading to workers) — tackled last because it's the most expensive per unit of improvement. |
+
+This ordering isn't a law — a checkout flow with heavy INP complaints should jump INP straight to the top. Absent a specific signal, LCP → CLS → INP is the typical sequencing because it goes from cheapest fix to most expensive fix.
 
 ---
 
@@ -177,6 +248,32 @@ This is architecturally significant: **the browser cannot paint a new frame whil
 
 The modern fix for INP isn't just "break up long tasks." It's **yielding to the browser at the right moment in the event handler pipeline**.
 
+##### What does "yield" actually mean?
+
+JavaScript in the browser runs on a **single main thread** — the same thread that also updates styles, runs layout, and paints pixels. While your JS is running, the browser physically cannot do any of that other work; it's one thread, one queue, one thing at a time.
+
+"Yielding" means: **your function voluntarily pauses itself and hands control back to the browser**, saying "I'm not done, but this is a good checkpoint — go do whatever's more urgent, and I'll pick up right where I left off."
+
+Analogy: a cashier mid-transaction who says "let me scan the last two items after I let this person with just one item go ahead of me" — the transaction isn't abandoned, just paused at a sensible checkpoint so something more urgent can cut in.
+
+```
+WITHOUT yielding:
+Main thread: [=========== one continuous 130ms block ===========]
+                                                                 ▲
+                                                    browser can only paint here —
+                                                    user finally sees the update
+
+WITH yielding:
+Main thread: [==100ms==] (yield!) [paint happens here] [==30ms, low priority==]
+                       ▲                    ▲
+             control handed back    user sees the update
+             to the browser         almost immediately
+```
+
+`scheduler.yield()` returns a `Promise`. `await`ing it pauses your `async` function at that exact line and returns control to the browser's event loop. The browser can then paint a pending frame — or respond to a fresh click — before resuming your function as a **continuation** right after the `await`.
+
+Why not just `setTimeout(fn, 0)`? A `setTimeout` callback is a plain macrotask — it gets shoved to the back of a shared queue with every other timer and message event, with no awareness of user input. `scheduler.yield()` is priority-aware: your continuation resumes with priority *higher* than a macrotask (so it isn't starved by unrelated timers) but *lower* than a fresh user input (so a new click always wins). That's the "won't starve interactions" property.
+
 ```javascript
 // Bad: single long task, browser cannot paint until this completes
 button.addEventListener('click', async () => {
@@ -197,6 +294,35 @@ button.addEventListener('click', async () => {
   sendAnalytics();          // Runs after next paint, invisible to user
 });
 ```
+
+##### Where do the "130ms" and "INP > 200ms" numbers actually come from?
+
+The 130ms in the comment is only the **processing time** — the JS that runs after the click. INP is not just processing time; it's the full pipeline from earlier in this section:
+
+```
+INP = input delay + processing time + presentation delay
+```
+
+**Bad version — no yield:**
+
+| Phase | Time | What's happening |
+| --- | --- | --- |
+| Input delay | ~10ms | Thread was mostly free when the click landed |
+| Processing time | 130ms | `processLargeDataset` + `updateDOM` + `sendAnalytics`, all synchronous, back to back |
+| Presentation delay | ~90ms | Style/layout/paint can't even *start* until all 130ms of JS finishes — and the browser still has to do the actual paint work |
+| **Total INP** | **≈230ms** | **Poor** — over the 200ms threshold |
+
+**Good version — with `scheduler.yield()`:**
+
+| Phase | Time | What's happening |
+| --- | --- | --- |
+| Input delay | ~10ms | Same as before |
+| Processing time | 100ms | `processLargeDataset` + `updateDOM` only — the part the user is actually waiting to see |
+| Presentation delay | ~40ms | Browser paints right after the DOM update, without waiting for analytics |
+| **Total INP** | **≈150ms** | **Good** — under 200ms |
+| `sendAnalytics` (30ms) | — | Runs *after* the paint, as its own task. Invisible to the user, and **doesn't count toward INP at all**, because measurement already stopped at the paint |
+
+The fix isn't "make the code faster" — the total work is nearly identical (130ms vs. 100ms + 30ms). The fix is **moving the paint-irrelevant work (`sendAnalytics`) to after the point where the browser can already paint**, so it stops being counted in the metric the user actually experiences.
 
 `scheduler.yield()` is semantically stronger than `setTimeout(fn, 0)` or `queueMicrotask()` because it yields to the browser's task queue with higher priority than a macrotask but lower priority than user input — i.e., it won't starve interactions.
 
@@ -263,8 +389,37 @@ observer.observe({ type: 'long-animation-frame', buffered: true });
 
 This distinction matters enormously in FAANG interviews and is frequently fumbled.
 
-| | Lab Data | Field Data (RUM) |
-|---|---|---|
+**In plain terms:** Lab data is like crash-testing a single car on a closed track under controlled conditions — repeatable, but it's one car, one track, one driver profile. Field data is like pulling real insurance claims from actual drivers — messy, varied, real weather and real traffic, but it's what *actually happened* to real people.
+
+```
+                LAB DATA                             FIELD DATA (RUM)
+          ┌──────────────────┐                 ┌───────────────────────┐
+          │  Lighthouse /     │                 │  Real user's real     │
+          │  WebPageTest run  │                 │  browser, device,     │
+          │  ONE simulated    │                 │  network, mid-session │
+          │  load on a fixed  │                 │                       │
+          │  throttle profile │                 │  web-vitals.js  ──┐   │
+          └──────────────────┘                 │                    │   │
+                                                 │  Chrome telemetry  │  │
+                                                 │  (opted-in users)  │  │
+                                                 └─────────┬──────────┘  │
+                                                            │            │
+                                                            ▼            ▼
+                                                     CrUX dataset   Your RUM
+                                                  (public, 28-day   dashboard
+                                                   rolling window)  (immediate)
+                                                            │
+                                                            ▼
+                                                 Google Search ranking
+                                                 (ONLY field data is used
+                                                  here — lab data never
+                                                  touches ranking)
+```
+
+**Why Lighthouse literally cannot measure INP:** INP is defined as the latency of *real user interactions*. A Lighthouse run is a scripted, single-session simulation — no human is clicking anything, so there's no interaction for it to time. That's not a tooling gap that might get fixed later; it's structural. You cannot measure "response to a real click" without a real click. That's why the table below shows INP as unavailable for Lab data, and why a team that only watches Lighthouse scores can ship an INP regression while their report stays green (see the first anti-pattern below).
+
+|  | Lab Data | Field Data (RUM) |
+| --- | --- | --- |
 | Tools | Lighthouse, WebPageTest | CrUX, web-vitals.js |
 | Conditions | Controlled, single user | Real users, all conditions |
 | Use for | Debugging, regression testing | Reporting to Search, business decisions |
@@ -379,6 +534,48 @@ graph LR
 
 ---
 
+## 🩺 Metric-by-Metric Diagnosis Framework
+
+A single lookup for each metric: how it's calculated, what it feels like when it's broken, how to diagnose it, and how to fix it. Everything here pulls together the deep-dive sections above — use this as the quick-reference version.
+
+### LCP
+
+| | |
+| --- | --- |
+| **Calculation** | Timestamp of the largest visible content element's render, measured from navigation start. The browser tracks candidates as they appear and keeps the largest one; the value freezes at the first user interaction or when the tab is backgrounded. |
+| **Symptoms** | Page "feels slow to load," hero image/banner appears late, visible blank space where main content should be, users bounce before content appears. |
+| **Diagnosis** | 1) `PerformanceObserver` on the `largest-contentful-paint` entry — gives the actual element + URL. 2) Segment CrUX data by device class and connection type (p75 is usually dominated by mobile/4G). 3) Break the value into its 4 sub-parts (TTFB → resource load delay → resource load duration → element render delay) to find which one is inflated. |
+| **Fixes** | `fetchpriority="high"` + `preload` on the confirmed LCP resource, remove render-blocking scripts/styles, image CDN + modern formats (WebP/AVIF), 103 Early Hints, avoid late client-side hydration of the LCP element. |
+
+### CLS
+
+| | |
+| --- | --- |
+| **Calculation** | `impact_fraction × distance_fraction` per shift, summed within 5-second session windows (≤1s gaps between shifts). Reported CLS = the single largest window's total. |
+| **Symptoms** | Content visibly jumps while loading or while being read, users misclick buttons that moved, complaints about the page "shifting under me." |
+| **Diagnosis** | 1) `PerformanceObserver` on `layout-shift` entries — `entry.sources` names the exact elements that moved. 2) DevTools Performance panel → Experience section flags each shift. 3) Confirm severity/frequency against CrUX field data. |
+| **Fixes** | Explicit `width`/`height` or `aspect-ratio` on images, reserve space (min-height/skeleton) for injected content (ads, banners, personalization, cookie banners), `font-display: optional` + `size-adjust`/`ascent-override` for fonts, animate only `transform`/`opacity`. |
+
+### INP
+
+| | |
+| --- | --- |
+| **Calculation** | For every real interaction (click/key/tap) during the page's life: `input delay + processing time + presentation delay`. INP is the worst interaction's latency (with outlier capping for pages with many interactions). |
+| **Symptoms** | Clicking or typing "feels laggy," visible delay between action and UI response, users double-clicking or double-tapping out of frustration. |
+| **Diagnosis** | 1) `web-vitals.js` with the attribution build → per-interaction breakdown (`inputDelay`, `processingDuration`, `presentationDelay`, target element). 2) `PerformanceObserver` on `long-animation-frame` (LoAF) entries to find and attribute long tasks. 3) DevTools Performance panel with CPU throttling to reproduce on lower-end hardware. |
+| **Fixes** | `scheduler.yield()` to split long tasks around paint checkpoints, move expensive work off the critical path (Web Workers, debouncing), virtualize large lists, defer non-urgent work (analytics, logging) until after the yield point, `startTransition` for React state updates that aren't urgent. |
+
+### Supporting metrics (not Core, but drive the diagnosis)
+
+| | TTFB | FCP |
+| --- | --- | --- |
+| **Calculation** | Time from navigation start to the first byte of the HTML response | Time from navigation start to the first bit of DOM content painted |
+| **Symptoms** | Everything downstream feels slow; long "white screen" before anything happens | Blank screen before *any* content shows, even before the main content |
+| **Diagnosis** | Server/CDN response time in the waterfall; check origin latency, redirect chains, DNS/TLS handshake time | Waterfall — what's blocking the first paint (render-blocking CSS/JS in `<head>`) |
+| **Fixes** | Edge SSR, CDN, HTTP/3, caching, reduce redirect hops | Inline critical CSS, defer non-critical JS, reduce render-blocking resources |
+
+---
+
 ## 🏢 Interview Context & FAANG Signals
 
 ### Where CWV appears in the loop
@@ -391,7 +588,7 @@ graph LR
 ### Lead signals interviewers are listening for
 
 | Signal | What they want to hear |
-|--------|----------------------|
+| --- | --- |
 | **Systems thinking** | "LCP degraded because our A/B testing framework injects above-the-fold variants synchronously" — tracing the metric to an architectural cause |
 | **RUM ownership** | Knowing that Lighthouse cannot measure INP; having instrumented web-vitals.js in production |
 | **Trade-off articulation** | "Preloading the LCP image improves LCP but can delay TTI by consuming bandwidth — here's how I'd measure the net effect" |
@@ -405,11 +602,13 @@ graph LR
 ### Scenario: "LCP on our product page is 4.2s at p75. How do you fix it?"
 
 **Senior response:**
+
 > "I'd run Lighthouse to identify the LCP element. If it's an image, I'd add `rel=preload`, convert it to WebP, and remove any `loading=lazy` attribute. I'd also check for render-blocking scripts and defer them."
 
 This is correct, but it's a checklist. It doesn't demonstrate causal reasoning, measurement strategy, or organizational influence.
 
 **Staff/Lead response:**
+
 > "Before touching anything, I'd decompose the 4.2s into its four sub-parts using CrUX field data segmented by device class and connection type. p75 CWV is often dominated by mobile on 4G — desktop is probably fine. If most of the time is in resource load delay, render-blocking resources are the culprit, likely a synchronous analytics or A/B testing script. If it's in resource load duration, we have a CDN or image optimization problem.
 >
 > I'd then cross-reference with our A/B experiment surface area — a new experiment that injects above-the-fold content or adds a third-party dependency is the most common source of sudden LCP regressions.
@@ -423,37 +622,49 @@ The key differences: **sub-part decomposition, field data segmentation, regressi
 ## ⚠️ Common Pitfalls & Anti-Patterns
 
 > ### ✕ Optimizing for Lab Data Only
+>
 > **Why it's wrong:** Lighthouse runs on a controlled machine with simulated throttling. INP is unmeasurable in Lighthouse. CLS often misses post-load shifts. A perfectly green Lighthouse score can coexist with failing field CWV. Teams that optimize for Lighthouse scores often ship regressions that only appear in production.
+>
 > **✓ Correct Lead Approach:** Treat Lighthouse as a regression detection tool in CI, not a production health signal. Instrument `web-vitals.js` in production, report to a RUM backend segmented by device type and connection class, and alert on p75 field degradation — not Lighthouse score drops.
 
 ---
 
 > ### ✕ Blanket `loading="lazy"` on All Images
+>
 > **Why it's wrong:** `loading="lazy"` on the LCP image is one of the most common CWV killers. It instructs the browser to defer fetching until the image is near the viewport — but the LCP image *is* in the viewport. The browser preload scanner discovers it, sees lazy, and delays the fetch until layout is complete. This can add 500ms+ to LCP on cold loads.
+>
 > **✓ Correct Lead Approach:** Apply `loading="lazy"` only to images below the fold. Use `loading="eager"` (or omit entirely) for LCP candidates and any above-fold image. Pair with `fetchpriority="high"` on the confirmed LCP element. Enforce this via lint rules or automated image auditing in CI.
 
 ---
 
 > ### ✕ Using `setTimeout(fn, 0)` to "Fix" INP
+>
 > **Why it's wrong:** `setTimeout(fn, 0)` is a macrotask with ~4ms minimum delay and no priority semantics. On a congested main thread, it can be delayed significantly. More critically, it moves the deferred work *after* a frame paint, but does nothing to split long tasks *within* the event handler pipeline — the presentation delay sub-part is unaffected.
+>
 > **✓ Correct Lead Approach:** Use `scheduler.yield()` (with polyfill: `new Promise(r => setTimeout(r, 0))` as fallback) at the specific yield point after DOM updates. Profile with Chrome DevTools' Performance tab to identify which sub-part of INP (input delay vs processing vs presentation) is the bottleneck before applying any fix.
 
 ---
 
 > ### ✕ Attributing CLS Entirely to Frontend
+>
 > **Why it's wrong:** CLS is frequently caused by server-driven content changes — A/B test variant swaps, personalization injection, ad slot resizing, cookie banner initialization. Treating it as a pure frontend CSS problem misdiagnoses the root cause and results in surface-level fixes that don't survive the next marketing campaign.
+>
 > **✓ Correct Lead Approach:** Audit CLS sources by type. For server-driven content: require that all personalized or experimental content reserves its final layout space in the initial HTML, either as a skeleton or with explicit min-height. For ads: use fixed-size containers. Establish a governance process where marketing/growth changes require a CLS impact review before ship.
 
 ---
 
 > ### ✕ Treating CWV as a One-Time Project
+>
 > **Why it's wrong:** CWV regressions are continuous. Every new A/B test, third-party script, feature launch, or image upload pipeline change is a potential regression vector. Fixing CWV once and declaring victory is not a Lead posture; it's a Senior task.
+>
 > **✓ Correct Lead Approach:** Build CWV into the SDLC: performance budgets in CI, Lighthouse CI gating on PRs, automated CrUX data pulls into dashboards, alert thresholds on p75 field metrics. Own the regression prevention process, not just the one-time fix.
 
 ---
 
 > ### ✕ Preloading Everything "Just in Case"
+>
 > **Why it's wrong:** `rel=preload` consumes bandwidth immediately. Preloading multiple resources races for the same connection pool and can starve the LCP resource — particularly on mobile connections. Preload with no `fetchpriority` hint leaves priority resolution to browser heuristics, which may rank it lower than expected.
+>
 > **✓ Correct Lead Approach:** Preload only the confirmed LCP resource per page template type. Use `fetchpriority="high"` explicitly. Measure the effect with WebPageTest waterfall before and after to validate the resource ordering is as intended, not assumed.
 
 ---
@@ -499,8 +710,9 @@ You can't eliminate the shift if the content is injected dynamically, but you ca
 **Approach:**
 1. **Static reservation:** Add a `min-height: 250px` container where the ad will be injected, immediately in the HTML. When the ad loads, it fills the reserved space — no elements shift.
 2. **CSS containment:** Apply `contain: layout` to the ad container. This establishes a containment context so any internal shifts within the container don't propagate upward to affect CLS of the broader page.
-3. **contractual SLA:** Work with the partner to require that their script declares a fixed height for the slot in advance. Many ad networks have this capability — it's a negotiation/procurement issue, not just a technical one. A Lead owns that conversation.
+3. **Contractual SLA:** Work with the partner to require that their script declares a fixed height for the slot in advance. Many ad networks have this capability — it's a negotiation/procurement issue, not just a technical one. A Lead owns that conversation.
 4. **Monitor with attribution:** Use the Layout Instability API to verify the specific elements causing shifts and confirm the fix works:
+
 ```javascript
 const observer = new PerformanceObserver((list) => {
   for (const entry of list.getEntries()) {
@@ -537,7 +749,7 @@ If not already virtualized, this is the first fix. React Window or TanStack Virt
 const handleSort = (column: string) => {
   // Immediate: show loading indicator (urgent)
   setLoadingColumn(column);
-  
+
   // Deferred: expensive sort + re-render (non-urgent)
   startTransition(() => {
     setSortConfig({ column, direction: getNextDirection(column) });
@@ -654,11 +866,8 @@ Field data shows INP > 500ms on mid-range Android devices (Moto G4 class) for a 
 **Diagnosis without the device:**
 
 1. **LoAF-based attribution in production RUM:** If you've instrumented `web-vitals.js` with `reportAllChanges: true` and the `attribution` build, the `metric.attribution` object on INP reports contain `interactionTargetElement`, `inputDelay`, `processingDuration`, and `presentationDelay`. This tells you *which phase* is slow without needing the device.
-
 2. **Chrome DevTools CPU throttling:** 6x slowdown simulates Moto G4 class performance reasonably well. Use the Performance panel with throttling to profile the checkout interaction.
-
 3. **Remote debugging via Chrome DevTools with an emulated device:** Not as accurate as a real device but sufficient for identifying long tasks.
-
 4. **WebPageTest with real device lab:** WebPageTest provides real Android devices. Script the checkout interaction and get a full Performance trace.
 
 **Common cause on mid-range devices:**
