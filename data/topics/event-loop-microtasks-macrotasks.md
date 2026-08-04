@@ -149,6 +149,7 @@ Each `await` suspends the async function and enqueues a microtask continuation. 
 ### Diagram 1: Event Loop Execution Flow
 
 ```mermaid
+%%{init: {"theme": "base", "themeVariables": {"background":"transparent","primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#64748b","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","clusterBkg":"#1e293b","clusterBorder":"#475569","fontFamily":"\"Plus Jakarta Sans\", sans-serif","fontSize":"14px"}}}%%
    flowchart TD
     %% ===== Main Loop =====
     A(["🚀 Script / Macrotask Starts"])
@@ -198,12 +199,12 @@ Each `await` suspends the async function and enqueues a microtask continuation. 
     N -- "📥 Macrotask" --> P[("Macrotask Queue")]
 
     %% ===== Styles =====
-    classDef start fill:#0f172a,stroke:#38bdf8,color:#ffffff,stroke-width:2px;
-    classDef process fill:#1e293b,stroke:#818cf8,color:#ffffff,stroke-width:2px;
-    classDef decision fill:#312e81,stroke:#c084fc,color:#ffffff,stroke-width:2px;
-    classDef queue fill:#064e3b,stroke:#34d399,color:#ffffff,stroke-width:2px;
-    classDef render fill:#4c1d95,stroke:#f472b6,color:#ffffff,stroke-width:2px;
-    classDef async fill:#7c2d12,stroke:#fb923c,color:#ffffff,stroke-width:2px;
+    classDef start fill:#0369a1,stroke:#7dd3fc,color:#f0f9ff,stroke-width:1.5px;
+    classDef process fill:#475569,stroke:#cbd5e1,color:#f8fafc,stroke-width:1.5px;
+    classDef decision fill:#4338ca,stroke:#c4b5fd,color:#f5f3ff,stroke-width:1.5px;
+    classDef queue fill:#047857,stroke:#6ee7b7,color:#ecfdf5,stroke-width:1.5px;
+    classDef render fill:#6d28d9,stroke:#f9a8d4,color:#fdf4ff,stroke-width:1.5px;
+    classDef async fill:#c2410c,stroke:#fdba74,color:#fff7ed,stroke-width:1.5px;
 
     class A start;
     class B,C,E,H,K,L,M process;

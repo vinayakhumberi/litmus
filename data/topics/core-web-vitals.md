@@ -299,6 +299,7 @@ onINP((metric) => {
 ### Diagram 1 — LCP Sub-Part Decomposition and Fix Mapping
 
 ```mermaid
+%%{init: {"theme": "base", "themeVariables": {"background":"transparent","primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#64748b","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontFamily":"\"Plus Jakarta Sans\", sans-serif","fontSize":"14px"}}}%%
 graph TD
     A["Navigation Start"] --> B["TTFB"]
     B --> C["Resource Load Delay"]
@@ -311,12 +312,13 @@ graph TD
     D -- "Fix: Image CDN,<br>WebP/AVIF, fetchpriority=high,<br>Reduce image byte size" --> D
     E -- "Fix: Reduce JS execution<br>before paint, avoid<br>late hydration on LCP element" --> E
 
-    style A fill:#1a1a2e,stroke:#4a90d9,color:#fff
-    style F fill:#0d3b2e,stroke:#2ecc71,color:#fff
-    style B fill:#2d1b4e,stroke:#9b59b6,color:#fff
-    style C fill:#2d1b4e,stroke:#9b59b6,color:#fff
-    style D fill:#2d1b4e,stroke:#9b59b6,color:#fff
-    style E fill:#2d1b4e,stroke:#9b59b6,color:#fff
+    classDef start fill:#0369a1,stroke:#7dd3fc,color:#f0f9ff,stroke-width:1.5px;
+    classDef subpart fill:#4338ca,stroke:#c4b5fd,color:#f5f3ff,stroke-width:1.5px;
+    classDef result fill:#047857,stroke:#6ee7b7,color:#ecfdf5,stroke-width:1.5px;
+
+    class A start;
+    class B,C,D,E subpart;
+    class F result;
 ```
 
 ---
@@ -324,6 +326,7 @@ graph TD
 ### Diagram 2 — INP Interaction Pipeline and Scheduler.yield() Intervention
 
 ```mermaid
+%%{init: {"theme": "base", "themeVariables": {"background":"transparent","actorBkg":"#334155","actorBorder":"#64748b","actorTextColor":"#f1f5f9","actorLineColor":"#64748b","signalColor":"#94a3b8","signalTextColor":"#e2e8f0","noteBkgColor":"#4338ca","noteBorderColor":"#818cf8","noteTextColor":"#f5f3ff","activationBkgColor":"#475569","activationBorderColor":"#94a3b8","labelBoxBkgColor":"#334155","labelBoxBorderColor":"#64748b","labelTextColor":"#f1f5f9","loopTextColor":"#f1f5f9","fontFamily":"\"Plus Jakarta Sans\", sans-serif","fontSize":"14px"}}}%%
 sequenceDiagram
     participant U as "User"
     participant MT as "Main Thread"
@@ -347,6 +350,7 @@ sequenceDiagram
 ### Diagram 3 — CLS Session Window Model
 
 ```mermaid
+%%{init: {"theme": "base", "themeVariables": {"background":"transparent","primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#64748b","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontFamily":"\"Plus Jakarta Sans\", sans-serif","fontSize":"14px"}}}%%
 graph LR
     A["Shift 1<br>t=0.5s<br>score=0.04"] --> W1["Session Window 1"]
     B["Shift 2<br>t=1.2s<br>score=0.06"] --> W1
@@ -360,8 +364,17 @@ graph LR
     W2 -- "Sum = 0.19" --> CLS_CALC
     CLS_CALC --> RESULT["Reported CLS = 0.19<br>(largest window wins)"]
 
-    style RESULT fill:#2d1010,stroke:#e74c3c,color:#fff
-    style CLS_CALC fill:#1a2d1a,stroke:#27ae60,color:#fff
+    classDef shift fill:#0369a1,stroke:#7dd3fc,color:#f0f9ff,stroke-width:1.5px;
+    classDef window fill:#475569,stroke:#cbd5e1,color:#f8fafc,stroke-width:1.5px;
+    classDef flow fill:#4338ca,stroke:#c4b5fd,color:#f5f3ff,stroke-width:1.5px;
+    classDef calc fill:#047857,stroke:#6ee7b7,color:#ecfdf5,stroke-width:1.5px;
+    classDef result fill:#b91c1c,stroke:#fca5a5,color:#fef2f2,stroke-width:1.5px;
+
+    class A,B,C,F,G shift;
+    class W1,W2 window;
+    class D,E flow;
+    class CLS_CALC calc;
+    class RESULT result;
 ```
 
 ---
