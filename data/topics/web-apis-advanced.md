@@ -6,12 +6,14 @@
 
 These four APIs are the browser's answer to a single recurring problem: **how do you do expensive work without fighting the render pipeline?** Each one is a different scheduling primitive, tied to a different point in the browser's frame lifecycle — and the interview signal isn't "do you know the method names," it's **do you know exactly when each callback fires relative to the event loop, and can you pick the right one under a specific performance constraint.**
 
-- **`requestAnimationFrame` (rAF)** — runs once per frame, right before the browser recalculates style, layout, and paints. The only place to safely read/write the DOM for visual updates without risking a dropped frame.
-- **`requestIdleCallback` (rIC)** — runs only when the main thread has genuinely nothing more important to do before the next frame. For low-priority work you're willing to defer indefinitely.
-- **`IntersectionObserver`** — asynchronously reports when an element crosses a visibility threshold, without ever forcing a synchronous layout calculation — the direct fix for the classic "scroll listener + `getBoundingClientRect()`" performance disaster.
-- **`MutationObserver`** — asynchronously (as a microtask) reports DOM tree changes, replacing the old synchronous Mutation Events that could tank performance by firing once per mutation, on the main thread, blocking everything.
+- `requestAnimationFrame` **(rAF)** — runs once per frame, right before the browser recalculates style, layout, and paints. The only place to safely read/write the DOM for visual updates without risking a dropped frame.
+- `requestIdleCallback` **(rIC)** — runs only when the main thread has genuinely nothing more important to do before the next frame. For low-priority work you're willing to defer indefinitely.
+- `IntersectionObserver` — asynchronously reports when an element crosses a visibility threshold, without ever forcing a synchronous layout calculation — the direct fix for the classic "scroll listener + `getBoundingClientRect()`" performance disaster.
+- `MutationObserver` — asynchronously (as a microtask) reports DOM tree changes, replacing the old synchronous Mutation Events that could tank performance by firing once per mutation, on the main thread, blocking everything.
 
 **Why this is a must-know for Leads:** every one of these APIs exists because someone at a browser vendor watched real production code do something catastrophically slow (layout thrashing from scroll handlers, synchronous mutation events, jank from unthrottled visual updates) and built a scheduling primitive specifically to make the correct approach the easy one. A Lead who can place all four of these precisely on the event loop timeline — and explain *why* React's own Scheduler deliberately avoids `requestIdleCallback` — is demonstrating exactly the kind of systems-level browser fluency this level of interview is designed to filter for.
+
+**A note on scope:** "Observer" is not one execution model — it's a naming convention the platform reused for at least five APIs that fire at genuinely different points in the pipeline. This document also classifies `ResizeObserver`, `PerformanceObserver`, and `ReportingObserver` alongside the two named in the title, because knowing *which bucket* a given observer falls into (microtask, render-step, or ordinary task) is the actual transferable skill — not memorizing four specific method names.
 
 ---
 
@@ -46,17 +48,18 @@ Before touching each API individually, the mental model that matters most: **the
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-The single most important fact this diagram encodes: **`MutationObserver` is a microtask** (runs after every task, deterministically, before rendering), **`rAF` is tied to the render step** (runs once per frame, guaranteed if the tab is visible), **`IntersectionObserver`** is delivered asynchronously by the browser's own internal scheduling (not on a fixed cadence you control), and **`rIC`** is the only one of the four with **no timing guarantee at all** — it might not run for seconds if the main thread stays busy.
+The single most important fact this diagram encodes: `MutationObserver` **is a microtask** (runs after every task, deterministically, before rendering), `rAF` **is tied to the render step** (runs once per frame, guaranteed if the tab is visible), `IntersectionObserver` is delivered asynchronously by the browser's own internal scheduling (not on a fixed cadence you control), and `rIC` is the only one of the four with **no timing guarantee at all** — it might not run for seconds if the main thread stays busy.
 
 ### `requestAnimationFrame` — the only correct place for visual DOM updates
 
 rAF callbacks run **synchronously, on the main thread, once per frame**, immediately before the browser performs style recalculation and layout. This timing is exactly why it's the correct primitive for animations and any DOM read/write that needs to be visually consistent within a single frame.
 
-**Frame budget:** at a 60Hz display, you have ~16.6ms per frame for all of: JS execution (including your rAF callback), style, layout, paint, and composite. On a 120Hz ProMotion display, that budget halves to ~8.3ms — the browser calls rAF callbacks more frequently to match, which is a real, underappreciated performance cliff: code that felt fine at 60Hz can start dropping frames on high-refresh-rate hardware simply because it now has half the time per frame.
+**Frame budget:** at a 60Hz display, you have \~16.6ms per frame for all of: JS execution (including your rAF callback), style, layout, paint, and composite. On a 120Hz ProMotion display, that budget halves to \~8.3ms — the browser calls rAF callbacks more frequently to match, which is a real, underappreciated performance cliff: code that felt fine at 60Hz can start dropping frames on high-refresh-rate hardware simply because it now has half the time per frame.
 
 **Batching within a frame:** if you call `requestAnimationFrame` again *from inside* a rAF callback, that new callback is scheduled for the **next** frame, not the current one — this is what makes rAF safe for recursive animation loops without runaway synchronous recursion.
 
 **The FLIP technique — the canonical rAF interview pattern:**
+
 ```javascript
 // FLIP: First, Last, Invert, Play — animate layout changes performantly
 function flipMove(element, applyLayoutChange) {
@@ -80,9 +83,11 @@ function flipMove(element, applyLayoutChange) {
   });
 }
 ```
+
 The `requestAnimationFrame` here isn't decorative — without it, setting `transition` and clearing `transform` in the same synchronous block would never trigger a visible transition, because the browser batches the style changes and never gets a chance to paint the "before" state. The rAF forces a frame boundary between "snap to the inverted position" and "animate to the true position."
 
 **Layout thrashing — the failure mode rAF exists to prevent:**
+
 ```javascript
 // BAD: interleaved reads and writes force a synchronous layout on every iteration
 elements.forEach(el => {
@@ -96,6 +101,7 @@ elements.forEach((el, i) => {
   el.style.height = heights[i] * 2 + 'px'; // all WRITES second
 });
 ```
+
 This read/write batching principle is exactly what rAF-based scheduling libraries (like `fastdom`) automate: queue all DOM reads into one rAF-adjacent phase, all writes into another, so the browser only performs one layout pass per frame instead of one per element.
 
 ### `requestIdleCallback` — genuinely low-priority, genuinely unreliable
@@ -115,7 +121,7 @@ requestIdleCallback((deadline) => {
 
 `deadline.timeRemaining()` returns how much idle time is left in this callback invocation (never guaranteed to be more than a few milliseconds), and `timeRemaining()` returns `0` immediately if a higher-priority task becomes pending — the browser can cut your idle time short mid-callback. The `timeout` option is the only guarantee rIC offers: without it, a busy main thread can starve your callback indefinitely.
 
-**Why React's Scheduler does NOT use `requestIdleCallback`:** this is one of the highest-signal facts a Lead can bring up unprompted. React needs **predictable, frequent, short time slices** (roughly 5ms chunks) to implement cooperative time-slicing for Concurrent Mode/Fiber — interrupting rendering work to let high-priority updates (like user input) through. `requestIdleCallback` fails this requirement on two counts: idle periods are **infrequent and unpredictable** (the browser might not consider the thread idle for a long stretch under load, exactly when React most needs to yield), and **it was never reliably implemented across browsers** (notably unsupported in Safari for years). React's `scheduler` package instead builds its own frame-rate-aware scheduler on top of a `MessageChannel` — posting a message creates a **macrotask** that runs after the current task and after paint, at a controllable/frequent cadence, giving React predictable yield points independent of the browser's own idle-time heuristics.
+**Why React's Scheduler does NOT use** `requestIdleCallback`**:** this is one of the highest-signal facts a Lead can bring up unprompted. React needs **predictable, frequent, short time slices** (roughly 5ms chunks) to implement cooperative time-slicing for Concurrent Mode/Fiber — interrupting rendering work to let high-priority updates (like user input) through. `requestIdleCallback` fails this requirement on two counts: idle periods are **infrequent and unpredictable** (the browser might not consider the thread idle for a long stretch under load, exactly when React most needs to yield), and **it was never reliably implemented across browsers** (notably unsupported in Safari for years). React's `scheduler` package instead builds its own frame-rate-aware scheduler on top of a `MessageChannel` — posting a message creates a **macrotask** that runs after the current task and after paint, at a controllable/frequent cadence, giving React predictable yield points independent of the browser's own idle-time heuristics.
 
 ### `IntersectionObserver` — visibility detection without touching layout
 
@@ -173,20 +179,127 @@ observer.disconnect();
 
 Because delivery is a microtask, a `MutationObserver` callback is guaranteed to run **before the next paint and before any pending macrotask**, but *after* the current synchronous block of code finishes — this is precisely why a common bug is expecting the callback to fire "immediately" inside the same synchronous function that triggered the mutation; it never does, by design.
 
+### `ResizeObserver` — the size-detection sibling of IntersectionObserver
+
+Where `IntersectionObserver` answers "is this element visible?", `ResizeObserver` answers "did this element's box change size?" — and it exists to kill the exact same anti-pattern in a different disguise: a `window.resize` listener plus `element.getBoundingClientRect()`, which forces the same synchronous layout recalculation `IntersectionObserver` was built to avoid.
+
+```javascript
+const observer = new ResizeObserver((entries) => {
+  for (const entry of entries) {
+    const { inlineSize, blockSize } = entry.contentBoxSize[0]; // logical, writing-mode-aware
+    console.log(`Element resized to ${inlineSize}×${blockSize}`);
+  }
+});
+
+observer.observe(containerElement, { box: 'content-box' }); // or 'border-box', 'device-pixel-content-box'
+```
+
+**Timing — the detail that separates this from `IntersectionObserver`:** `ResizeObserver` callbacks are explicitly specified to run **after layout has been calculated for this frame, but before paint** — the browser needs the post-layout box size to have anything to report. This creates a genuine hazard: if a `ResizeObserver` callback itself changes a size (e.g., resizing a child in response to observing a parent), that can trigger *another* layout and *another* round of resize notifications, all still before this frame paints. The spec bounds this with a **loop limit** — if resize notifications don't converge within a small number of iterations, the browser gives up, skips notifying for that frame, and fires an `ResizeObserver loop limit exceeded` error instead of hanging the page.
+
+**Why a Lead should know this over "just use `window.onresize`":** `window.resize` only fires for viewport size changes, not for arbitrary element resizes (a sidebar collapsing, a flex item reflowing due to sibling content). `ResizeObserver` is the only correct primitive for "this specific element changed size, for any reason" — including reasons that have nothing to do with the window at all (font loading, dynamic content, container queries before they were natively supported).
+
+### `PerformanceObserver` and `ReportingObserver` — task-queued, not render-tied at all
+
+These two are the observers most candidates forget exist, and they break the pattern of the previous three in an important way: **they are not synchronized with rendering at all.** Both are delivered by queuing an ordinary **task** (a macrotask) whenever new entries are available — they don't care about frames, layout, or paint, because the data they report (performance timing, deprecation reports) has no visual component to synchronize with.
+
+```javascript
+// PerformanceObserver — the RUM instrumentation backbone
+const perfObserver = new PerformanceObserver((list) => {
+  for (const entry of list.getEntries()) {
+    console.log(entry.entryType, entry.name, entry.startTime, entry.duration);
+  }
+});
+
+perfObserver.observe({
+  type: 'largest-contentful-paint',
+  buffered: true, // also deliver entries recorded BEFORE this observer was created
+});
+
+// ReportingObserver — deprecation and intervention reports, for auditing platform usage at scale
+const reportingObserver = new ReportingObserver((reports) => {
+  reports.forEach(report => sendToTelemetry(report.type, report.body));
+}, { types: ['deprecation', 'intervention'], buffered: true });
+
+reportingObserver.observe();
+```
+
+Because delivery rides on the ordinary task queue rather than a microtask or a render step, a `PerformanceObserver` callback can be measurably delayed relative to when the entry was actually recorded — if the main thread is busy with other tasks, your callback simply waits its turn like any other task. This is precisely why `web-vitals.js` (covered in the Core Web Vitals topic) layers its own attribution and reporting logic on top of raw `PerformanceObserver` entries rather than assuming instant delivery.
+
+`ReportingObserver` is the most niche of the five — its primary use is auditing real-world usage of deprecated or soon-to-be-removed browser features across a large user base before a breaking change ships, which is a platform/infrastructure concern more than a typical product-feature one. Knowing it exists, unprompted, is a strong "I operate at ecosystem scale, not just component scale" signal in a Staff/Principal loop.
+
 ### Comparison table — the summary a Lead should be able to produce from memory
 
-| API | Fires as | Guaranteed? | Forces layout? | Typical use case |
-| --- | --- | --- | --- | --- |
-| `requestAnimationFrame` | Once per frame, pre-render | Yes, if tab is visible | No (unless you read layout properties inside it without batching) | Animations, visual DOM sync, FLIP transitions |
-| `requestIdleCallback` | During idle periods only | **No** — `timeout` is the only guarantee | No | Low-priority background work, analytics batching, prefetch |
-| `IntersectionObserver` | Async, browser-batched | Delivered eventually, timing not controlled by you | **No** — this is its entire purpose | Lazy loading, infinite scroll, viewability tracking |
-| `MutationObserver` | As a microtask, batched | Yes — deterministic per spec | No | Detecting third-party/uncontrolled DOM changes, a11y live regions |
+| API | Timing category | Fires as | Guaranteed? | Forces layout? | Typical use case |
+| --- | --- | --- | --- | --- | --- |
+| `MutationObserver` | Microtask | As a microtask, batched | Yes — deterministic per spec | No | Detecting third-party/uncontrolled DOM changes, a11y live regions |
+| `requestAnimationFrame` | Render-step | Once per frame, pre-render | Yes, if tab is visible | No (unless you read layout properties inside it without batching) | Animations, visual DOM sync, FLIP transitions |
+| `ResizeObserver` | Render-step | Post-layout, pre-paint, batched | Yes, when a size change occurred | No — reads a size the browser already computed | Responsive components, container-query-style logic |
+| `IntersectionObserver` | Render-step | Async, browser-batched | Delivered eventually, timing not controlled by you | **No** — this is its entire purpose | Lazy loading, infinite scroll, viewability tracking |
+| `PerformanceObserver` | Ordinary task | Queued as a task when entries exist | Eventually, subject to main-thread contention | No | RUM instrumentation — LCP/INP/long tasks/resource timing |
+| `ReportingObserver` | Ordinary task | Queued as a task, low priority | Eventually | No | Auditing deprecated/intervention usage at scale |
+| `requestIdleCallback` | Idle | During idle periods only | **No** — `timeout` is the only guarantee | No | Low-priority background work, analytics batching, prefetch |
 
 ---
 
 ## 📊 Visual Architecture & Logic
 
-### Diagram 1 — Where Each API Fires in the Frame Lifecycle
+### Diagram 1 — Opening the Black Box: The Full "Update the Rendering" Pipeline
+
+The diagram in the earlier section was the simplified version. This one unpacks the box fully — including the two branches most explanations skip entirely: the bounded `ResizeObserver` retry loop, and the fact that `PerformanceObserver`/`ReportingObserver` don't participate in the rendering pipeline **at all** — they run off an entirely separate, ordinary task queue (shown as the dotted branch on the right).
+
+```mermaid
+%%{init: {"theme": "base", "themeVariables": {"background":"transparent","primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#64748b","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontFamily":"\"Plus Jakarta Sans\", sans-serif","fontSize":"14px"}}}%%
+graph TD
+    Start(["Task on the call stack completes"]) --> MC["Microtask checkpoint:<br>drain the Promise .then() queue"]
+    MC --> MO["Run MutationObserver callbacks<br>(ONE batched callback per checkpoint)"]
+    MO --> RQ{"Is this a rendering<br>opportunity?<br>(browser decides, ~once per refresh)"}
+
+    RQ -- "No" --> IdleGate
+    RQ -- "Yes" --> RAF["Run requestAnimationFrame callbacks<br>(and requestVideoFrameCallback)"]
+    RAF --> SL["Recalculate style + run Layout<br>(computed lazily, only when something needs it)"]
+    SL --> RC{"Did any observed element's<br>box size change?"}
+
+    RC -- "Yes" --> RO["Run ResizeObserver callbacks<br>(post-layout, pre-paint)"]
+    RO --> RL{"Did a callback<br>trigger another resize?"}
+    RL -- "Yes (bounded retries)" --> SL
+    RL -- "No, converged" --> Scroll
+    RC -- "No" --> Scroll["Run scroll steps,<br>update animations & media queries"]
+
+    Scroll --> IO["Run IntersectionObserver callbacks<br>(update intersection observations)"]
+    IO --> Paint["Paint"]
+    Paint --> Composite["Composite"]
+    Composite --> IdleGate{"Time remaining<br>before the next task is due?"}
+
+    IdleGate -- "Yes" --> RIC["Run requestIdleCallback callbacks<br>(deadline.timeRemaining() greater than 0)"]
+    IdleGate -- "No" --> SkipRIC["Skipped this cycle<br>(reschedule via timeout if set)"]
+    RIC --> Next(["Next event loop iteration"])
+    SkipRIC --> Next
+
+    TQ["Ordinary task queue<br>— entirely separate from rendering"] -.-> PO["PerformanceObserver callbacks<br>queued whenever entries are buffered"]
+    TQ -.-> RepO["ReportingObserver callbacks<br>queued, low priority"]
+
+    classDef microtask fill:#4338ca,stroke:#c4b5fd,color:#f5f3ff,stroke-width:1.5px;
+    classDef render fill:#047857,stroke:#6ee7b7,color:#ecfdf5,stroke-width:1.5px;
+    classDef idle fill:#b45309,stroke:#fcd34d,color:#fffbeb,stroke-width:1.5px;
+    classDef task fill:#0369a1,stroke:#7dd3fc,color:#f0f9ff,stroke-width:1.5px;
+    classDef decision fill:#334155,stroke:#94a3b8,color:#f1f5f9,stroke-width:1.5px;
+
+    class MC,MO microtask;
+    class RAF,SL,RO,Scroll,IO,Paint,Composite render;
+    class IdleGate,RIC,SkipRIC idle;
+    class TQ,PO,RepO task;
+    class RQ,RC,RL decision;
+```
+
+**How to read the three colors:** purple = microtask-timed (runs after every task, before any rendering). Green = render-step-timed (only runs on frames the browser actually decides to render, and always in this relative order: rAF → layout → ResizeObserver → IntersectionObserver → paint). Amber = idle-timed (no guarantee). Blue = an entirely separate lane — `PerformanceObserver` and `ReportingObserver` are dispatched via the ordinary task queue and have no relationship to frames at all, which is precisely why they're drawn disconnected from the rendering spine rather than feeding into it.
+
+**The loop worth narrating out loud in an interview:** the `ResizeObserver` retry cycle (`SL → RO → RL → SL`) is the platform's answer to "what if observing a resize causes another resize?" — it re-runs layout and re-notifies, bounded by a fixed retry count, and gives up with a `ResizeObserver loop limit exceeded` error rather than hanging the frame indefinitely. This is the same class of problem as `MutationObserver` callbacks that trigger more mutations (Scenario 4 below), just solved with an explicit bounded loop instead of relying on the developer to avoid the cascade.
+
+---
+
+### Diagram 2 — Simplified Overview (For Quick Recall)
+
+The condensed version of Diagram 1 — useful for reciting the ordering quickly without redrawing the full pipeline, but Diagram 1 is the one that actually explains *why* the ordering is what it is.
 
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"background":"transparent","primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#64748b","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontFamily":"\"Plus Jakarta Sans\", sans-serif","fontSize":"14px"}}}%%
@@ -195,15 +308,15 @@ graph TD
     B --> C["MutationObserver callback<br>fires HERE (batched, as a microtask)"]
     C --> D{"Is this a<br>render opportunity?"}
     D -- "Yes (~once per frame)" --> E["requestAnimationFrame callbacks run"]
-    E --> F["Style recalculation"]
-    F --> G["Layout"]
-    G --> H["Paint"]
+    E --> F["Style + Layout"]
+    F --> F2["ResizeObserver callbacks<br>(post-layout, pre-paint)"]
+    F2 --> H["Paint"]
     H --> I["Composite"]
     I --> J["IntersectionObserver callbacks<br>delivered around this point (async, batched)"]
     D -- "No" --> K["Skip straight to idle check"]
     J --> K
     K --> L{"Time remaining before<br>next task is due?"}
-    L -- "Yes" --> M["requestIdleCallback callbacks run<br>(deadline.timeRemaining() > 0)"]
+    L -- "Yes" --> M["requestIdleCallback callbacks run<br>(deadline.timeRemaining() greater than 0)"]
     L -- "No" --> N["Skip — reschedule via timeout if set"]
     M --> O["Next event loop iteration"]
     N --> O
@@ -215,13 +328,13 @@ graph TD
 
     class A,B task;
     class C micro;
-    class D,E,F,G,H,I,J render;
+    class D,E,F,F2,H,I,J render;
     class K,L,M,N,O idle;
 ```
 
 ---
 
-### Diagram 2 — Cooperative Infinite Scroll: IntersectionObserver + rAF + rIC Working Together
+### Diagram 3 — Cooperative Infinite Scroll: IntersectionObserver + rAF + rIC Working Together
 
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"background":"transparent","actorBkg":"#334155","actorBorder":"#64748b","actorTextColor":"#f1f5f9","actorLineColor":"#64748b","signalColor":"#94a3b8","signalTextColor":"#e2e8f0","noteBkgColor":"#4338ca","noteBorderColor":"#818cf8","noteTextColor":"#f5f3ff","activationBkgColor":"#475569","activationBorderColor":"#94a3b8","labelBoxBkgColor":"#334155","labelBoxBorderColor":"#64748b","labelTextColor":"#f1f5f9","loopTextColor":"#f1f5f9","fontFamily":"\"Plus Jakarta Sans\", sans-serif","fontSize":"14px"}}}%%
@@ -319,7 +432,7 @@ The key differences: **replacing the scroll+geometry pattern outright rather tha
 
 > ### ✕ Never Disconnecting Observers
 >
-> **Why it's wrong:** `IntersectionObserver` and `MutationObserver` both keep strong internal references to observed targets and their callback closures. Failing to call `unobserve()`/`disconnect()` when a component unmounts or an element is removed leaks the closure's entire captured scope for the life of the observer — compounding over every mount/unmount cycle in a long-lived SPA, identical in shape to the classic uncleaned-event-listener leak.
+> **Why it's wrong:** `IntersectionObserver`, `MutationObserver`, and `ResizeObserver` all keep strong internal references to observed targets and their callback closures. Failing to call `unobserve()`/`disconnect()` when a component unmounts or an element is removed leaks the closure's entire captured scope for the life of the observer — compounding over every mount/unmount cycle in a long-lived SPA, identical in shape to the classic uncleaned-event-listener leak.
 >
 > **✓ Correct Lead Approach:** Treat every `observe()` call as paired with a required teardown, the same discipline as event listeners — `disconnect()` in a `useEffect` cleanup function or equivalent lifecycle hook, without exception.
 
