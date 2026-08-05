@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web APIs Playground: rAF, rIC, IntersectionObserver, MutationObserver</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #61dafb;
+            --dark: #20232a;
+            --text: #ffffff;
+            --gray: #282c34;
+            --accent: #f08d49;
+            --good: #4ade80;
+            --bad: #f87171;
+            --code-bg: #1e1e1e;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--dark);
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: var(--gray);
+            padding: 3rem 2rem;
+            text-align: center;
+            border-bottom: 4px solid var(--primary);
+        }
+        nav {
+            position: sticky;
+            top: 0;
+            background: var(--gray);
+            padding: 1rem;
+            z-index: 100;
+            text-align: center;
+            border-bottom: 1px solid #444;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 4px;
+        }
+        nav a {
+            color: var(--primary);
+            margin: 0 12px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+        main {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        section {
+            margin-bottom: 4rem;
+            padding: 2.5rem;
+            background: var(--gray);
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+        }
+        h1, h2, h3, h4 { color: var(--primary); }
+        pre, code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: "Fira Code", "Courier New", monospace;
+        }
+        pre {
+            padding: 1rem;
+            overflow-x: auto;
+            border-left: 3px solid var(--primary);
+        }
+        .diagram {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+        .playground {
+            border: 2px dashed var(--accent);
+            padding: 2rem;
+            margin: 2rem 0;
+            border-radius: 12px;
+            background: rgba(240, 141, 73, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .demo-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .interactivity-test {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+        .hover-box {
+            width: 80px;
+            height: 80px;
+            background: #444;
+            display: flex;
+            align-items: center;
+            text-align: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            border-radius: 8px;
+            transition: background 0.2s, transform 0.2s;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .hover-box:hover {
+            background: var(--accent);
+            transform: scale(1.1);
+        }
+        .counter-btn {
+            background: #333;
+            color: white;
+            border: 1px solid var(--primary);
+        }
+        .spin-box {
+            width: 60px;
+            height: 60px;
+            background: var(--accent);
+            border-radius: 12px;
+            animation: rotate 1s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .jank-explanation {
+            font-size: 0.9rem;
+            color: #aaa;
+            font-style: italic;
+        }
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        .card {
+            background: rgba(255,255,255,0.05);
+            padding: 1.5rem;
+            border-left: 4px solid var(--primary);
+            border-radius: 4px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 24px;
+            background: #444;
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #a2e9ff);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+        button {
+            padding: 0.8rem 1.6rem;
+            background: var(--primary);
+            color: var(--dark);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95rem;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        button.secondary { background: #444; color: var(--text); }
+        .warning { color: var(--accent); font-weight: bold; }
+        label { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; cursor: pointer; }
+
+        /* rAF demo */
+        .drag-area {
+            position: relative;
+            height: 180px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            border: 1px solid #444;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+        .ball {
+            position: absolute;
+            top: 0; left: 0;
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 12px rgba(240,141,73,0.6);
+        }
+        .stat-row { display: flex; gap: 16px; flex-wrap: wrap; }
+        .stat-badge {
+            background: rgba(0,0,0,0.3);
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            font-family: "Fira Code", monospace;
+            font-size: 0.9rem;
+            border: 1px solid #444;
+        }
+        .stat-badge span { color: var(--primary); font-weight: bold; }
+        .stat-badge.bad span { color: var(--bad); }
+        .stat-badge.good span { color: var(--good); }
+
+        /* Log panel */
+        .log-panel {
+            background: var(--code-bg);
+            border-radius: 6px;
+            padding: 0.8rem 1rem;
+            max-height: 160px;
+            overflow-y: auto;
+            font-family: "Fira Code", monospace;
+            font-size: 0.78rem;
+            color: #9adcff;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .log-panel div { border-bottom: 1px solid #2a2a2a; padding-bottom: 4px; }
+
+        /* IntersectionObserver demo */
+        .scroll-list {
+            height: 260px;
+            overflow-y: auto;
+            border: 1px solid #444;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.25);
+            padding: 0 12px;
+        }
+        .io-row {
+            margin: 12px 0;
+            padding: 1rem;
+            border-radius: 6px;
+            background: #333;
+            border: 1px solid #444;
+            transition: background 0.25s, border-color 0.25s;
+        }
+        .io-row.visible {
+            background: rgba(97, 218, 251, 0.15);
+            border-color: var(--primary);
+        }
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .slider-row input[type="range"] { flex: 1; }
+
+        /* MutationObserver demo */
+        .widget-zone {
+            min-height: 120px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.25);
+            padding: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-content: flex-start;
+        }
+        .mo-node {
+            background: var(--accent);
+            color: var(--dark);
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #444; }
+        th { color: var(--primary); }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Web APIs Playground 🧪</h1>
+    <p>requestAnimationFrame · requestIdleCallback · IntersectionObserver · MutationObserver — seen, not just read</p>
+</header>
+
+<nav>
+    <a href="#overview">Overview</a>
+    <a href="#raf">rAF</a>
+    <a href="#ric">rIC</a>
+    <a href="#io">IntersectionObserver</a>
+    <a href="#mo">MutationObserver</a>
+    <a href="#comparison">Comparison</a>
+</nav>
+
+<main>
+    <section id="overview">
+        <h2>1. Where Each API Sits in the Frame Lifecycle</h2>
+        <p>All four of these APIs exist to solve one problem: doing work without fighting the browser's render pipeline. The most important thing to internalize isn't the method names — it's <strong>exactly when each callback fires</strong> relative to the event loop.</p>
+
+        <div class="diagram">
+            <pre class="mermaid">
+            graph TD
+                A["Macrotask executes"] --> B["Drain microtask queue"]
+                B --> C["MutationObserver callback fires HERE<br>(batched, microtask)"]
+                C --> D{"Render opportunity?"}
+                D -- "Yes, ~once per frame" --> E["requestAnimationFrame callbacks run"]
+                E --> F["Style → Layout → Paint → Composite"]
+                F --> G["IntersectionObserver callbacks<br>delivered around here (async, batched)"]
+                D -- "No" --> H["Idle check"]
+                G --> H
+                H --> I{"Time before next task?"}
+                I -- "Yes" --> J["requestIdleCallback runs<br>(no hard guarantee)"]
+                I -- "No" --> K["Skipped this cycle"]
+            </pre>
+        </div>
+
+        <p>Each section below has a live playground. Toggle the checkboxes and watch the counters — the numbers are the point, not just the visual effect.</p>
+    </section>
+
+    <section id="raf">
+        <h2>2. requestAnimationFrame — Coalescing High-Frequency Events</h2>
+        <p>A <code>mousemove</code> event can fire far more often than the screen can actually redraw. Writing to the DOM on every single event wastes work on frames the user will never see — and if each write is even slightly expensive, it compounds into visible jank.</p>
+
+        <div class="playground">
+            <h3>Drag inside the box</h3>
+            <p class="jank-explanation">Click and drag inside the dark area. Compare "mousemove events fired" against "DOM writes applied" with rAF batching on vs off. Then enable the heavy-paint checkbox to make the jank difference obvious.</p>
+
+            <div class="demo-controls">
+                <label><input type="checkbox" id="raf-toggle" checked> Batch updates with requestAnimationFrame</label>
+                <label><input type="checkbox" id="raf-heavy"> Simulate ~4ms expensive work per write</label>
+            </div>
+
+            <div class="drag-area" id="drag-area">
+                <div class="ball" id="ball"></div>
+            </div>
+
+            <div class="stat-row">
+                <div class="stat-badge">mousemove events fired: <span id="raf-events">0</span></div>
+                <div class="stat-badge good">DOM writes applied: <span id="raf-writes">0</span></div>
+                <button class="secondary" id="raf-reset">Reset counters</button>
+            </div>
+
+            <div class="interactivity-test">
+                <div class="spin-box"></div>
+                <div class="hover-box">HOVER ME</div>
+                <p class="jank-explanation" style="margin:0;">With "heavy work" on and rAF off, dragging can visibly stutter the spinner — every mousemove blocks the thread. With rAF on, the same drag stays smooth because the expensive write only happens once per frame, no matter how many events fired.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="ric">
+        <h2>3. requestIdleCallback — Genuinely Low-Priority Work</h2>
+        <p>Some work matters, but not urgently — analytics batching, speculative prefetch, cache warming. <code>requestIdleCallback</code> only runs it when the main thread truly has nothing more important to do, using a <code>deadline</code> object that tells you how much idle time is actually left.</p>
+
+        <div class="playground">
+            <h3>Process 150 background jobs, two ways</h3>
+            <p class="jank-explanation">Try hovering the box or clicking the counter <em>while</em> each run is in progress.</p>
+
+            <div class="btn-row">
+                <button onclick="processSync(event)">Run Synchronously (blocks thread)</button>
+                <button onclick="processIdle(event)">Run via requestIdleCallback</button>
+            </div>
+
+            <div class="interactivity-test">
+                <div class="spin-box"></div>
+                <div class="hover-box">HOVER ME</div>
+                <button class="counter-btn" onclick="updateRicCounter()">Clicks: <span id="ric-counter">0</span></button>
+            </div>
+
+            <p id="ric-status">Status: Idle</p>
+            <div class="log-panel" id="ric-log"></div>
+        </div>
+    </section>
+
+    <section id="io">
+        <h2>4. IntersectionObserver — Visibility Without Forcing Layout</h2>
+        <p>A scroll listener calling <code>getBoundingClientRect()</code> forces a synchronous layout recalculation on every call. IntersectionObserver reports visibility asynchronously, using layout data the browser is already computing — without you ever forcing extra work.</p>
+
+        <div class="playground">
+            <h3>Scroll the list below</h3>
+
+            <div class="slider-row">
+                <label for="io-margin" style="flex-shrink:0;">rootMargin buffer:</label>
+                <input type="range" id="io-margin" min="0" max="300" value="0" step="10">
+                <span class="stat-badge"><span id="io-margin-label">0px</span></span>
+            </div>
+
+            <label><input type="checkbox" id="io-naive-toggle"> Also run the naive scroll + getBoundingClientRect() comparison</label>
+
+            <div class="scroll-list" id="io-list">
+                <!-- rows injected by JS -->
+            </div>
+
+            <div class="stat-row">
+                <div class="stat-badge good">rows currently "visible": <span id="io-visible-count">0</span></div>
+                <div class="stat-badge good">IntersectionObserver callback firings: <span id="io-call-count">0</span></div>
+                <div class="stat-badge bad">naive forced-layout reads: <span id="io-naive-count">0</span></div>
+                <button class="secondary" id="io-reset">Reset counters</button>
+            </div>
+            <p class="jank-explanation">Scroll a few times with the naive comparison enabled — its counter climbs fast (every row, every scroll tick, forcing layout each time), while the IntersectionObserver counter only ticks when a row actually crosses the visibility threshold.</p>
+
+            <div class="log-panel" id="io-log"></div>
+        </div>
+    </section>
+
+    <section id="mo">
+        <h2>5. MutationObserver — Microtask-Batched, Not Per-Mutation</h2>
+        <p>The old Mutation Events fired synchronously, once per DOM change — a performance disaster at scale, which is why they were deprecated. <code>MutationObserver</code> batches everything since the last microtask checkpoint into a single callback.</p>
+
+        <div class="playground">
+            <h3>Simulate a "third-party widget" mutating the DOM</h3>
+            <p class="jank-explanation">Click "Inject 5 nodes" — watch the log. It's <strong>one</strong> callback with 5 batched records, not five separate callbacks.</p>
+
+            <div class="btn-row">
+                <button onclick="injectOne()">Inject 1 node</button>
+                <button onclick="injectFive()">Inject 5 nodes (synchronous loop)</button>
+                <button onclick="toggleAttr()">Change an attribute</button>
+                <button class="secondary" id="mo-clear">Clear & reset</button>
+            </div>
+
+            <div class="widget-zone" id="mo-zone"></div>
+
+            <div class="stat-row">
+                <div class="stat-badge good">MutationObserver callback firings: <span id="mo-call-count">0</span></div>
+                <div class="stat-badge">total mutation records delivered: <span id="mo-record-count">0</span></div>
+            </div>
+
+            <div class="log-panel" id="mo-log"></div>
+        </div>
+    </section>
+
+    <section id="comparison">
+        <h2>6. Summary Table</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>API</th>
+                    <th>Fires as</th>
+                    <th>Guaranteed?</th>
+                    <th>Forces layout?</th>
+                    <th>Typical use case</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>requestAnimationFrame</strong></td>
+                    <td>Once per frame, pre-render</td>
+                    <td>Yes, if tab is visible</td>
+                    <td>No, if you avoid interleaved reads</td>
+                    <td>Animations, visual DOM sync, FLIP transitions</td>
+                </tr>
+                <tr>
+                    <td><strong>requestIdleCallback</strong></td>
+                    <td>During idle periods only</td>
+                    <td>No — <code>timeout</code> is the only guarantee</td>
+                    <td>No</td>
+                    <td>Low-priority background work, analytics batching</td>
+                </tr>
+                <tr>
+                    <td><strong>IntersectionObserver</strong></td>
+                    <td>Async, browser-batched</td>
+                    <td>Eventually, timing not in your control</td>
+                    <td>No — this is its entire purpose</td>
+                    <td>Lazy loading, infinite scroll, viewability tracking</td>
+                </tr>
+                <tr>
+                    <td><strong>MutationObserver</strong></td>
+                    <td>As a microtask, batched</td>
+                    <td>Yes — deterministic per spec</td>
+                    <td>No</td>
+                    <td>Detecting third-party/uncontrolled DOM changes</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="summary">
+        <h2>Takeaway</h2>
+        <p>Every counter above is telling the same story: the naive approach does <em>more work, more often, on the main thread</em>, while the purpose-built API does <em>less work, batched, at the right moment</em>. That's the whole argument for reaching for these four APIs by default instead of scroll listeners, raw timers, and synchronous mutation handling.</p>
+    </section>
+</main>
+
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+    function logLine(container, text) {
+        const p = document.createElement('div');
+        p.textContent = text;
+        container.prepend(p);
+        while (container.children.length > 8) container.removeChild(container.lastChild);
+    }
+
+    /* ---------- rAF demo ---------- */
+    (function () {
+        const dragArea = document.getElementById('drag-area');
+        const ball = document.getElementById('ball');
+        const toggle = document.getElementById('raf-toggle');
+        const heavyToggle = document.getElementById('raf-heavy');
+        const eventsEl = document.getElementById('raf-events');
+        const writesEl = document.getElementById('raf-writes');
+
+        let events = 0, writes = 0;
+        let latest = null;
+        let scheduled = false;
+        let dragging = false;
+
+        function applyPosition(x, y) {
+            if (heavyToggle.checked) {
+                const start = performance.now();
+                while (performance.now() - start < 4) { /* simulate expensive work */ }
+            }
+            ball.style.transform = `translate(${x}px, ${y}px)`;
+            writes++;
+            writesEl.textContent = writes;
+        }
+
+        function onMove(e) {
+            if (!dragging) return;
+            const rect = dragArea.getBoundingClientRect();
+            const x = Math.min(Math.max(e.clientX - rect.left - 15, 0), rect.width - 30);
+            const y = Math.min(Math.max(e.clientY - rect.top - 15, 0), rect.height - 30);
+            events++;
+            eventsEl.textContent = events;
+            latest = { x, y };
+
+            if (toggle.checked) {
+                if (!scheduled) {
+                    scheduled = true;
+                    requestAnimationFrame(() => {
+                        applyPosition(latest.x, latest.y);
+                        scheduled = false;
+                    });
+                }
+            } else {
+                applyPosition(x, y);
+            }
+        }
+
+        dragArea.addEventListener('mousedown', () => { dragging = true; });
+        window.addEventListener('mouseup', () => { dragging = false; });
+        dragArea.addEventListener('mousemove', onMove);
+
+        document.getElementById('raf-reset').addEventListener('click', () => {
+            events = 0; writes = 0;
+            eventsEl.textContent = 0; writesEl.textContent = 0;
+        });
+    })();
+
+    /* ---------- rIC demo ---------- */
+    function updateRicCounter() {
+        const el = document.getElementById('ric-counter');
+        el.textContent = parseInt(el.textContent, 10) + 1;
+    }
+
+    function processSync(event) {
+        const status = document.getElementById('ric-status');
+        const btn = event.target;
+        btn.disabled = true;
+        status.textContent = 'Status: ❌ Running synchronously — thread blocked...';
+        status.style.color = 'var(--bad)';
+
+        setTimeout(() => {
+            const jobs = 150;
+            const start = performance.now();
+            for (let i = 0; i < jobs; i++) {
+                const s = performance.now();
+                while (performance.now() - s < 2) { /* simulate a 2ms job */ }
+            }
+            status.textContent = `Status: Done in ${Math.round(performance.now() - start)}ms. Did the spinner freeze?`;
+            status.style.color = 'var(--primary)';
+            btn.disabled = false;
+        }, 50);
+    }
+
+    function processIdle(event) {
+        const status = document.getElementById('ric-status');
+        const log = document.getElementById('ric-log');
+        const btn = event.target;
+        btn.disabled = true;
+        status.textContent = 'Status: ✅ Scheduling via requestIdleCallback...';
+        status.style.color = 'var(--good)';
+        log.innerHTML = '';
+
+        const ric = window.requestIdleCallback || function (cb) {
+            return setTimeout(() => cb({ timeRemaining: () => 10, didTimeout: false }), 1);
+        };
+
+        let jobsLeft = 150;
+        const start = performance.now();
+
+        function runChunk(deadline) {
+            let processedThisChunk = 0;
+            while (jobsLeft > 0 && deadline.timeRemaining() > 1) {
+                const s = performance.now();
+                while (performance.now() - s < 1) { /* simulate a 1ms job */ }
+                jobsLeft--;
+                processedThisChunk++;
+            }
+            logLine(log, `Idle slice: processed ${processedThisChunk} job(s), ${jobsLeft} left`);
+
+            if (jobsLeft > 0) {
+                ric(runChunk, { timeout: 1000 });
+            } else {
+                status.textContent = `Status: Done in ${Math.round(performance.now() - start)}ms via idle callbacks. UI should have stayed responsive.`;
+                status.style.color = 'var(--primary)';
+                btn.disabled = false;
+            }
+        }
+
+        ric(runChunk, { timeout: 1000 });
+    }
+
+    /* ---------- IntersectionObserver demo ---------- */
+    (function () {
+        const list = document.getElementById('io-list');
+        for (let i = 1; i <= 24; i++) {
+            const row = document.createElement('div');
+            row.className = 'io-row';
+            row.dataset.id = i;
+            row.textContent = `Item ${i}`;
+            list.appendChild(row);
+        }
+        const rows = Array.from(list.querySelectorAll('.io-row'));
+
+        const marginSlider = document.getElementById('io-margin');
+        const marginLabel = document.getElementById('io-margin-label');
+        const visibleCountEl = document.getElementById('io-visible-count');
+        const ioCallCountEl = document.getElementById('io-call-count');
+        const naiveToggle = document.getElementById('io-naive-toggle');
+        const naiveCountEl = document.getElementById('io-naive-count');
+        const log = document.getElementById('io-log');
+
+        let observer;
+        let ioCalls = 0;
+        let naiveCalls = 0;
+
+        function setup() {
+            if (observer) observer.disconnect();
+            const margin = marginSlider.value;
+            marginLabel.textContent = margin + 'px';
+
+            observer = new IntersectionObserver((entries) => {
+                ioCalls++;
+                ioCallCountEl.textContent = ioCalls;
+                entries.forEach(entry => {
+                    entry.target.classList.toggle('visible', entry.isIntersecting);
+                });
+                const visible = rows.filter(r => r.classList.contains('visible')).length;
+                visibleCountEl.textContent = visible;
+                const sample = entries[0];
+                logLine(log, `batch of ${entries.length} — e.g. #${sample.target.dataset.id} isIntersecting=${sample.isIntersecting} ratio=${sample.intersectionRatio.toFixed(2)}`);
+            }, {
+                root: list,
+                rootMargin: `${margin}px`,
+                threshold: [0, 0.5, 1],
+            });
+
+            rows.forEach(r => observer.observe(r));
+        }
+
+        marginSlider.addEventListener('input', setup);
+        setup();
+
+        list.addEventListener('scroll', () => {
+            if (!naiveToggle.checked) return;
+            rows.forEach(r => {
+                r.getBoundingClientRect(); // forces a synchronous layout read, every row, every tick
+                naiveCalls++;
+            });
+            naiveCountEl.textContent = naiveCalls;
+        });
+
+        document.getElementById('io-reset').addEventListener('click', () => {
+            naiveCalls = 0; naiveCountEl.textContent = 0;
+            ioCalls = 0; ioCallCountEl.textContent = 0;
+            log.innerHTML = '';
+        });
+    })();
+
+    /* ---------- MutationObserver demo ---------- */
+    (function () {
+        const zone = document.getElementById('mo-zone');
+        const log = document.getElementById('mo-log');
+        const callCountEl = document.getElementById('mo-call-count');
+        const recordCountEl = document.getElementById('mo-record-count');
+        let callCount = 0, recordCount = 0;
+
+        const observer = new MutationObserver((mutations) => {
+            callCount++;
+            recordCount += mutations.length;
+            callCountEl.textContent = callCount;
+            recordCountEl.textContent = recordCount;
+            logLine(log, `Callback #${callCount}: batched ${mutations.length} mutation record(s)`);
+        });
+
+        observer.observe(zone, {
+            childList: true,
+            attributes: true,
+            subtree: true,
+            attributeFilter: ['class', 'data-state'],
+        });
+
+        window.injectOne = function () {
+            const div = document.createElement('div');
+            div.className = 'mo-node';
+            div.textContent = 'node ' + (zone.children.length + 1);
+            zone.appendChild(div);
+        };
+
+        window.injectFive = function () {
+            for (let i = 0; i < 5; i++) window.injectOne(); // synchronous loop — still ONE batched callback
+        };
+
+        window.toggleAttr = function () {
+            zone.dataset.state = zone.dataset.state === 'active' ? 'idle' : 'active';
+        };
+
+        document.getElementById('mo-clear').addEventListener('click', () => {
+            zone.innerHTML = '';
+            callCount = 0; recordCount = 0;
+            callCountEl.textContent = 0; recordCountEl.textContent = 0;
+            log.innerHTML = '';
+        });
+    })();
+</script>
+
+</body>
+</html>
