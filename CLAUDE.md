@@ -52,18 +52,17 @@ Diagrams are read both in-app and via Safari Reader Mode, which strips the page'
 
 ## Data layer (`data/`)
 
-`data/ReadMe.md` documents an **aspirational/older** schema (`prompts.json`, `test_prompts.json`, `evaluation_prompts.json`, `schedule.json`). The actual files on disk have different names and one has a different purpose than its name suggests:
+`data/ReadMe.md` documents an **aspirational/older** schema (`prompts.json`, `test_prompts.json`, `evaluation_prompts.json`, `schedule.json`). The actual files on disk have different names, different roles than `ReadMe.md` describes, and topic count drifts upward as topics get added — check `data/plan.json` directly rather than trusting a hardcoded number:
 
 | Actual file | Role | Notes |
 |---|---|---|
-| `data/plan.json` | Master list of 68 topics (id, category, difficulty, priority, status, score, tags) | Source of truth for topic metadata |
+| `data/plan.json` | Master list of topics (id, category, difficulty, priority, status, score, tags), 70 as of the last count | Source of truth for topic metadata |
 | `data/scedule.json` | Week/day calendar assigning topics to study sessions | **Typo is intentional** — `index.html` fetches this exact filename (`data/scedule.json`, not `schedule.json`). Don't "fix" the typo without updating the fetch call. |
-| `data/deep-dive.json` | Per-topic **study-content generation prompt**, keyed by topic id, plain string values | Matches `ReadMe.md`'s description of `prompts.json` |
-| `data/evaluation.json` | Per-topic **test-question generation prompt**, keyed by topic id, plain string values | Despite the filename, this is test-generation, not scoring/evaluation, prompts — matches `ReadMe.md`'s `test_prompts.json`. There is currently no separate evaluation/scoring-prompt file in the repo. |
-| `data/topics/{id}.md` | Rendered study content, Markdown (not JSON as `ReadMe.md` describes) | Only a handful of the 68 planned topics exist as files so far; `topic-detail.html` shows "Topic Not Found" for the rest |
+| `data/deep-dive.json`, `data/evaluation.json` | Per-topic prompt strings keyed by topic id, left over from an earlier design | **Not read by any page.** `index.html`'s "Course Prompt" / "Generate Test" buttons build prompts live from `STUDY_PROMPT_TEMPLATE`/`TEST_PROMPT_TEMPLATE` (defined in `index.html`), generic functions parameterized only by the topic's `name` field in `plan.json` — so "customizing a topic's prompt" means editing its `name`/scope in `plan.json`, not touching these JSON files. (Their contents also don't match their filenames: `evaluation.json` actually holds test-*generation* prompts, not scoring/evaluation prompts — matches `ReadMe.md`'s description of `test_prompts.json`, not `evaluation_prompts.json`.) |
+| `data/topics/{id}.md` | Rendered study content, Markdown (not JSON as `ReadMe.md` describes) | Only a handful of the ~70 planned topics exist as files so far; `topic-detail.html` shows "Topic Not Found" for the rest |
 | `data/tests/{id}.json` | Test question set, shape `{ "test": {...} } ` | `test-portal.html` also falls back to legacy `{id}-test.json` |
 | `data/results/{id}.json` | Scored test result, shape `{ "result": {...} }` | `test-portal.html` also falls back to legacy `{id}-result.json`; finishing a test in the UI offers a `{id}.json` download meant to be saved here manually |
 
-The content pipeline is manual/human-in-the-loop, not automated: a prompt from `deep-dive.json`/`evaluation.json` is copy-pasted into a Claude chat, and the response is hand-saved into `data/topics/`, `data/tests/`, or `data/results/`. There is no script wiring these steps together.
+The content pipeline is manual/human-in-the-loop, not automated: a prompt is copied from the `index.html` modal (or `data/deep-dive.json`/`data/evaluation.json`, if working from the old workflow) into a Claude chat, and the response is hand-saved into `data/topics/`, `data/tests/`, or `data/results/`. There is no script wiring these steps together.
 
 `fix_prompts.py` at the repo root is a one-off cleanup script for `data/evaluation.json`, left over from before the repo was renamed/moved — it has a hardcoded absolute path to a different local directory (`/Users/carollucas/Desktop/Summit/data/evaluation.json`) and needs that path updated before it would run against this repo.

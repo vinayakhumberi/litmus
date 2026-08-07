@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Rendering Pipeline Playground: Parse → Style → Layout → Paint → Composite</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #61dafb;
+            --dark: #20232a;
+            --text: #ffffff;
+            --gray: #282c34;
+            --accent: #f08d49;
+            --good: #4ade80;
+            --bad: #f87171;
+            --code-bg: #1e1e1e;
+
+            --c-parse: #4a5568;      --c-parse-bright: #cbd5e0;
+            --c-style: #805ad5;      --c-style-bright: #d6bcfa;
+            --c-layout: #dd6b20;     --c-layout-bright: #fbd38d;
+            --c-paint: #38a169;      --c-paint-bright: #9ae6b4;
+            --c-composite: #3182ce; --c-composite-bright: #90cdf4;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--dark);
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: var(--gray);
+            padding: 3rem 2rem;
+            text-align: center;
+            border-bottom: 4px solid var(--primary);
+        }
+        nav {
+            position: sticky;
+            top: 0;
+            background: var(--gray);
+            padding: 1rem;
+            z-index: 100;
+            text-align: center;
+            border-bottom: 1px solid #444;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 4px;
+        }
+        nav a {
+            color: var(--primary);
+            margin: 0 12px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+
+        /* Persistent pipeline strip */
+        .pipeline-sticky {
+            position: sticky;
+            top: 57px;
+            z-index: 90;
+            background: rgba(32, 35, 42, 0.97);
+            backdrop-filter: blur(6px);
+            border-bottom: 1px solid #444;
+            padding: 0.9rem 1rem 0.7rem;
+        }
+        .pipeline-strip {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .stage {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            letter-spacing: 0.02em;
+            border: 1px solid transparent;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.25s ease, color 0.25s ease;
+            background: rgba(255,255,255,0.04);
+            color: #777;
+        }
+        .stage[data-stage="parse"]     { border-color: rgba(203,213,224,0.25); }
+        .stage[data-stage="style"]     { border-color: rgba(214,188,250,0.25); }
+        .stage[data-stage="layout"]    { border-color: rgba(251,211,141,0.25); }
+        .stage[data-stage="paint"]     { border-color: rgba(154,230,180,0.25); }
+        .stage[data-stage="composite"] { border-color: rgba(144,205,244,0.25); }
+
+        .stage[data-stage="parse"].active     { background: var(--c-parse);     color: var(--c-parse-bright);     box-shadow: 0 0 18px rgba(203,213,224,0.6); transform: scale(1.08); }
+        .stage[data-stage="style"].active     { background: var(--c-style);     color: var(--c-style-bright);     box-shadow: 0 0 18px rgba(214,188,250,0.6); transform: scale(1.08); }
+        .stage[data-stage="layout"].active    { background: var(--c-layout);    color: var(--c-layout-bright);    box-shadow: 0 0 18px rgba(251,211,141,0.6); transform: scale(1.08); }
+        .stage[data-stage="paint"].active     { background: var(--c-paint);     color: var(--c-paint-bright);     box-shadow: 0 0 18px rgba(154,230,180,0.6); transform: scale(1.08); }
+        .stage[data-stage="composite"].active { background: var(--c-composite); color: var(--c-composite-bright); box-shadow: 0 0 18px rgba(144,205,244,0.6); transform: scale(1.08); }
+
+        .stage.skipped { opacity: 0.25; text-decoration: line-through; }
+
+        .pipe-arrow { color: #555; font-size: 1.1rem; }
+        .pipeline-caption {
+            max-width: 700px;
+            margin: 0.6rem auto 0;
+            text-align: center;
+            font-size: 0.78rem;
+            color: #888;
+            min-height: 1.2em;
+        }
+
+        main {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        section {
+            margin-bottom: 4rem;
+            padding: 2.5rem;
+            background: var(--gray);
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+        }
+        h1, h2, h3, h4 { color: var(--primary); }
+        pre, code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: "Fira Code", "Courier New", monospace;
+        }
+        .diagram {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+            scroll-margin-top: 220px;
+        }
+        .diagram svg .node.diagram-node-active rect,
+        .diagram svg .node.diagram-node-active polygon,
+        .diagram svg .node.diagram-node-active path,
+        .diagram svg .node.diagram-node-active circle {
+            stroke: #fff !important;
+            stroke-width: 3px !important;
+        }
+        .diagram svg .node.diagram-node-active {
+            animation: diagram-pulse 0.7s ease-in-out infinite alternate;
+        }
+        @keyframes diagram-pulse {
+            from { filter: drop-shadow(0 0 3px rgba(0,0,0,0.5)); }
+            to   { filter: drop-shadow(0 0 14px rgba(255,255,255,0.95)); }
+        }
+        .playground {
+            border: 2px dashed var(--accent);
+            padding: 2rem;
+            margin: 2rem 0;
+            border-radius: 12px;
+            background: rgba(240, 141, 73, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
+        button {
+            padding: 0.8rem 1.6rem;
+            background: var(--primary);
+            color: var(--dark);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95rem;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        button.secondary { background: #444; color: var(--text); }
+        button.layout-btn    { background: var(--c-layout);    color: #2a1a05; }
+        button.paint-btn     { background: var(--c-paint);     color: #06210f; }
+        button.composite-btn { background: var(--c-composite); color: #071c33; }
+
+        .jank-explanation { font-size: 0.9rem; color: #aaa; font-style: italic; }
+        .stat-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+        .stat-badge {
+            background: rgba(0,0,0,0.3);
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            font-family: "Fira Code", monospace;
+            font-size: 0.9rem;
+            border: 1px solid #444;
+        }
+        .stat-badge span { color: var(--primary); font-weight: bold; }
+        .stat-badge.bad span { color: var(--bad); }
+        .stat-badge.good span { color: var(--good); }
+        .stat-badge.flash { animation: badge-flash 0.6s ease; }
+        @keyframes badge-flash {
+            0%   { background: rgba(255,255,255,0.35); border-color: rgba(255,255,255,0.6); }
+            100% { background: rgba(0,0,0,0.3); border-color: #444; }
+        }
+
+        .bar-row { display: flex; align-items: center; gap: 12px; font-family: "Fira Code", monospace; font-size: 0.85rem; }
+        .bar-label { width: 150px; flex-shrink: 0; color: #ccc; }
+        .bar-track { flex: 1; background: rgba(0,0,0,0.3); border-radius: 6px; height: 22px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 6px; width: 0%; transition: width 0.4s cubic-bezier(.2,.9,.3,1); }
+        .bar-fill.naive { background: linear-gradient(90deg, var(--bad), #fca5a5); }
+        .bar-fill.batched { background: linear-gradient(90deg, var(--good), #86efac); }
+        .bar-value { width: 70px; text-align: right; flex-shrink: 0; }
+
+        /* Worked-example card, mirrors the markdown deep dive */
+        .demo-card-zone { display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-start; }
+        .demo-card {
+            width: 200px;
+            padding: 16px;
+            background: #fff3e0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+            border-radius: 6px;
+            transition: margin-left 0.25s ease, background-color 0.25s ease, transform 0.25s ease;
+            flex-shrink: 0;
+        }
+        .demo-card h3 { color: #3d2b00; margin: 0 0 6px; font-size: 1.05rem; }
+        .demo-card p { color: #d84315; margin: 0; font-weight: bold; }
+
+        .stress-grid-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #888;
+            margin-bottom: 6px;
+        }
+        .stress-grid-label span { color: var(--accent); text-transform: none; letter-spacing: normal; }
+        .stress-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            max-width: 420px;
+            transition: margin-left 0.25s ease, transform 0.25s ease;
+        }
+        .stress-box {
+            width: 14px;
+            height: 14px;
+            flex: 0 0 auto;
+            background: #4a5568;
+            border-radius: 2px;
+            transition: margin-left 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+        }
+
+        /* Compositor freeze test */
+        .race-track {
+            position: relative;
+            height: 160px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            border: 1px solid #444;
+            overflow: hidden;
+        }
+        .racer {
+            position: absolute;
+            width: 34px; height: 34px;
+            border-radius: 8px;
+            top: 20px;
+        }
+        .racer.left-mover {
+            left: 0;
+            background: var(--c-layout);
+            box-shadow: 0 0 10px rgba(221,107,32,0.6);
+            animation: race-left 2.2s linear infinite alternate;
+        }
+        .racer.transform-mover {
+            top: 90px;
+            left: 0;
+            background: var(--c-composite);
+            box-shadow: 0 0 10px rgba(49,130,206,0.6);
+            animation: race-transform 2.2s linear infinite alternate;
+            will-change: transform;
+        }
+        @keyframes race-left {
+            from { left: 0; }
+            to   { left: calc(100% - 34px); }
+        }
+        @keyframes race-transform {
+            from { transform: translateX(0); }
+            to   { transform: translateX(calc(min(100vw,900px) - 68px)); }
+        }
+        .race-caption { display: flex; justify-content: space-between; font-size: 0.78rem; color: #999; margin-top: 4px; }
+
+        .interactivity-test {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            background: rgba(0,0,0,0.2);
+            padding: 1rem;
+            border-radius: 8px;
+        }
+        .hover-box {
+            width: 70px; height: 70px;
+            background: #444;
+            display: flex; align-items: center; justify-content: center;
+            text-align: center;
+            font-size: 0.65rem;
+            border-radius: 8px;
+            transition: background 0.2s, transform 0.2s;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .hover-box:hover { background: var(--accent); transform: scale(1.1); }
+
+        /* content-visibility demo */
+        .cv-list {
+            height: 260px;
+            overflow-y: auto;
+            border: 1px solid #444;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.25);
+        }
+        .cv-row {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid #333;
+            font-size: 0.85rem;
+        }
+        .cv-row.contained {
+            content-visibility: auto;
+            contain-intrinsic-size: 0 38px;
+        }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #444; }
+        th { color: var(--primary); }
+        td.layout-cell { color: var(--c-layout-bright); }
+        td.paint-cell { color: var(--c-paint-bright); }
+        td.composite-cell { color: var(--c-composite-bright); }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Browser Rendering Pipeline Playground 🖼️</h1>
+    <p>Parse → Style → Layout → Paint → Composite — watched, not just read</p>
+</header>
+
+<nav>
+    <a href="#overview">Overview</a>
+    <a href="#cost">Cost Inspector</a>
+    <a href="#thrash">Thrashing Race</a>
+    <a href="#freeze">Compositor Freeze Test</a>
+    <a href="#cv">content-visibility</a>
+    <a href="#summary">Summary</a>
+</nav>
+
+<div class="pipeline-sticky">
+    <div class="pipeline-strip" id="pipeline-strip">
+        <div class="stage" data-stage="parse">Parse</div>
+        <div class="pipe-arrow">→</div>
+        <div class="stage" data-stage="style">Style</div>
+        <div class="pipe-arrow">→</div>
+        <div class="stage" data-stage="layout">Layout</div>
+        <div class="pipe-arrow">→</div>
+        <div class="stage" data-stage="paint">Paint</div>
+        <div class="pipe-arrow">→</div>
+        <div class="stage" data-stage="composite">Composite</div>
+    </div>
+    <div class="pipeline-caption" id="pipeline-caption">This strip lights up in real time as you interact with the demos below — it's always on screen so you never lose the thread.</div>
+</div>
+
+<main>
+    <section id="overview">
+        <h2>1. The Pipeline, End to End</h2>
+        <p>Every visible pixel is the output of five stages. The engine doesn't run all five on every change — which stages actually re-run is <em>the</em> mental model this whole page exists to make visible.</p>
+
+        <div class="btn-row">
+            <button onclick="simulateInitialLoad()">▶ Simulate a first page load</button>
+        </div>
+        <p class="jank-explanation">On first load every stage runs, in order, once. That's the baseline. Everything after this section is about what happens on the <em>second</em> change — a click, a scroll, a resize — where the engine tries to do as little of this as possible. Click the button — the strip above and the matching boxes in the diagram below will highlight in sync as each stage runs.</p>
+
+        <div class="diagram" id="overview-diagram">
+            <pre class="mermaid">
+            graph TD
+                A["HTML bytes"] --> B["Parse: HTML Parser"]
+                B --> C["DOM Tree"]
+                D["CSS bytes"] --> E["Parse: CSS Parser"]
+                E --> F["CSSOM Tree"]
+                C --> G["Style Recalculation<br>(cascade + specificity + inheritance)"]
+                F --> G
+                G --> H{"Did geometry change?<br>(width, height, position, font-size...)"}
+                H -- "Yes" --> I["Layout: compute x, y, width, height"]
+                H -- "No" --> J
+                I --> J{"Did pixels change?<br>(color, shadow, background...)"}
+                J -- "Yes" --> K["Paint: rasterize into layers"]
+                J -- "No" --> L
+                K --> L["Composite: GPU blends layers<br>(transform, opacity, z-order)"]
+                L --> M["Pixels on screen"]
+
+                classDef parseC fill:#4a5568,stroke:#cbd5e0,color:#fff
+                classDef styleC fill:#805ad5,stroke:#d6bcfa,color:#fff
+                classDef layoutC fill:#dd6b20,stroke:#fbd38d,color:#fff
+                classDef paintC fill:#38a169,stroke:#9ae6b4,color:#fff
+                classDef compositeC fill:#3182ce,stroke:#90cdf4,color:#fff
+
+                class A,B,C,D,E,F parseC
+                class G styleC
+                class H,I layoutC
+                class J,K paintC
+                class L,M compositeC
+            </pre>
+        </div>
+    </section>
+
+    <section id="cost">
+        <h2>2. Cost Inspector — Same Element, Three Different Prices</h2>
+        <p>Changing <code>margin-left</code>, <code>background-color</code>, and <code>transform</code> all "look like" a style change from the code you'd write — but they force completely different amounts of work.</p>
+        <p class="jank-explanation" style="margin-top:0;"><strong>How to read this:</strong> <strong>Layout</strong> and <strong>Composite</strong> move the same elements the same 18px to the right — click them back to back and watch it's the identical visual move. Layout gets there via <code>margin-left</code> (forces the browser to recompute geometry); Composite gets there via <code>transform</code> (compositor-only, geometry untouched). <strong>Paint</strong> is deliberately different: it only changes color, nothing moves, because color doesn't affect geometry at all. Each click reports how long that change kept the main thread busy — Layout will show a real, non-trivial number; Paint and Composite will hover near zero, which is the entire point: the browser is free to do that work later, off the critical path, so your script barely notices it happened.</p>
+
+        <div class="playground">
+            <div class="demo-card-zone">
+                <div style="flex-shrink:0;">
+                    <div class="stress-grid-label">The card from the write-up</div>
+                    <div class="demo-card" id="demo-card">
+                        <h3>Product</h3>
+                        <p>$42</p>
+                    </div>
+                </div>
+                <div style="flex:1; min-width:220px;">
+                    <div class="stress-grid-label">180 simulated page elements <span id="cost-run-count"></span></div>
+                    <div class="stress-grid" id="stress-grid"></div>
+                </div>
+            </div>
+            <p class="jank-explanation" style="margin:0;">The card and the 180 boxes get the <em>exact same</em> change on every click — the card so you can see it happen to a realistic UI element, the boxes so the timing is measurable across enough elements to be meaningful.</p>
+
+            <div class="btn-row">
+                <button class="layout-btn" onclick="runCostTest('layout')">Shift 18px via margin-left (Layout)</button>
+                <button class="paint-btn" onclick="runCostTest('paint')">Flash a new color (Paint)</button>
+                <button class="composite-btn" onclick="runCostTest('composite')">Shift 18px via transform (Composite)</button>
+                <button class="secondary" onclick="resetCostDemo()">Reset</button>
+            </div>
+
+            <div class="stat-row">
+                <div class="stat-badge bad" id="cost-layout-badge">Layout blocked the thread for: <span>— click the button</span></div>
+                <div class="stat-badge" id="cost-paint-badge">Paint blocked the thread for: <span>— click the button</span></div>
+                <div class="stat-badge good" id="cost-composite-badge">Composite blocked the thread for: <span>— click the button</span></div>
+            </div>
+            <p class="jank-explanation" id="cost-compare"></p>
+            <p class="jank-explanation" id="cost-explain">Try Layout first, then Composite — the gap is the entire reason `transform`/`opacity` are the default choice for animation.</p>
+        </div>
+    </section>
+
+    <section id="thrash">
+        <h2>3. Layout Thrashing Race — Interleaved vs Batched</h2>
+        <p><code>el.offsetWidth</code> right after a write forces the browser to flush layout synchronously, on the spot. Do that in a loop and an O(1) operation becomes O(n) forced layouts. Same 400 elements, same total work, two different access patterns.</p>
+
+        <div class="playground">
+            <div class="btn-row">
+                <button onclick="runNaive()">Run naive (write → read, per element)</button>
+                <button class="secondary" onclick="runBatched()">Run batched (read all, then write all)</button>
+                <button class="secondary" onclick="resetThrash()">Reset</button>
+            </div>
+
+            <div class="bar-row">
+                <div class="bar-label">Naive (interleaved)</div>
+                <div class="bar-track"><div class="bar-fill naive" id="naive-bar"></div></div>
+                <div class="bar-value" id="naive-value">—</div>
+            </div>
+            <div class="bar-row">
+                <div class="bar-label">Batched</div>
+                <div class="bar-track"><div class="bar-fill batched" id="batched-bar"></div></div>
+                <div class="bar-value" id="batched-value">—</div>
+            </div>
+
+            <p class="jank-explanation">Both runs mutate the same 400 elements. The naive run forces up to 400 synchronous layout flushes; the batched run forces roughly one. Numbers will vary by machine — the <em>ratio</em> is the point, and you can verify it independently in DevTools' Performance panel (look for purple "Layout" blocks stacked inside the naive run).</p>
+        </div>
+    </section>
+
+    <section id="freeze">
+        <h2>4. Does It Keep Animating When JS Blocks the Main Thread?</h2>
+        <p>Two boxes, same visual motion, two different CSS properties driving it. Click the block button and watch which one keeps moving.</p>
+
+        <div class="playground">
+            <div class="race-track">
+                <div class="racer left-mover"></div>
+                <div class="racer transform-mover"></div>
+            </div>
+            <div class="race-caption">
+                <span>🟧 top racer: animates <code>left</code> (needs Layout every frame)</span>
+                <span>🟦 bottom racer: animates <code>transform</code> (compositor-only)</span>
+            </div>
+
+            <div class="btn-row">
+                <button onclick="blockMainThread()">🧱 Block main thread for 1.5s</button>
+            </div>
+
+            <div class="interactivity-test">
+                <div class="hover-box">HOVER ME</div>
+                <p class="jank-explanation" style="margin:0;">While the thread is blocked, this box won't respond to hover either — same root cause as the freeze in whichever racer stops. In Chromium-based browsers, the <code>transform</code> racer is expected to keep sliding: it's a compositor-thread animation, running independently of the main thread JS is blocking. The <code>left</code> racer visibly stalls because it needs the main thread's Style/Layout/Paint steps every frame.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="cv">
+        <h2>5. content-visibility: auto — Skipping Off-Screen Work Entirely</h2>
+        <p>6,000 rows, rendered into a 260px-tall scroll box — so almost all of them start off-screen. One version renders normally; the other tells the browser it's allowed to skip layout and paint for rows it can't see yet.</p>
+
+        <div class="playground">
+            <div class="btn-row">
+                <button onclick="renderList(false)">Render 6,000 rows (normal)</button>
+                <button onclick="renderList(true)">Render 6,000 rows (content-visibility: auto)</button>
+                <button class="secondary" onclick="clearList()">Clear</button>
+            </div>
+            <div class="cv-list" id="cv-list"></div>
+            <div class="stat-row">
+                <div class="stat-badge" id="cv-badge">Forced layout time: <span>—</span></div>
+            </div>
+            <p class="jank-explanation">This measures how long a <strong>forced synchronous layout</strong> takes right after inserting the rows (the same technique DevTools' own "Layout" cost is measured with) — not "time to next paint," which on a fast machine is dominated by compositor/vsync scheduling noise that has nothing to do with the actual work being skipped. If the numbers look close or inverted, click each button 2–3 times in a row — the first content-visibility run can include one-time setup cost that later runs don't pay again.</p>
+        </div>
+    </section>
+
+    <section id="summary">
+        <h2>6. Summary Table</h2>
+        <table>
+            <thead>
+                <tr><th>Change triggers</th><th>Example properties</th><th>What runs</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="layout-cell"><strong>Layout + Paint + Composite</strong></td>
+                    <td><code>width</code>, <code>height</code>, <code>top</code>/<code>left</code>, <code>font-size</code>, <code>padding</code>, <code>display</code></td>
+                    <td>Full geometry recompute → repaint → recomposite. The expensive path.</td>
+                </tr>
+                <tr>
+                    <td class="paint-cell"><strong>Paint + Composite only</strong></td>
+                    <td><code>background-color</code>, <code>color</code>, <code>box-shadow</code>, <code>border-radius</code>, <code>visibility</code></td>
+                    <td>Geometry unchanged; pixels redrawn.</td>
+                </tr>
+                <tr>
+                    <td class="composite-cell"><strong>Composite only</strong></td>
+                    <td><code>transform</code>, <code>opacity</code> (layer-promoted element)</td>
+                    <td>No main-thread work past the first frame — GPU re-blends existing textures.</td>
+                </tr>
+            </tbody>
+        </table>
+        <p class="jank-explanation" style="margin-top:1.5rem;">Everything above is a live version of this table. If you take one thing away: before animating a property, ask which row it's in — not whether it "looks cheap" in the code.</p>
+    </section>
+</main>
+
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+    /* ---------- Pipeline strip ---------- */
+    const stageEls = {
+        parse: document.querySelector('.stage[data-stage="parse"]'),
+        style: document.querySelector('.stage[data-stage="style"]'),
+        layout: document.querySelector('.stage[data-stage="layout"]'),
+        paint: document.querySelector('.stage[data-stage="paint"]'),
+        composite: document.querySelector('.stage[data-stage="composite"]'),
+    };
+    const captionEl = document.getElementById('pipeline-caption');
+    let igniteTimers = [];
+
+    const diagramStageClass = {
+        parse: 'parseC', style: 'styleC', layout: 'layoutC', paint: 'paintC', composite: 'compositeC',
+    };
+
+    function highlightDiagramStages(stages) {
+        document.querySelectorAll('.diagram svg .node.diagram-node-active').forEach(g => g.classList.remove('diagram-node-active'));
+        stages.forEach(s => {
+            const cls = diagramStageClass[s];
+            if (!cls) return;
+            document.querySelectorAll('.diagram svg .node.' + cls).forEach(g => g.classList.add('diagram-node-active'));
+        });
+    }
+
+    function ignite(stages, caption, holdMs) {
+        holdMs = holdMs || 900;
+        igniteTimers.forEach(t => clearTimeout(t));
+        igniteTimers = [];
+        Object.values(stageEls).forEach(el => { el.classList.remove('active'); });
+        stages.forEach(s => {
+            const el = stageEls[s];
+            void el.offsetWidth; // restart-friendly
+            el.classList.add('active');
+        });
+        highlightDiagramStages(stages);
+        if (caption) captionEl.textContent = caption;
+        igniteTimers.push(setTimeout(() => {
+            Object.values(stageEls).forEach(el => el.classList.remove('active'));
+            highlightDiagramStages([]);
+        }, holdMs));
+    }
+
+    async function simulateInitialLoad() {
+        const diagramEl = document.getElementById('overview-diagram');
+        if (diagramEl) diagramEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        await sleep(500);
+        ignite(['parse'], 'Parsing HTML + CSS into DOM + CSSOM…', 500);
+        await sleep(550);
+        ignite(['style'], 'Recalculating style: cascade, specificity, inheritance…', 500);
+        await sleep(550);
+        ignite(['layout'], 'Layout: computing geometry for every node…', 500);
+        await sleep(550);
+        ignite(['paint'], 'Paint: rasterizing pixels into layers…', 500);
+        await sleep(550);
+        ignite(['composite'], 'Composite: GPU blends layers onto the screen. First paint.', 700);
+    }
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    /* ---------- Cost Inspector ---------- */
+    const stressGrid = document.getElementById('stress-grid');
+    const stressBoxes = [];
+    for (let i = 0; i < 180; i++) {
+        const b = document.createElement('div');
+        b.className = 'stress-box';
+        stressGrid.appendChild(b);
+        stressBoxes.push(b);
+    }
+    const demoCard = document.getElementById('demo-card');
+    const costBadges = {
+        layout: document.querySelector('#cost-layout-badge span'),
+        paint: document.querySelector('#cost-paint-badge span'),
+        composite: document.querySelector('#cost-composite-badge span'),
+    };
+    const costExplain = document.getElementById('cost-explain');
+    const costCompareEl = document.getElementById('cost-compare');
+    const costRunCountEl = document.getElementById('cost-run-count');
+    const COST_DEFAULT_EXPLAIN = 'Try Layout first, then Composite — the gap is the entire reason `transform`/`opacity` are the default choice for animation.';
+    let costResults = {};
+    let costRunCount = 0;
+
+    function randomColor() {
+        const hues = ['#e57373', '#64b5f6', '#81c784', '#ffd54f', '#ba68c8', '#4dd0e1'];
+        return hues[Math.floor(Math.random() * hues.length)];
+    }
+
+    function formatMs(ms) {
+        return ms < 0.01 ? '< 0.01ms' : ms.toFixed(2) + 'ms';
+    }
+
+    function flashBadge(kind) {
+        const badge = costBadges[kind].closest('.stat-badge');
+        badge.classList.remove('flash');
+        void badge.offsetWidth; // restart the animation
+        badge.classList.add('flash');
+    }
+
+    // Each click mutates 180 elements 25 times over (4,500 total writes) so the
+    // measured main-thread time is a stable, visible number for all three tiers —
+    // not just a single pass that can round down to an unconvincing "0.00ms".
+    const REPEATS = 25;
+
+    // Layout and Composite deliberately produce the SAME 18px shift on the same
+    // 180 boxes — one by forcing layout (margin-left), one via the compositor
+    // only (transform). Same visual outcome, so the cost gap is the only variable.
+    const SHIFT_PX = 18;
+    let layoutShifted = false;
+    let compositeShifted = false;
+
+    function runCostTest(kind) {
+        const t0 = performance.now();
+        if (kind === 'layout') {
+            layoutShifted = !layoutShifted;
+            const targetMargin = layoutShifted ? SHIFT_PX + 'px' : '0px';
+            // The visible "whole grid moves" effect is ONE write to the container —
+            // applying margin-left to every box individually would add a gap before
+            // each one instead of moving the block, which is a different (broken) look.
+            stressGrid.style.marginLeft = targetMargin;
+            demoCard.style.marginLeft = targetMargin;
+            // Separately, force real (but visually tiny) layout work across all 180
+            // boxes so the measured cost reflects touching a realistic number of
+            // elements, not just moving one container.
+            for (let r = 0; r < REPEATS; r++) {
+                stressBoxes.forEach(el => {
+                    el.style.width = layoutShifted ? '14.1px' : '14px';
+                    void el.offsetWidth; // force synchronous layout, per element, per repeat
+                });
+            }
+            ignite(['style', 'layout', 'paint', 'composite'], 'margin-left changed → full pipeline: Style → Layout → Paint → Composite.', 1200);
+            costExplain.textContent = `The whole grid just shifted ${SHIFT_PX}px right via one margin-left write on the container — and ${REPEATS * stressBoxes.length} separate layout-triggering writes just ran across the 180 boxes too, simulating the cost of a change like this touching a realistic number of elements.`;
+        } else if (kind === 'paint') {
+            for (let r = 0; r < REPEATS; r++) {
+                stressBoxes.forEach(el => { el.style.backgroundColor = randomColor(); });
+            }
+            demoCard.style.backgroundColor = (demoCard.style.backgroundColor === 'rgb(255, 224, 178)') ? '#fff3e0' : '#ffe0b2';
+            ignite(['style', 'paint', 'composite'], 'background-color changed → Layout skipped, geometry is unaffected.', 1200);
+            costExplain.textContent = `Only color changed — nothing moves, because geometry is untouched. ${REPEATS * stressBoxes.length} color changes still return almost instantly — the browser redraws pixels whenever it likes, before the next frame.`;
+        } else {
+            compositeShifted = !compositeShifted;
+            const targetTransform = compositeShifted ? `translateX(${SHIFT_PX}px)` : 'translateX(0px)';
+            // Same idea as Layout: one write moves the whole block. The per-box loop
+            // below is only there to prove repeated transform writes stay cheap.
+            stressGrid.style.transform = targetTransform;
+            demoCard.style.transform = targetTransform;
+            for (let r = 0; r < REPEATS; r++) {
+                stressBoxes.forEach(el => {
+                    el.style.transform = compositeShifted ? 'translateX(0.1px)' : 'translateX(0px)';
+                });
+            }
+            ignite(['composite'], 'transform changed → Style, Layout, and Paint are all skipped entirely.', 1200);
+            costExplain.textContent = `The whole grid shifted the exact same ${SHIFT_PX}px right — via transform on the container this time — while ${REPEATS * stressBoxes.length} per-element transform writes ran alongside it with no forced layout at all.`;
+        }
+        const ms = performance.now() - t0;
+        costResults[kind] = ms;
+        costRunCount++;
+        costRunCountEl.textContent = `— run #${costRunCount}`;
+        costBadges[kind].textContent = formatMs(ms);
+        flashBadge(kind);
+
+        const cheapest = costResults.composite != null ? 'composite' : (costResults.paint != null ? 'paint' : null);
+        if (costResults.layout != null && cheapest && cheapest !== 'layout') {
+            const ratio = costResults.layout / Math.max(costResults[cheapest], 0.005);
+            costCompareEl.textContent = ratio >= 1.5
+                ? `So far: Layout blocked the thread ${ratio.toFixed(1)}× longer than ${cheapest} did.`
+                : `So far: Layout and ${cheapest} are close — try clicking Layout again, forced synchronous layout time can vary run to run.`;
+        }
+    }
+
+    function resetCostDemo() {
+        stressBoxes.forEach(el => {
+            el.style.width = '';
+            el.style.backgroundColor = '';
+            el.style.transform = '';
+        });
+        stressGrid.style.marginLeft = '';
+        stressGrid.style.transform = '';
+        demoCard.style.marginLeft = '';
+        demoCard.style.backgroundColor = '';
+        demoCard.style.transform = '';
+        layoutShifted = false;
+        compositeShifted = false;
+        costResults = {};
+        costRunCount = 0;
+        costRunCountEl.textContent = '';
+        costCompareEl.textContent = '';
+        costExplain.textContent = COST_DEFAULT_EXPLAIN;
+        Object.keys(costBadges).forEach(k => { costBadges[k].textContent = '— click the button'; });
+        ignite([], '', 1);
+    }
+
+    /* ---------- Thrashing race ---------- */
+    const thrashBoxes = [];
+    const thrashHost = document.createElement('div');
+    thrashHost.style.display = 'none';
+    document.body.appendChild(thrashHost);
+    for (let i = 0; i < 400; i++) {
+        const b = document.createElement('div');
+        b.style.width = '40px';
+        thrashHost.appendChild(b);
+        thrashBoxes.push(b);
+    }
+    thrashHost.style.display = ''; // attach to layout so offsetWidth is meaningful, kept visually hidden via zero size wrapper
+    thrashHost.style.position = 'absolute';
+    thrashHost.style.visibility = 'hidden';
+    thrashHost.style.pointerEvents = 'none';
+
+    function updateBar(barEl, valueEl, ms, maxMs) {
+        const pct = Math.min(100, (ms / maxMs) * 100);
+        barEl.style.width = pct + '%';
+        valueEl.textContent = ms.toFixed(2) + 'ms';
+    }
+
+    let lastMax = 10;
+
+    function runNaive() {
+        ignite(['style', 'layout', 'paint', 'composite'], 'Interleaved write→read: forcing a synchronous layout on every one of 400 elements.', 1200);
+        const t0 = performance.now();
+        thrashBoxes.forEach(el => {
+            const current = parseFloat(el.style.width) || 40;
+            el.style.width = (current + 1) + 'px';
+            void el.offsetWidth; // forced synchronous layout, every iteration
+        });
+        const ms = performance.now() - t0;
+        lastMax = Math.max(lastMax, ms * 1.2);
+        updateBar(document.getElementById('naive-bar'), document.getElementById('naive-value'), ms, lastMax);
+    }
+
+    function runBatched() {
+        ignite(['style', 'layout', 'paint', 'composite'], 'Reads batched first (one flush), then all writes deferred to the next frame.', 1200);
+        const t0 = performance.now();
+        const widths = thrashBoxes.map(el => el.offsetWidth); // one read pass
+        thrashBoxes.forEach((el, i) => { el.style.width = (widths[i] + 1) + 'px'; }); // write pass, no interleaved read
+        const ms = performance.now() - t0;
+        lastMax = Math.max(lastMax, ms * 1.2);
+        updateBar(document.getElementById('batched-bar'), document.getElementById('batched-value'), ms, lastMax);
+    }
+
+    function resetThrash() {
+        thrashBoxes.forEach(el => { el.style.width = '40px'; });
+        ['naive-bar', 'batched-bar'].forEach(id => document.getElementById(id).style.width = '0%');
+        ['naive-value', 'batched-value'].forEach(id => document.getElementById(id).textContent = '—');
+        lastMax = 10;
+    }
+
+    /* ---------- Compositor freeze test ---------- */
+    function blockMainThread() {
+        ignite(['style', 'layout', 'paint'], 'Main thread blocked by synchronous JS — no Style/Layout/Paint can run until it\'s free.', 1600);
+        const start = performance.now();
+        while (performance.now() - start < 1500) { /* deliberately busy-block the main thread */ }
+    }
+
+    /* ---------- content-visibility demo ---------- */
+    const cvList = document.getElementById('cv-list');
+    const cvBadge = document.querySelector('#cv-badge span');
+
+    function clearList() {
+        cvList.innerHTML = '';
+        cvBadge.textContent = '—';
+    }
+
+    const CV_ROW_COUNT = 6000;
+
+    function renderList(contained) {
+        ignite(contained ? ['composite'] : ['style', 'layout', 'paint', 'composite'],
+            contained ? 'content-visibility: auto — off-screen rows skip Layout and Paint entirely.' : 'Every row goes through the full pipeline, visible or not.',
+            1400);
+        const t0 = performance.now();
+        cvList.innerHTML = '';
+        const frag = document.createDocumentFragment();
+        for (let i = 1; i <= CV_ROW_COUNT; i++) {
+            const row = document.createElement('div');
+            row.className = 'cv-row' + (contained ? ' contained' : '');
+            row.textContent = `Row ${i} — ${contained ? 'content-visibility: auto' : 'normal render'}`;
+            frag.appendChild(row);
+        }
+        cvList.appendChild(frag);
+        // Force layout synchronously right now instead of waiting for a painted
+        // frame — this isolates the actual layout cost content-visibility skips,
+        // without compositor/vsync scheduling noise drowning out the difference.
+        void cvList.offsetHeight;
+        const ms = performance.now() - t0;
+        cvBadge.textContent = ms.toFixed(1) + 'ms (' + (contained ? 'contained, ' : 'normal, ') + CV_ROW_COUNT + ' rows)';
+    }
+</script>
+
+</body>
+</html>

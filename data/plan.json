@@ -51,7 +51,7 @@
           },
           {
             "id": "memory-management-gc",
-            "name": "Memory management and garbage collection",
+            "name": "Memory management, garbage collection, and leak detection/prevention",
             "category": "JavaScript & Browser Internals",
             "difficulty": "Medium",
             "estimatedHours": 3,
@@ -60,7 +60,7 @@
             "score": 0,
             "passingScore": 70,
             "recommendedWeek": "Week 3-4",
-            "tags": ["javascript", "memory", "performance", "gc"]
+            "tags": ["javascript", "memory", "performance", "gc", "memory-leaks", "devtools", "heap-snapshot"]
           },
           {
             "id": "web-apis-advanced",
@@ -387,6 +387,19 @@
             "passingScore": 70,
             "recommendedWeek": "Week 1-2",
             "tags": ["react", "performance", "profiling", "virtualization"]
+          },
+          {
+            "id": "performance-profiling-devtools",
+            "name": "Performance profiling with Chrome DevTools: CPU profiles, flame charts, Long Tasks, memory profiling",
+            "category": "Performance Optimisation",
+            "difficulty": "Hard",
+            "estimatedHours": 3,
+            "priority": "High",
+            "status": "not-started",
+            "score": 0,
+            "passingScore": 70,
+            "recommendedWeek": "Week 3-4",
+            "tags": ["performance", "profiling", "devtools", "debugging", "framework-agnostic"]
           }
         ]
       },
@@ -524,6 +537,19 @@
             "passingScore": 70,
             "recommendedWeek": "Week 3-4",
             "tags": ["system-design", "state-management", "architecture", "patterns"]
+          },
+          {
+            "id": "advanced-rendering-strategies",
+            "name": "Advanced rendering strategies: CSR vs SSR vs SSG vs ISR vs streaming SSR — trade-offs",
+            "category": "Frontend System Design",
+            "difficulty": "Hard",
+            "estimatedHours": 4,
+            "priority": "High",
+            "status": "not-started",
+            "score": 0,
+            "passingScore": 70,
+            "recommendedWeek": "Week 3-4",
+            "tags": ["system-design", "rendering", "ssr", "ssg", "isr", "architecture"]
           },
           {
             "id": "offline-first-architecture",

@@ -61,6 +61,42 @@ This is precisely the problem libraries like FastDOM (and React's batched DOM up
 
 Modern browsers expose `contain: layout style paint` and `content-visibility: auto` specifically so a Lead can scope invalidation. `contain: layout` tells the engine "this subtree's layout doesn't affect anything outside it," letting the engine skip re-laying-out ancestors/siblings when something inside changes — this is how virtualization-adjacent techniques and componentized design systems keep large pages fast without JS-level virtualization for every list. `content-visibility: auto` goes further: off-screen subtrees skip layout, paint, *and* rendering hit-testing entirely until they're near the viewport, which is why it can turn a 10,000-node page from unusable to instant without a virtualized-list rewrite — this is a very strong "senior-vs-lead" signal, because it trades a one-line CSS change for what used to require a bespoke virtualization component.
 
+### Worked example: tracing one page through the pipeline
+
+Everything above is the abstract model. Here's the same pipeline made concrete, using one real component — a product card — traced stage by stage with actual computed values, so the mental model isn't just five names in a row.
+
+```html
+<div class="card">
+  <h2 class="title">Product</h2>
+  <p class="price">$42</p>
+</div>
+```
+```css
+.card  { width: 280px; padding: 16px; background: #fff3e0; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+.title { font-size: 18px; font-weight: 600; margin: 0 0 8px 0; }
+.price { color: #d84315; margin: 0; }
+```
+
+**1. Parse.** The HTML tokenizer produces a DOM subtree — `div.card` with two children, `h2.title` and `p.price`. Independently, the CSS parser produces a CSSOM with three rules, each a class selector at specificity `(0,1,0)`. Neither tree knows about the other yet; a `div.card` node has no idea it matches `.card` until the next stage.
+
+**2. Style.** The engine walks the DOM, and for every node, matches CSSOM selectors against it (highest specificity + source order wins ties), resolves any values that come from inheritance (neither `.title` nor `.price` sets `font-family`, so both inherit the UA default from `body`), and resolves the UA stylesheet's own defaults where the author sheet is silent (`h2` is `display: block` and bold by default — our explicit `font-weight: 600` overrides that default, not the other way around). The output, per node, is a fully resolved computed style — not "what the author wrote," but "what wins after cascade + inheritance + UA defaults."
+
+**3. Layout.** Now the engine turns those resolved styles into geometry, top-down, respecting the block formatting context: `div.card` is a block box with a fixed `width: 280px`, so its border-box is `280 + 32 (padding)` = `312px` wide, positioned at whatever `x, y` its own parent (`body`, with the UA default `8px` margin) gives it. Its children lay out inside its *content* box (280px wide, starting 16px in from the card's edge), stacking vertically: `h2.title` takes the full 280px content width, its height falls out of `font-size`/line-height (~24px), and its `margin-bottom: 8px` is what pushes `p.price` down rather than any property on `p.price` itself.
+
+```
+body (8px UA margin)
+└─ div.card            x=8   y=8    border-box: 312×(auto)
+   └─ padding: 16px
+      ├─ h2.title       x=24  y=24   content-box: 280×~24   (margin-bottom: 8 → next box starts at y=56)
+      └─ p.price        x=24  y=56   content-box: 280×~18
+```
+
+This is the "constraint solver" from the section above, made concrete: `p.price`'s `y` position exists *only* because `h2.title`'s height and margin were resolved first — geometry genuinely depends on sibling and ancestor geometry, it isn't computed independently per node.
+
+**4. Paint.** The engine now emits paint records in stacking order for this box: fill the background rect (`#fff3e0`), draw the `box-shadow` (a *separate* paint operation from the background fill — and because it has blur radius, the engine has to rasterize an area larger than the element's own bounds to accommodate the blur falloff, which is why blurred shadows are measurably more expensive to repaint than a flat `border`), then draw the two glyph runs for the title and price text. Nothing here is layout math anymore — it's "what color is this pixel."
+
+**5. Composite.** Nothing in this component uses `transform`, `opacity`, or `will-change`, so there's no reason for the engine to give it its own compositor layer — it paints straight into the same layer as its surrounding content, and one texture upload covers the whole thing. Contrast that with adding `.card:hover { transform: scale(1.02); }`: the moment that rule can apply, the browser promotes `.card` to its own layer *in advance*, and every subsequent hover toggle skips Style, Layout, and Paint entirely — the compositor thread just re-blends an already-rasterized texture. That's the practical difference between "cheap because we did the work once" and "cheap because we never had to do the work" — and it's the exact reasoning a Lead should narrate out loud when justifying `transform` over `top`/`left` for this kind of micro-interaction.
+
 ## 📊 Visual Architecture & Logic
 
 ### Diagram 1 — The pipeline as a flow, with cost annotations
@@ -97,7 +133,45 @@ graph TD
     class M,N,O composite
 ```
 
-### Diagram 2 — Layout thrashing: architectural interaction between JS and the render pipeline
+### Diagram 2 — Worked example: DOM + CSSOM → Render tree → Layout geometry
+
+```mermaid
+graph TD
+    subgraph DOM["DOM Tree"]
+        D1["div.card"] --> D2["h2.title"]
+        D1 --> D3["p.price"]
+    end
+
+    subgraph CSSOM["CSSOM Tree"]
+        C1[".card<br>width:280px<br>padding:16px<br>background:#fff3e0"]
+        C2[".title<br>font-size:18px<br>font-weight:600"]
+        C3[".price<br>color:#d84315"]
+    end
+
+    D1 -.->|"matches"| C1
+    D2 -.->|"matches"| C2
+    D3 -.->|"matches"| C3
+
+    C1 --> R1["Render node: div.card<br>computed style resolved"]
+    C2 --> R2["Render node: h2.title<br>computed style resolved"]
+    C3 --> R3["Render node: p.price<br>computed style resolved"]
+
+    R1 --> L1["Layout box<br>x=8 y=8, 312 wide"]
+    R2 --> L2["Layout box<br>x=24 y=24, 280x24"]
+    R3 --> L3["Layout box<br>x=24 y=56, 280x18"]
+
+    classDef domNode fill:#4a5568,stroke:#cbd5e0,color:#fff
+    classDef cssomNode fill:#805ad5,stroke:#d6bcfa,color:#fff
+    classDef renderNode fill:#dd6b20,stroke:#fbd38d,color:#fff
+    classDef layoutNode fill:#3182ce,stroke:#90cdf4,color:#fff
+
+    class D1,D2,D3 domNode
+    class C1,C2,C3 cssomNode
+    class R1,R2,R3 renderNode
+    class L1,L2,L3 layoutNode
+```
+
+### Diagram 3 — Layout thrashing: architectural interaction between JS and the render pipeline
 
 ```mermaid
 sequenceDiagram
@@ -111,7 +185,7 @@ sequenceDiagram
         JS->>Style: "el.style.width = x (WRITE)"
         Style-->>Style: "Mark layout dirty"
         JS->>Layout: "el.offsetWidth (READ)"
-        Note over Layout: "Forced synchronous layout!<br>Must flush NOW to answer the read"
+        Note over Layout: "Forced synchronous layout! Must flush NOW to answer the read"
         Layout-->>JS: "return computed width"
     end
     Note over JS,Layout: "Result: O(n) synchronous layouts on the main thread"
