@@ -1,0 +1,21 @@
+{
+  "result": {
+    "topicId": "core-web-vitals",
+    "topicName": "Core Web Vitals: LCP, CLS, INP — definitions, thresholds, improvements",
+    "score": 95,
+    "testDate": "2026-08-07",
+    "passed": true,
+    "answers": {
+      "1": "A",
+      "2": "A",
+      "3": "B",
+      "4": "A",
+      "5": "Field Data - This is the data metrics calculated in the real world use-cases.\nLab Data - This is a the data metrics calculated in a controlled environment, usually mimicking worst case scenario.\n\nBoth are use as Lab Data can be used to gate the releases. While Field data can be used to plan and fix performance issues. Lab Data can be for of an engineering driven task, while field data can be used to rope in product team and work togeather ",
+      "6": "LCP depends on alot of aspects.\nTTFB\nFCP\nTBT\nCLS\nand others\nTTFB can be improved by improving the network layer, caching static content in edge servers, compressing the payload using gzip or brotli\nFCP can be improved by removing render blocking scripts/fonts.\nCLS can be improved by setting image height and width, use skeletal loaders",
+      "7": "Learn this",
+      "8": "img does not have height and width leading heaving re calculation of layouts\nmultiple fonts might lead to FOUT.  there is not smooth font transistion set\nscript tag sets a element post fetch again forcing layout re-calculation. One way to solve this is by using skeletal loaders ",
+      "9": "function HeroSection({ heroImageUrl }) {\n  return (\n    <section className=\"hero\">\n      <img src={heroImageUrl} loading=\"lazy\" alt=\"Product hero\" width=\"200\" height=\"400\"  />\n      <h1>Welcome to Acme</h1>\n    </section>\n  );\n}\nfunction App() {\n  const [heroImageUrl, setHeroImageUrl] = useState(null);\n\n  useEffect(() => {\n    fetch('/api/hero-config')\n      .then(res => res.json())\n      .then(data => setHeroImageUrl(data.imageUrl));\n  }, []);\n\n  if (!heroImageUrl) return <div className=\"hero-placeholder\"  width=\"200\" height=\"400\"> Skeletal loader </div>;\n\n  return <HeroSection heroImageUrl={heroImageUrl} />;\n}",
+      "10": "function ProductList({ products }) {\n  const [filter, setFilter] = useState('');\n  const [filteredProducts, setFilteredProducts] = useState(products);\n\n  const handleInputChange = (e) => {\n    const value = e.target.value;\n    setFilter(value);\n   scheduler.yield();\n    logAnalyticsEvent('filter_changed', { value });\n   const filtered =   await getFilteredValureFromWebWorker(products, value);\n    setFilteredProducts(filtered);\n  };\n\n  return (\n    <div>\n      <input value={filter} onChange={handleInputChange} />\n      <ProductGrid products={filteredProducts} />\n    </div>\n  );\n}"
+    }
+  }
+}

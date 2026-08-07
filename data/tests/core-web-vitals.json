@@ -1,0 +1,125 @@
+{
+  "test": {
+    "topicId": "core-web-vitals",
+    "topicName": "Core Web Vitals: LCP, CLS, INP — definitions, thresholds, improvements",
+    "totalQuestions": 10,
+    "totalPoints": 100,
+    "passingScore": 70,
+    "questions": [
+      {
+        "id": 1,
+        "type": "multiple-choice",
+        "difficulty": "easy",
+        "question": "Which of the following can be considered the Largest Contentful Paint (LCP) element on a page?",
+        "options": [
+          "A) An <img> element, the poster image of a <video>, an element with a CSS background-image, or a block-level element containing text nodes",
+          "B) Any DOM node, including <script> and <meta> tags",
+          "C) Only <img> elements — no other element type is eligible",
+          "D) Only elements that are above the fold at any viewport size, regardless of type"
+        ],
+        "correctAnswer": "A) An <img> element, the poster image of a <video>, an element with a CSS background-image, or a block-level element containing text nodes",
+        "explanation": "The LCP algorithm considers a specific set of element types as candidates: <img>, <image> inside <svg>, the poster of <video>, elements with a CSS background-image, and block-level elements containing text nodes. The browser tracks render times of these candidates and reports the largest one rendered within the viewport as LCP.",
+        "points": 10
+      },
+      {
+        "id": 2,
+        "type": "multiple-choice",
+        "difficulty": "easy",
+        "question": "What aspect of user experience does Cumulative Layout Shift (CLS) measure?",
+        "options": [
+          "A) Unexpected visual instability — how much visible content shifts position during the page's lifecycle without user-initiated interaction",
+          "B) The total time until the page becomes interactive",
+          "C) The delay between a user's input and the browser's response",
+          "D) The number of DOM nodes repainted per second"
+        ],
+        "correctAnswer": "A) Unexpected visual instability — how much visible content shifts position during the page's lifecycle without user-initiated interaction",
+        "explanation": "CLS sums the layout shift scores (impact fraction × distance fraction) of every unexpected layout shift that occurs during the page's lifespan, excluding shifts that happen within 500ms of a user interaction (which are considered expected). It quantifies visual stability, not load speed or responsiveness.",
+        "points": 10
+      },
+      {
+        "id": 3,
+        "type": "multiple-choice",
+        "difficulty": "medium",
+        "question": "In March 2024, Interaction to Next Paint (INP) officially replaced First Input Delay (FID) as a Core Web Vital. What is the key difference in what INP measures compared to FID?",
+        "options": [
+          "A) INP measures only the first interaction on a page, exactly like FID did",
+          "B) INP measures the full latency of interactions across the entire page lifecycle (using a high percentile, effectively the worst typical interaction) — from input delay through event processing to the next paint — whereas FID only measured the delay before an event handler started running, and only for the very first interaction",
+          "C) INP is a lab-only synthetic metric that cannot be measured from real users in the field",
+          "D) INP measures scroll-jank, replacing FID's focus on click and tap responsiveness"
+        ],
+        "correctAnswer": "B) INP measures the full latency of interactions across the entire page lifecycle (using a high percentile, effectively the worst typical interaction) — from input delay through event processing to the next paint — whereas FID only measured the delay before an event handler started running, and only for the very first interaction",
+        "explanation": "FID captured only 'input delay' (time before the handler starts) for the first interaction, missing slow handlers, re-render time, and paint time, and it ignored every interaction after the first. INP samples all (or nearly all) interactions during a page's lifetime and reports a high-percentile value, and it end-to-end measures input delay + processing time + presentation delay — a far more complete responsiveness signal.",
+        "points": 10
+      },
+      {
+        "id": 4,
+        "type": "multiple-choice",
+        "difficulty": "medium",
+        "question": "Per Google's Core Web Vitals thresholds, measured at the 75th percentile of page loads (segmented across mobile and desktop), which set of values classifies a page as 'Good' across all three metrics?",
+        "options": [
+          "A) LCP ≤ 2.5s, CLS ≤ 0.1, INP ≤ 200ms",
+          "B) LCP ≤ 4.0s, CLS ≤ 0.25, INP ≤ 500ms",
+          "C) LCP ≤ 1.0s, CLS ≤ 0.05, INP ≤ 100ms",
+          "D) LCP ≤ 2.5s, CLS ≤ 0.1, INP ≤ 100ms"
+        ],
+        "correctAnswer": "A) LCP ≤ 2.5s, CLS ≤ 0.1, INP ≤ 200ms",
+        "explanation": "The 'Good' thresholds are LCP ≤ 2.5s, CLS ≤ 0.1, and INP ≤ 200ms, all assessed at the 75th percentile of collected field data. Option B lists the 'Needs Improvement' upper bounds (anything above those is 'Poor'), not the 'Good' thresholds.",
+        "points": 10
+      },
+      {
+        "id": 5,
+        "type": "short-answer",
+        "difficulty": "easy",
+        "question": "Explain the difference between 'field data' (e.g., Chrome UX Report / RUM) and 'lab data' (e.g., Lighthouse, local DevTools) for Core Web Vitals, and why both matter to a frontend team.",
+        "correctAnswer": "Field data is Real User Monitoring collected from actual visitors' browsers (via the Chrome UX Report, or your own RUM/analytics pipeline using the web-vitals JS library), reflecting real network conditions, real devices, real content/personalization, and typically reported as a 75th-percentile value over a rolling ~28-day window. This is the data Google actually uses as a Search ranking signal. Lab data is synthetic and reproducible — generated by tools like Lighthouse or PageSpeed Insights' lab section under fixed, simulated network/CPU throttling profiles in a single run, with no real user interactions (so INP in particular can't be measured in a pure lab run — Lighthouse instead approximates responsiveness via Total Blocking Time). Lab data is valuable for fast, deterministic debugging and for catching regressions in CI/PR checks before shipping; field data is the ground truth for actual user experience and SEO/ranking impact, but is noisier, slower to accumulate, and can't be bisected to a single commit as easily. Mature teams use lab data as a guardrail and field data as the source of truth.",
+        "explanation": "Grading focus: correctly distinguishes RUM/CrUX (real users, ranking signal, percentile-based, no fixed conditions) from Lighthouse/lab (synthetic, reproducible, no real INP measurement, good for CI), and articulates why each is used for a different purpose (regression prevention vs. ground truth).",
+        "points": 10
+      },
+      {
+        "id": 6,
+        "type": "short-answer",
+        "difficulty": "medium",
+        "question": "List and briefly justify at least four concrete engineering techniques to improve LCP on a marketing landing page where the LCP element is a large hero image.",
+        "correctAnswer": "1) Preload the hero image with <link rel=\"preload\" as=\"image\" href=\"...\" fetchpriority=\"high\"> so the browser's preload scanner discovers and starts fetching it as early as possible, instead of waiting for CSS/JS to reveal it. 2) Never lazy-load the LCP candidate — loading=\"lazy\" defers fetch discovery until it's known to be near the viewport, directly delaying LCP; use fetchpriority=\"high\" and omit loading=\"lazy\" for above-the-fold hero images. 3) Serve a modern compressed format (WebP/AVIF) with a responsive srcset/sizes so mobile clients don't download an oversized desktop asset, reducing download time. 4) Reduce server response time / Time to First Byte (edge caching, CDN, SSR streaming, faster origin) since LCP is lower-bounded by TTFB — nothing can render before bytes arrive. 5) Eliminate render-blocking resources above the hero (defer non-critical CSS/JS, inline critical above-the-fold CSS) so the browser can start painting sooner. 6) Serve static assets from a CDN with HTTP/2 or HTTP/3 and long-lived cache-control headers to cut connection and round-trip latency.",
+        "explanation": "Looking for at least four distinct, correctly justified techniques spanning discovery/priority (preload, fetchpriority, avoiding lazy-load), payload (format/responsive images), and delivery/server (TTFB, render-blocking resources, CDN).",
+        "points": 10
+      },
+      {
+        "id": 7,
+        "type": "short-answer",
+        "difficulty": "hard",
+        "question": "Interaction to Next Paint (INP) decomposes a single interaction into three phases. Name the three phases and explain what you would specifically optimize in each to reduce INP.",
+        "correctAnswer": "1) Input delay: the time from the user's physical input (click/tap/keypress) until the browser's main thread is free to begin running the associated event handlers. It's dominated by main-thread contention — long tasks from other JS execution, parsing/compiling scripts, or third-party code running at that moment. Optimize by breaking up long tasks (code-splitting, yielding via scheduler.yield()/setTimeout/requestIdleCallback), reducing total JS shipped/executed on load, and deferring non-critical third-party scripts so the thread is free when interactions happen. 2) Processing time: the time actually spent running the event handler(s) and any synchronous work they trigger (state updates, re-renders, synchronous DOM reads/writes). Optimize by minimizing handler complexity, deferring non-essential work (analytics, logging) off the critical path via requestIdleCallback/queueMicrotask/scheduler.postTask, using React's startTransition/useTransition to deprioritize expensive derived-state updates, avoiding layout thrashing by batching DOM reads and writes, and memoizing expensive computations. 3) Presentation delay: the time from the end of processing until the browser actually paints the next frame — style recalculation, layout, paint, and compositing, plus any wait for the next rendering opportunity (e.g., chained requestAnimationFrame calls). Optimize by minimizing the size/complexity of the DOM subtree being updated, avoiding forced synchronous reflow, preferring compositor-only properties (transform/opacity) over layout-triggering ones, and not needlessly chaining multiple rAF callbacks before the visual update lands.",
+        "explanation": "Grading focus: correctly names all three phases (input delay, processing time, presentation delay) and ties each to a specific, technically accurate optimization strategy rather than generic 'make it faster' advice.",
+        "points": 10
+      },
+      {
+        "id": 8,
+        "type": "code-scenario",
+        "difficulty": "medium",
+        "question": "This landing page has 'Poor' CLS in field data:\n\n```html\n<style>\n  @font-face {\n    font-family: 'Brand';\n    src: url('/fonts/brand.woff2') format('woff2');\n  }\n  body { font-family: 'Brand', sans-serif; }\n</style>\n\n<div id=\"promo-banner\"></div>\n<img src=\"/hero.jpg\" alt=\"Hero\">\n<p>Some intro copy that renders immediately on load.</p>\n\n<script>\n  fetch('/api/promo').then(res => res.json()).then(data => {\n    document.querySelector('#promo-banner').innerHTML = `<div class=\"banner\">${data.message}</div>`;\n  });\n</script>\n```\n\nIdentify at least three distinct issues contributing to layout shift, and explain how to fix each.",
+        "correctAnswer": "Issue 1 — unsized image: `<img src=\"/hero.jpg\">` has no `width`/`height` attributes (or CSS `aspect-ratio`), so the browser can't reserve its box before the image downloads; when it loads, it pushes the paragraph below it downward, causing a shift. Fix: add explicit `width`/`height` attributes (the browser derives an aspect ratio from them automatically) or set `aspect-ratio` in CSS so space is reserved from first paint.\n\nIssue 2 — content injected into an unsized container: `#promo-banner` starts empty with no reserved height, then an async fetch injects a `.banner` div into it later, shoving everything below it down the moment the response arrives. Fix: give `#promo-banner` a `min-height` matching the expected banner size (or render a skeleton placeholder of that size) so its box is stable before and after the content loads.\n\nIssue 3 — unoptimized web font swap: `@font-face` has no `font-display` strategy, so depending on the browser default this can cause FOIT/FOUT; if the fallback font's metrics (x-height, width) differ notably from 'Brand', the swap re-wraps text and shifts layout. Fix: preload the font file (`<link rel=\"preload\" as=\"font\" type=\"font/woff2\" href=\"/fonts/brand.woff2\" crossorigin>`) and use `font-display: optional` (avoids the swap entirely if the font isn't ready in time) or use `size-adjust`/`ascent-override`/`descent-override` on a fallback `@font-face` to closely match the custom font's metrics so any swap causes minimal shift.",
+        "explanation": "Tests recognition of the three most common real-world CLS root causes: missing image dimensions, unreserved space for late-injected async content, and web font swap/FOIT-FOUT — plus the correct, specific fix for each.",
+        "points": 10
+      },
+      {
+        "id": 9,
+        "type": "code-scenario",
+        "difficulty": "hard",
+        "question": "This is the above-the-fold hero section of a React marketing page. Field LCP is consistently 'Poor' (>4s), even though the hero image itself is small and well-optimized (80KB):\n\n```jsx\nfunction HeroSection({ heroImageUrl }) {\n  return (\n    <section className=\"hero\">\n      <img src={heroImageUrl} loading=\"lazy\" alt=\"Product hero\" />\n      <h1>Welcome to Acme</h1>\n    </section>\n  );\n}\n\nfunction App() {\n  const [heroImageUrl, setHeroImageUrl] = useState(null);\n\n  useEffect(() => {\n    fetch('/api/hero-config')\n      .then(res => res.json())\n      .then(data => setHeroImageUrl(data.imageUrl));\n  }, []);\n\n  if (!heroImageUrl) return <div className=\"hero-placeholder\" />;\n\n  return <HeroSection heroImageUrl={heroImageUrl} />;\n}\n```\n\nDiagnose all root causes of the LCP regression and rewrite the code to fix them.",
+        "correctAnswer": "Root cause 1 — `loading=\"lazy\"` on the LCP candidate itself: this tells the browser to defer fetching until the image is near the viewport, which is exactly backwards for the single most important above-the-fold image; it should never be lazy-loaded.\n\nRoot cause 2 — client-side discovery waterfall: the image URL isn't known until JS loads → hydrates → `useEffect` fires → `fetch('/api/hero-config')` resolves → state updates → `<img>` finally renders → the browser can start fetching the image. This chains multiple sequential round trips before the LCP resource request is even issued, and because the URL never appears in the initial server-rendered HTML, the browser's preload scanner can't discover it early either.\n\nRoot cause 3 — no priority hint: even once rendered, there's no `fetchpriority=\"high\"` to tell the browser this is a critical resource.\n\nFix — resolve the hero config server-side (SSR) so the URL is present in the initial HTML response and can be preloaded, drop `loading=\"lazy\"`, and add `fetchpriority=\"high\"`:\n\n```jsx\n// Server-rendered: heroImageUrl resolved before the HTML is sent, passed as a prop — no client fetch/waterfall.\nfunction HeroSection({ heroImageUrl }) {\n  return (\n    <section className=\"hero\">\n      <img src={heroImageUrl} fetchpriority=\"high\" alt=\"Product hero\" />\n      <h1>Welcome to Acme</h1>\n    </section>\n  );\n}\n\nfunction App({ heroImageUrl }) {\n  return <HeroSection heroImageUrl={heroImageUrl} />;\n}\n\n// In the document <head>, rendered server-side, for earliest possible discovery:\n// <link rel=\"preload\" as=\"image\" href={heroImageUrl} fetchpriority=\"high\" />\n```",
+        "explanation": "Tests the ability to spot a compound LCP failure: an anti-pattern lazy-load on the LCP element itself, plus a client-fetch waterfall that hides the resource from the browser's early preload scanner, plus a missing priority hint — and to fix it by moving resolution server-side, preloading, and prioritizing.",
+        "points": 10
+      },
+      {
+        "id": 10,
+        "type": "code-scenario",
+        "difficulty": "hard",
+        "question": "`products` contains 5,000 items. Typing in the filter input feels laggy — the DevTools Performance panel shows long tasks over 200ms on every keystroke, and field INP is 'Poor' (>500ms):\n\n```jsx\nfunction ProductList({ products }) {\n  const [filter, setFilter] = useState('');\n  const [filteredProducts, setFilteredProducts] = useState(products);\n\n  const handleInputChange = (e) => {\n    const value = e.target.value;\n    setFilter(value);\n\n    logAnalyticsEvent('filter_changed', { value });\n    const filtered = products\n      .filter(p => p.name.toLowerCase().includes(value.toLowerCase()))\n      .map(p => ({ ...p, score: computeRelevanceScore(p, value) }))\n      .sort((a, b) => b.score - a.score);\n\n    setFilteredProducts(filtered);\n  };\n\n  return (\n    <div>\n      <input value={filter} onChange={handleInputChange} />\n      <ProductGrid products={filteredProducts} />\n    </div>\n  );\n}\n```\n\nDiagnose why INP is poor here and rewrite the code to fix it.",
+        "correctAnswer": "Diagnosis: every single keystroke synchronously runs an analytics call plus an O(n log n) filter + map + sort over 5,000 items inside the input's event handler, all before React can commit and paint the updated input character. This inflates the 'processing time' phase of the interaction well past the frame budget, so both the visible input update and the overall interaction blow past the 200ms/500ms INP thresholds — the typed character itself feels janky because its paint is blocked behind the expensive, unrelated recompute.\n\nFix — separate the urgent update (what the user sees typed) from the expensive, deferrable update (the filtered/sorted list) using React 18's `useTransition`, so React can paint the new input value immediately while the heavy recompute runs as an interruptible, lower-priority transition; also move analytics off the critical path and (ideally) debounce or index the search rather than re-scanning the full array on every keystroke:\n\n```jsx\nfunction ProductList({ products }) {\n  const [filter, setFilter] = useState('');\n  const [filteredProducts, setFilteredProducts] = useState(products);\n  const [isPending, startTransition] = useTransition();\n\n  const handleInputChange = (e) => {\n    const value = e.target.value;\n    setFilter(value); // urgent: keeps the input itself responsive\n\n    startTransition(() => {\n      const filtered = products\n        .filter(p => p.name.toLowerCase().includes(value.toLowerCase()))\n        .map(p => ({ ...p, score: computeRelevanceScore(p, value) }))\n        .sort((a, b) => b.score - a.score);\n      setFilteredProducts(filtered);\n    });\n\n    queueMicrotask(() => logAnalyticsEvent('filter_changed', { value }));\n  };\n\n  return (\n    <div>\n      <input value={filter} onChange={handleInputChange} />\n      <ProductGrid products={filteredProducts} loading={isPending} />\n    </div>\n  );\n}\n```\n\nFor very large or frequently re-filtered datasets, also consider debouncing the expensive recompute and/or moving it to a Web Worker or a pre-built search index so it never occupies the main thread during the interaction at all.",
+        "explanation": "Tests the ability to trace a laggy-typing INP regression to synchronous expensive work inside an event handler, and to apply React 18 concurrent-rendering primitives (useTransition/startTransition) correctly to separate urgent visual updates from deferrable computation, plus recognize analytics/off-critical-path deferral and worker/indexing as further mitigations.",
+        "points": 10
+      }
+    ]
+  }
+}
