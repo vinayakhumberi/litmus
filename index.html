@@ -729,6 +729,15 @@
     color: var(--text-dim);
     white-space: nowrap;
   }
+  .week-badge-deferred {
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .week-checkbox-deferred {
+    border-left: 1px solid var(--border, #333);
+    margin-left: 4px;
+    padding-left: 10px;
+  }
 
   /* Empty / no results */
   .no-results {
@@ -1067,9 +1076,9 @@ function buildTopicList() {
   const categories = planData?.plan?.categories || [];
   categories.forEach(cat => {
     (cat.topics || []).forEach(t => {
-      let weekNum = null;
+      let weekNum = 'deferred';
       if (scheduleData) {
-        const weekMatch = scheduleData.schedule.weeks.find(w => 
+        const weekMatch = scheduleData.schedule.weeks.find(w =>
           w.days.some(d => d.topics.some(st => st.topicId === t.id))
         );
         if (weekMatch) weekNum = weekMatch.weekNumber;
@@ -1100,7 +1109,15 @@ function renderWeekFilters() {
       </label>
     `);
   });
-  
+
+  const deferredChecked = selectedWeeks.has('deferred');
+  html.push(`
+    <label class="week-checkbox week-checkbox-deferred">
+      <input type="checkbox" value="deferred" ${deferredChecked ? 'checked' : ''} onchange="toggleWeekFilter('deferred', this.checked)">
+      Deferred
+    </label>
+  `);
+
   container.innerHTML = html.join('');
 }
 
@@ -1248,7 +1265,7 @@ function renderTopicRow(t) {
   else if (t.score > 0) readiness = `<div class="readiness r-review"><div class="readiness-dot"></div>Review</div>`;
   else readiness = `<div class="readiness r-not"><div class="readiness-dot"></div>Untested</div>`;
 
-  const weekLabel = t.actualWeek ? `Week ${t.actualWeek}` : '—';
+  const weekLabel = t.actualWeek === 'deferred' ? 'Deferred' : (t.actualWeek ? `Week ${t.actualWeek}` : '—');
   const tagsHtml = (t.tags || []).map(tag => `<span class="tag">${escHtml(tag)}</span>`).join('');
 
   const topicId = escAttr(t.id);
@@ -1264,7 +1281,7 @@ function renderTopicRow(t) {
     <td><span class="badge ${prioClass}">${escHtml(t.priority || 'Medium')}</span></td>
     <td>${scoreHtml}</td>
     <td>${readiness}</td>
-    <td><span class="week-badge">${escHtml(weekLabel)}</span></td>
+    <td><span class="week-badge${t.actualWeek === 'deferred' ? ' week-badge-deferred' : ''}">${escHtml(weekLabel)}</span></td>
     <td>
       <div class="actions">
         <a class="action-btn dive" data-tip="Study Course" href="topic-detail.html?id=${topicId}" target="_blank" style="text-decoration:none">

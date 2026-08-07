@@ -7,6 +7,11 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+  }
+</script>
 <style type="text/tailwindcss">
   @layer base {
     body { 
@@ -74,7 +79,8 @@
 </div>
 
 <script>
-  if (localStorage.getItem('theme') === 'light') document.body.classList.add('light-theme');
+  const isLight = localStorage.getItem('theme') === 'light';
+  if (isLight) { document.body.classList.add('light-theme'); } else { document.documentElement.classList.add('dark'); }
 
   const urlParams = new URLSearchParams(window.location.search);
   const topicId = urlParams.get('id');
