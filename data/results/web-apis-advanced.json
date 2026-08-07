@@ -1,0 +1,21 @@
+{
+  "result": {
+    "topicId": "web-apis-advanced",
+    "topicName": "Web APIs: requestAnimationFrame, requestIdleCallback, IntersectionObserver, MutationObserver",
+    "score": 100,
+    "testDate": "2026-08-07",
+    "passed": true,
+    "answers": {
+      "1": "A",
+      "2": "B",
+      "3": "B",
+      "4": "B",
+      "5": "requestAnimationFrame runs right before the render pipeline. This ensures that the DOM reads and writes are faster and do not hog up the main thread. Also requestAnimationFrame has higher priority over Macrotasks thus users tend to see less Jank.\n\nsetTimeout/setInterval spin out Macro tasks these have the least priority. And are picked one at a time per event loop tick, if thats not enough for to slow the visual animations. The DOM reads and writes also hog up the main thread, while the changes done during this cycle only show up in the next renderPipeline execution. ",
+      "6": "a. Inconsistent timings - Since it fires depending on variable external factors, its highly unreliable. Also it is not supported in all the browsers. \nEx. If a user needs to see a error message upon typing wrong data in an input and I use requestIdleCallback to display the error message. It can so happen the message might show up when the user is filling the next field sometimes. And it might show up on time. This will never show up on a Safari browser.\nb.\nA pollyfill for this would look something like this:\nwindow.prototype. requestIdleCallback = function (callback, options) {\n    // check if callstack is empty\n    // check if microtask is emtpy\n    // check if macrotask is empty\n   // check if renderPipeline is empty\n  callback();\n}",
+      "7": "Explain:\n (1) how this affects ordering relative to synchronous DOM mutations, Promise microtasks, and macrotasks like setTimeout \n(2) a subtle re-entrancy bug that can occur if the observer's own callback mutates the DOM node it's observing, and how to guard against it.\n\n1. Mutation observers create a array of all the mutations and queue it at the end of microtask queue.\nThis works exactly like how any micro tasks work. While Other micro tasks remain queued ahead of these.\n2. Since a mutation observer fires a callback to DOM change.The callback itself should not again update the DOM tree directly. One way to guard this is via linters, or effective PR reviews",
+      "8": "  const observer = new IntersectionObserver((entries) => { \n    entries.forEach(entry => { \n        if (entry.isIntersecting) { loadMoreItems(); }\n        });\n  },\n  {\n    root: null, // viewport\n    rootMargin: '200px', // start \"intersecting\" 200px before it's actually visible — pre-fetch buffer\n    threshold: 0.01, // fire as soon as even 1% is visible\n  });",
+      "9": "function useAnimation(callback) {\n    useEffect(() => {\n        function loop() { \n            callback(); \n            setTimeout(() => requestAnimationFrame(loop), 0);\n        } \n        requestAnimationFrame(loop);\n    }, [callback]);\n}",
+      "10": " It freezes because there is an infinite loop caused by the MutationObserver. \n\n if (m.value !== el.dataset.count) {\n     const count = parseInt(el.dataset.count, 10);\n     el.style.setProperty('--count', count);\n }\n"
+    }
+  }
+}

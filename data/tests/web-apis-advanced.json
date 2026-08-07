@@ -1,0 +1,126 @@
+{
+  "test": {
+    "topicId": "web-apis-advanced",
+    "topicName": "Web APIs: requestAnimationFrame, requestIdleCallback, IntersectionObserver, MutationObserver",
+    "totalQuestions": 10,
+    "totalPoints": 100,
+    "passingScore": 70,
+    "questions": [
+      {
+        "id": 1,
+        "type": "multiple-choice",
+        "difficulty": "easy",
+        "question": "What is the primary behavioral difference between requestAnimationFrame(callback) and setTimeout(callback, 16) when used to drive a 60fps animation?",
+        "options": [
+          "A) requestAnimationFrame runs the callback immediately before the browser's next repaint, is synced to the display's actual refresh rate, and is automatically paused in background/hidden tabs; setTimeout is a fixed timer unrelated to paint timing and historically keeps firing (often throttled to ~1s) in background tabs",
+          "B) They are functionally identical; requestAnimationFrame is just syntactic sugar for setTimeout(fn, 16)",
+          "C) setTimeout guarantees frame-perfect timing while requestAnimationFrame is best-effort and can be delayed indefinitely",
+          "D) requestAnimationFrame can only be used inside Web Workers, while setTimeout can only be used on the main thread"
+        ],
+        "correctAnswer": "A) requestAnimationFrame runs the callback immediately before the browser's next repaint, is synced to the display's actual refresh rate, and is automatically paused in background/hidden tabs; setTimeout is a fixed timer unrelated to paint timing and historically keeps firing (often throttled to ~1s) in background tabs",
+        "explanation": "rAF callbacks are scheduled by the browser to run right before the next repaint, so they naturally adapt to 60Hz/90Hz/120Hz displays and pause when the tab is backgrounded (saving CPU/battery). setTimeout(fn, 16) is just a best-effort delay unrelated to the rendering pipeline — it can fire mid-frame, drift over time, and does not pause the same way, making it a poor primitive for smooth animation.",
+        "points": 10
+      },
+      {
+        "id": 2,
+        "type": "multiple-choice",
+        "difficulty": "easy",
+        "question": "You need to lazy-load images as they scroll into the viewport, without causing layout thrashing from repeated getBoundingClientRect() calls in a scroll handler. Which API is purpose-built for this?",
+        "options": [
+          "A) A throttled `scroll` event listener calling `getBoundingClientRect()`",
+          "B) IntersectionObserver",
+          "C) MutationObserver",
+          "D) requestIdleCallback"
+        ],
+        "correctAnswer": "B) IntersectionObserver",
+        "explanation": "IntersectionObserver asynchronously observes intersection changes between a target element and an ancestor/viewport off the main thread's synchronous layout path, avoiding the forced synchronous layout ('layout thrashing') that repeated getBoundingClientRect() calls inside scroll handlers cause.",
+        "points": 10
+      },
+      {
+        "id": 3,
+        "type": "multiple-choice",
+        "difficulty": "medium",
+        "question": "Inside a requestIdleCallback callback, what does `deadline.timeRemaining()` represent, and what is the significance of `deadline.didTimeout`?",
+        "options": [
+          "A) `timeRemaining()` returns total idle time available for the rest of the page's lifetime; `didTimeout` indicates the browser crashed",
+          "B) `timeRemaining()` returns the milliseconds left in the current idle period (bounded, historically up to ~50ms); `didTimeout` is true when the callback was forced to run because its `timeout` option elapsed before an idle period occurred, even if the browser wasn't actually idle",
+          "C) `timeRemaining()` is a boolean; `didTimeout` returns the elapsed idle time in ms",
+          "D) Both properties are only meaningful when the callback is invoked from a Web Worker",
+          "E) None of the above"
+        ],
+        "correctAnswer": "B) `timeRemaining()` returns the milliseconds left in the current idle period (bounded, historically up to ~50ms); `didTimeout` is true when the callback was forced to run because its `timeout` option elapsed before an idle period occurred, even if the browser wasn't actually idle",
+        "explanation": "requestIdleCallback gives work a time budget per idle period. `timeRemaining()` lets you check how much of that budget is left so you can yield before blocking the next frame. If you pass `{ timeout }` and the browser never becomes idle in time, the callback still fires with `didTimeout: true` so starved low-priority work eventually runs — but `timeRemaining()` may report 0 or a very small value in that case since there's no real idle slack.",
+        "points": 10
+      },
+      {
+        "id": 4,
+        "type": "multiple-choice",
+        "difficulty": "medium",
+        "question": "If a script synchronously performs 50 separate DOM mutations on observed nodes within the same task (e.g., inside one function call, no awaits), how does a MutationObserver deliver these changes to its callback?",
+        "options": [
+          "A) The callback fires synchronously 50 times, once per mutation, interleaved with the mutating code",
+          "B) The 50 mutations are compressed into an array of MutationRecords and delivered in a single callback invocation, scheduled as a microtask after the current synchronous task completes",
+          "C) Only the first mutation is recorded; the rest are silently dropped",
+          "D) Delivery requires an explicit call to `observer.flush()` after each mutation"
+        ],
+        "correctAnswer": "B) The 50 mutations are compressed into an array of MutationRecords and delivered in a single callback invocation, scheduled as a microtask after the current synchronous task completes",
+        "explanation": "MutationObserver is asynchronous and batches records. The spec queues a compound microtask that flushes all pending observers once the current task finishes running (and before the next macrotask/rendering step), delivering the entire batch of MutationRecords as one array to the callback rather than firing per-mutation. `takeRecords()` can be used to synchronously drain the queue early if needed.",
+        "points": 10
+      },
+      {
+        "id": 5,
+        "type": "short-answer",
+        "difficulty": "easy",
+        "question": "In 3-5 sentences, explain why requestAnimationFrame is preferred over setTimeout/setInterval for driving visual animations. Name at least two concrete distinctions.",
+        "correctAnswer": "requestAnimationFrame schedules its callback to run right before the browser's next repaint, so updates are synchronized with the actual paint cycle and adapt automatically to the display's refresh rate (60Hz, 90Hz, 120Hz, etc.), whereas setTimeout/setInterval fire on a fixed wall-clock timer that has no relationship to painting and can easily fall out of sync with frames (causing jank, dropped frames, or wasted work between paints). rAF also automatically throttles/pauses when the tab is backgrounded or the page isn't visible, saving CPU and battery, while setTimeout/setInterval keep running (historically clamped to ~1s in background tabs by browsers, but still an uncoordinated separate mechanism). Additionally, the browser can batch style/layout recalculation work optimally around rAF callbacks since it knows exactly when they run relative to the rendering pipeline.",
+        "explanation": "Key grading points: (1) sync with repaint/refresh rate vs fixed timer, (2) automatic pause/throttle in background tabs, (3) avoids jank from misaligned timers, (4) enables the browser to schedule rendering work efficiently.",
+        "points": 10
+      },
+      {
+        "id": 6,
+        "type": "short-answer",
+        "difficulty": "medium",
+        "question": "requestIdleCallback has inconsistent browser support (notably absent in Safari) and known reliability pitfalls even where it exists. (a) List at least two reasons you should avoid relying on it for anything user-facing or time-critical. (b) Briefly describe how you'd implement a cross-browser fallback or an alternative scheduling strategy.",
+        "correctAnswer": "(a) Reasons to avoid for critical work: idle periods are not guaranteed to occur at all under sustained CPU/scroll/animation load, so callbacks can be starved indefinitely even with a `timeout`; the per-callback time budget is small and browser-determined (not something you control precisely); behavior differs across browsers/versions and is entirely unsupported in Safari; and idle callbacks may be deprioritized or not fire consistently in background tabs. (b) Fallback approaches: feature-detect `window.requestIdleCallback` and polyfill with `setTimeout(fn, 1)` plus a shimmed `IdleDeadline` object whose `timeRemaining()` is estimated from `performance.now()` against a fixed frame budget (e.g., 50ms minus elapsed frame time); alternatively use `requestAnimationFrame`-driven time-slicing (chunk work and yield back to rAF each frame, similar to React's Scheduler) or the newer `scheduler.postTask()` API with priority hints where available, reserving genuinely non-critical work (e.g., analytics batching, prefetch, non-visible DOM cleanup) for idle callbacks only when they do fire.",
+        "explanation": "Looking for: recognition that idle time isn't guaranteed, Safari has no native support, and a concrete fallback (setTimeout shim, rAF time-slicing, or scheduler.postTask). Bonus for distinguishing 'nice to have' vs 'must happen' work.",
+        "points": 10
+      },
+      {
+        "id": 7,
+        "type": "short-answer",
+        "difficulty": "hard",
+        "question": "MutationObserver callbacks are delivered as microtasks. Explain: (1) how this affects ordering relative to synchronous DOM mutations, Promise microtasks, and macrotasks like setTimeout; and (2) a subtle re-entrancy bug that can occur if the observer's own callback mutates the DOM node it's observing, and how to guard against it.",
+        "correctAnswer": "(1) MutationObserver queues a mutation-record microtask that runs after the current synchronous script/task finishes but before the event loop proceeds to rendering or the next macrotask (setTimeout/setInterval/I/O callbacks). It is interleaved with other microtasks like Promise `.then()` callbacks according to microtask queue order — if a Promise microtask was already scheduled before the mutation observer's delivery was queued, it runs first, and vice versa; both drain completely before any macrotask or paint. (2) If the callback itself synchronously mutates the observed node (e.g., updates an attribute it's watching), that mutation generates new MutationRecords for the same observer, which get appended to the queue and can cause the callback to be invoked again within the same microtask checkpoint (the microtask queue keeps draining until empty) — potentially producing an infinite loop or runaway recursion that hangs the tab. The fix is to guard re-entrancy: call `observer.disconnect()` before making the mutation inside the callback, perform the change, then call `observer.observe(...)` again to resume watching; alternatively use a flag/semaphore to skip self-triggered mutations, or check `record.oldValue`/`attributeName` to distinguish the observer's own writes from external ones.",
+        "explanation": "Grading focus: correct microtask ordering (after current task, before macrotasks/rendering, interleaved with Promise microtasks per queue order), and the disconnect/reconnect (or guard flag) pattern to prevent self-triggered infinite loops.",
+        "points": 10
+      },
+      {
+        "id": 8,
+        "type": "code-scenario",
+        "difficulty": "medium",
+        "question": "The following infinite-scroll code lives inside a custom scrollable panel (a `<div id=\"panel\" style=\"overflow-y:auto; height:400px\">`), with a sentinel element as the last child:\n\n```js\nconst sentinel = document.querySelector('#sentinel');\n\nconst observer = new IntersectionObserver((entries) => {\n  entries.forEach(entry => {\n    if (entry.isIntersecting) {\n      loadMoreItems();\n    }\n  });\n});\n\nobserver.observe(sentinel);\n```\n\nIn production, `loadMoreItems()` either never fires as users scroll the panel, or fires many times in rapid succession for a single scroll-into-view event. Identify both bugs and fix the code.",
+        "correctAnswer": "Bug 1 (never fires / fires incorrectly): the observer is created without a `root` option, so it defaults to the browser viewport, not the `#panel` scroll container. Intersection is being computed against the wrong scrolling ancestor, so entries can report intersecting/non-intersecting states that don't match what the user actually sees inside the panel. Fix: pass `{ root: document.querySelector('#panel') }` (and optionally a `rootMargin` like '200px' to prefetch before the sentinel is fully visible).\n\nBug 2 (fires many times rapidly): `loadMoreItems()` is called on every intersection callback invocation while `isIntersecting` stays true (e.g., before new content pushes the sentinel out of view, or due to multiple threshold crossings), causing duplicate/overlapping fetches. Fix: guard with a loading flag (or unobserve/reobserve the sentinel) so a new load can't start while one is in flight, e.g.:\n\n```js\nlet isLoading = false;\nconst observer = new IntersectionObserver((entries) => {\n  entries.forEach(async entry => {\n    if (entry.isIntersecting && !isLoading) {\n      isLoading = true;\n      await loadMoreItems();\n      isLoading = false;\n    }\n  });\n}, { root: document.querySelector('#panel'), rootMargin: '200px' });\n\nobserver.observe(sentinel);\n```",
+        "explanation": "Tests understanding that `root` must match the actual scrolling container (defaults to viewport otherwise) and that IntersectionObserver can re-fire while an element remains intersecting, requiring explicit in-flight guarding — a very common real-world infinite-scroll bug.",
+        "points": 10
+      },
+      {
+        "id": 9,
+        "type": "code-scenario",
+        "difficulty": "hard",
+        "question": "This custom React hook is meant to run a per-frame animation loop:\n\n```js\nfunction useAnimation(callback) {\n  useEffect(() => {\n    function loop() {\n      callback();\n      requestAnimationFrame(loop);\n    }\n    requestAnimationFrame(loop);\n  }, [callback]);\n}\n```\n\nIn practice, components using this hook see animation speed increase over time, occasional errors referencing unmounted DOM nodes, and higher-than-expected CPU usage the longer a page stays open. Identify all bugs and rewrite the hook correctly.",
+        "correctAnswer": "Bug 1 — no cleanup / no cancellation: the effect never calls `cancelAnimationFrame`, so on unmount (or whenever the effect re-runs) the existing `loop` keeps scheduling itself forever, continuing to run and touch state/DOM after the component is gone (causing the 'unmounted node' errors and a memory/CPU leak that never stops).\n\nBug 2 — unstable dependency causes duplicate loops: the effect depends on `callback`. If the parent doesn't memoize `callback` (no `useCallback`), a new function identity is created every render, re-running the effect and starting a *new* `requestAnimationFrame(loop)` chain each time without ever canceling the previous one — so multiple loops stack up and run concurrently, which explains animation speed increasing over time (multiple loops each calling `callback()` per frame).\n\nFix — cancel on cleanup, and decouple the loop's identity from `callback` via a ref so re-renders don't spawn new loops:\n\n```js\nfunction useAnimation(callback) {\n  const callbackRef = useRef(callback);\n  useEffect(() => { callbackRef.current = callback; }, [callback]);\n\n  useEffect(() => {\n    let rafId;\n    function loop() {\n      callbackRef.current();\n      rafId = requestAnimationFrame(loop);\n    }\n    rafId = requestAnimationFrame(loop);\n    return () => cancelAnimationFrame(rafId);\n  }, []); // stable — starts exactly one loop, cleaned up on unmount\n}\n```",
+        "explanation": "Tests recognition of two compounding real-world bugs: missing `cancelAnimationFrame` cleanup (classic leak on unmount) and an unstable effect dependency causing multiple concurrent rAF loops to stack up. The fix pattern (ref for latest callback + empty-deps effect + cleanup) is a standard senior-level React/rAF idiom.",
+        "points": 10
+      },
+      {
+        "id": 10,
+        "type": "code-scenario",
+        "difficulty": "hard",
+        "question": "A widget syncs a visual counter by watching its own `data-count` attribute and mirroring it into a CSS custom property, but also increments the attribute in the same callback to 'debounce' external updates:\n\n```js\nconst el = document.getElementById('widget');\n\nconst observer = new MutationObserver((mutations) => {\n  mutations.forEach(m => {\n    if (m.type === 'attributes' && m.attributeName === 'data-count') {\n      const count = parseInt(el.dataset.count, 10);\n      el.dataset.count = count + 1;\n      el.style.setProperty('--count', count);\n    }\n  });\n});\n\nobserver.observe(el, { attributes: true, attributeFilter: ['data-count'] });\n```\n\nAs soon as any code sets `el.dataset.count = 'someValue'` once, the tab freezes. Explain exactly why, and rewrite the code to fix it.",
+        "correctAnswer": "The callback mutates the very attribute (`data-count`) it is observing. Each time the callback runs, `el.dataset.count = count + 1` itself is a mutation on the observed attribute, which generates a new MutationRecord that gets queued for the same observer. Because MutationObserver delivery keeps draining its queue until empty within the microtask checkpoint, this creates unbounded self-triggering recursion — the callback keeps re-invoking itself synchronously as fast as the engine can process microtasks, with no exit condition, hanging the tab.\n\nFix: break the self-observation loop, either by disconnecting before mutating and reconnecting after, or — better — by not observing an attribute you also write to from the same callback (separate the 'observed' state from the 'derived' state):\n\n```js\nconst el = document.getElementById('widget');\n\nconst observer = new MutationObserver((mutations) => {\n  mutations.forEach(m => {\n    if (m.type === 'attributes' && m.attributeName === 'data-count') {\n      observer.disconnect(); // stop observing before we mutate\n      const count = parseInt(el.dataset.count, 10);\n      el.style.setProperty('--count', count);\n      // if incrementing is truly needed, do it here, then:\n      observer.observe(el, { attributes: true, attributeFilter: ['data-count'] });\n    }\n  });\n});\n\nobserver.observe(el, { attributes: true, attributeFilter: ['data-count'] });\n```\n\nA cleaner design avoids the increment-inside-callback pattern entirely: use a separate attribute/property for the 'source of truth' the observer watches, and write derived output (like the CSS variable) to a different attribute so the callback never mutates its own trigger.",
+        "explanation": "Tests deep understanding of MutationObserver's queue-drain-until-empty delivery semantics and the classic re-entrancy footgun of mutating the exact attribute/subtree you're observing inside the callback. Expect either the disconnect/reconnect guard or a redesign separating observed vs. derived state as a valid fix.",
+        "points": 10
+      }
+    ]
+  }
+}
