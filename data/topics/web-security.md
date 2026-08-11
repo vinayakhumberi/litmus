@@ -10,51 +10,70 @@ This topic is a "must-know" because it's a proxy for a broader Lead signal: **do
 
 ### The trust model: why XSS exists at all
 
-The browser's core execution model treats **HTML, CSS, and JS parsed from a trusted origin's response as fully privileged**. There is no runtime distinction between "a `<script>` tag the developer wrote" and "a `<script>` tag that ended up in the response because user input was concatenated into HTML." Once bytes are in the document and are parsed as markup or executable script, they run with the full privileges of that origin: access to `document.cookie` (unless `HttpOnly`), the DOM, `localStorage`, `fetch` with ambient credentials, and the ability to make same-origin requests carrying session cookies.
+The browser treats any HTML, CSS, or JS parsed from a trusted origin's response as **fully privileged** — there's no runtime distinction between a `<script>` tag the developer wrote and one that ended up in the response because user input got concatenated into HTML. Once it's parsed, it runs with full access to `document.cookie` (unless `HttpOnly`), the DOM, `localStorage`, and `fetch` with ambient credentials. Injected script isn't "sandboxed lite JS" — to the JS engine, it's indistinguishable from first-party code. That's the whole reason XSS is catastrophic rather than merely annoying.
 
-This is the fundamental reason XSS is catastrophic rather than merely annoying — injected script isn't "sandboxed lite JS," it's indistinguishable from first-party code to the JS engine.
+**The three XSS types, at a glance:**
 
-**Three canonical XSS vectors, and where each is architecturally rooted:**
+| Type | Payload source | Requires a click? | Severity |
+|---|---|---|---|
+| **Stored** | Persisted server-side (comment, bio, review), reflected on every render | No | Highest — wormable, fires on every viewer |
+| **Reflected** | Echoed back from the current request (query params, form fields) | Yes — victim clicks a crafted URL | Medium |
+| **DOM-based** | Client-side only, never touches the server | Varies | High — server-side defenses (WAF, input validation) see nothing |
 
-1. **Stored XSS** — malicious payload persisted server-side (comment, bio, product review) and reflected into HTML on every subsequent render. Highest severity because it's a stored, wormable attack — it fires on every viewer, no click required.
-2. **Reflected XSS** — payload comes from the request itself (query params, form fields) and is echoed back unescaped in the response. Requires social engineering to get the victim to click a crafted URL — lower severity, but still credential/session theft.
-3. **DOM-based XSS** — the vulnerable data flow never touches the server at all. A client-side "source" (`location.hash`, `location.search`, `document.referrer`, `postMessage` data) flows into a client-side "sink" (`innerHTML`, `document.write`, `eval`, `setTimeout(string)`, `location.href =`) entirely within the browser. This is the vector modern SPA frameworks are most exposed to, because routing logic increasingly reads from `location` and renders it.
+DOM-based XSS is the vector modern SPAs are most exposed to, because routing logic increasingly reads directly from `location` and renders it. The pattern to recognize: a client-side **source** (`location.hash`, `location.search`, `document.referrer`, `postMessage` data) flowing into a client-side **sink** (`innerHTML`, `document.write`, `eval`, `setTimeout(string)`, `location.href =`).
 
-**Why React/Vue/Angular's auto-escaping isn't a complete answer:**
+**Why framework auto-escaping isn't a complete answer**
 
-Frameworks auto-escape *text interpolation* (`{value}` in JSX, `{{ value }}` in Vue) by routing it through `textContent`/`createTextNode`, which never triggers HTML parsing. But every framework has an explicit escape hatch that bypasses this — `dangerouslySetInnerHTML` in React, `v-html` in Vue, `[innerHTML]` in Angular (Angular additionally runs a `DomSanitizer` by default, which is why Angular is comparatively harder to XSS out of the box). A Staff engineer's job is knowing that **the framework's default posture is not the same as the codebase's actual posture** — a single `dangerouslySetInnerHTML` fed by unsanitized markdown-to-HTML rendering (a very common real pattern: user bios, rich-text comments) reintroduces the full vulnerability class the framework was otherwise protecting against.
+React/Vue/Angular auto-escape *text interpolation* (`{value}` in JSX, `{{ value }}` in Vue) by routing it through `textContent`, which never triggers HTML parsing. But every framework has an escape hatch that bypasses this:
 
-There's a second, subtler DOM-XSS surface: **attribute and URL sinks**. `<a href={userInput}>` looks safe because it's JSX interpolation, but if `userInput` is `javascript:alert(document.cookie)`, the framework will happily render `href="javascript:alert(...)"`, and a click executes it. React added protections against this in later versions (warns on `javascript:` URLs), but homegrown attribute binding or older framework versions do not. The mental model: **escaping is context-sensitive**. HTML-entity-escaping text content does nothing to neutralize a `javascript:` URL in an `href`, or a `style="background:url(javascript:...)"` in older IE-class parsers, or a payload breaking out of a `<script>` block via `</script>` inside a JSON blob embedded server-side.
+- `dangerouslySetInnerHTML` (React)
+- `v-html` (Vue)
+- `[innerHTML]` (Angular — though Angular also runs a `DomSanitizer` by default, which is why it's comparatively harder to XSS out of the box)
+
+A single `dangerouslySetInnerHTML` fed by unsanitized markdown-to-HTML rendering — a very common pattern for user bios and rich-text comments — reintroduces the full vulnerability class the framework was otherwise protecting against. Knowing that **the framework's default posture isn't the same as the codebase's actual posture** is the Staff-level distinction here.
+
+There's a second, subtler surface: **attribute and URL sinks**. `<a href={userInput}>` looks safe — it's JSX interpolation — but if `userInput` is `javascript:alert(document.cookie)`, the framework renders it verbatim, and a click executes it. The mental model to hold onto: **escaping is context-sensitive**. HTML-entity-escaping text content does nothing to neutralize a `javascript:` URL in an `href`, or a payload breaking out of a `<script>` block via `</script>` inside a JSON blob embedded server-side.
+
+> **Key takeaway:** Auto-escaping only covers the interpolation paths the framework controls. Every escape hatch (`dangerouslySetInnerHTML`, `v-html`, raw `innerHTML`) and every non-text-content sink (URLs, attributes, inline scripts) is its own separate attack surface, needing its own defense.
 
 ### CSRF: the same-origin policy's deliberate blind spot
 
-CSRF is not a bug in the same-origin policy (SOP) — it's a consequence of a deliberate exception the browser makes. SOP prevents `evil.com`'s JavaScript from **reading** responses from `bank.com`. It does *not* prevent `evil.com` from **causing a request to be sent** to `bank.com` — a `<form>` POST, an `<img src>` GET, a fetch with `mode: 'no-cors'` — and critically, the browser will attach `bank.com`'s cookies to that request automatically, because cookie attachment is origin-scoped to the *target*, not the *initiator*. The attacker can't read the response (SOP blocks that), but for state-changing operations, they don't need to — firing the request with ambient credentials is the attack.
+CSRF isn't a bug in the same-origin policy (SOP) — it's a consequence of a deliberate exception. SOP stops `evil.com`'s JavaScript from **reading** a response from `bank.com`. It does *not* stop `evil.com` from **causing a request to be sent** to `bank.com` — a `<form>` POST, an `<img src>` GET — and the browser attaches `bank.com`'s cookies to that request automatically, because cookie attachment is scoped to the request's *target*, not its *initiator*. The attacker can't read the response, but for a state-changing operation they don't need to — firing the request with ambient credentials is the entire attack.
 
-This is why CSRF specifically targets **cookie-based session authentication**. It does not affect schemes where the credential must be *explicitly attached by JavaScript* (e.g., `Authorization: Bearer <token>` read from memory/`localStorage` and set via a `fetch` header) — because `evil.com`'s form/image tag has no mechanism to read `bank.com`'s `localStorage` or construct an arbitrary header on a simple form submission. This is the architectural trade-off Leads are expected to articulate: **bearer-token auth stored out of cookies sidesteps CSRF entirely, but reopens XSS-based token theft as a bigger prize** (steal the token once, no need for a live CSRF vector), whereas `HttpOnly` cookies are immune to XSS-based *theft* but are exactly the credential CSRF exploits.
+This is why CSRF specifically targets **cookie-based session auth**. It doesn't affect schemes where the credential must be *explicitly attached by JavaScript* (e.g. a bearer token read from memory and set as a `fetch` header), because `evil.com`'s form has no way to read `bank.com`'s storage or construct a custom header. That's the trade-off a Lead should be able to name: bearer tokens outside cookies sidestep CSRF entirely, but make XSS-based token theft a bigger prize (steal it once, no live CSRF vector needed) — while `HttpOnly` cookies are immune to XSS theft but are exactly the credential CSRF exploits.
 
-**The three real defenses, and why each works:**
+**The three real defenses:**
 
-- **SameSite cookie attribute** (`Lax` default in modern Chrome/Firefox/Safari) — the browser itself refuses to attach the cookie on cross-site navigations/requests above a certain method/context threshold. `Strict` blocks it on all cross-site requests including top-level navigation from a link; `Lax` allows top-level GET navigations (so following a link from an email still logs you in) but blocks cross-site POST. This is a browser-enforced default now, which is why CSRF has become *less* prevalent than it was pre-2020 — but it's not a complete fix: it doesn't protect against subdomain-to-subdomain attacks under the same registrable domain, and legacy browsers/API clients may not honor it.
-- **CSRF tokens (synchronizer token pattern)** — server generates a per-session (or per-request) random token, embeds it in the HTML form/response, client must echo it back in the request body or a custom header. This works because SOP *does* block `evil.com` from reading `bank.com`'s response to extract the token — the attacker can force a request but can't read what value to put in it.
-- **Custom header requirement** — requiring `X-Requested-With` or similar on state-changing `fetch`/XHR calls. This works because simple `<form>` submissions cannot set arbitrary headers, only `fetch`/XHR can, and those are subject to CORS preflight — so an attacker's cross-origin fetch attempting to set that header triggers a preflight `OPTIONS` that the server can reject.
+| Defense | How it works | Where it falls short |
+|---|---|---|
+| **`SameSite` cookie attribute** | Browser refuses to attach the cookie cross-site: `Strict` blocks all cross-site requests, `Lax` (the modern browser default) allows top-level GET but blocks cross-site POST | Doesn't cover subdomain-to-subdomain attacks under the same registrable domain; legacy clients may not honor it |
+| **CSRF tokens** (synchronizer pattern) | Server embeds a per-session random token in the page; client must echo it back. SOP blocks the attacker from *reading* the page to steal that token | Only works if the server actually verifies it on every state-changing route |
+| **Custom header requirement** | Plain `<form>` submissions can't set arbitrary headers — only `fetch`/XHR can, which triggers a CORS preflight the server can reject | Doesn't help if the same endpoint also accepts plain form-encoded POSTs |
 
-None of these should be deployed alone. `SameSite=Lax` plus CSRF tokens is the standard defense-in-depth combination a Lead should propose, because `SameSite` is a browser behavior you don't fully control the rollout of (older clients), while tokens are a server-verifiable guarantee.
+None of these should be deployed alone. `SameSite=Lax` plus CSRF tokens is the standard combination: `SameSite` is a browser behavior you don't fully control the rollout of, while tokens are a server-verifiable guarantee.
+
+> **Key takeaway:** CSRF only works because cookies are attached automatically, regardless of who initiated the request. Anything that makes the credential *not* automatic (bearer tokens) or *not* attachable cross-site (`SameSite`) closes the hole — layer both, don't rely on either alone.
 
 ### CSP: shifting from "prevent the injection" to "neuter the injection"
 
-Every defense above is about *preventing* untrusted content from entering the DOM/response. Content-Security-Policy is fundamentally different: it assumes injection **will** happen sometimes (defense-in-depth, not defense-instead-of) and constrains *what injected code is allowed to do* at the browser-enforcement level, via an HTTP response header (or `<meta>` tag, with reduced coverage — `frame-ancestors` and report-only directives don't work in `<meta>`).
+Everything above tries to *prevent* untrusted content from entering the DOM. Content-Security-Policy assumes injection **will** happen sometimes, and instead constrains *what injected code is allowed to do*, enforced by the browser via an HTTP response header (or a `<meta>` tag, with reduced coverage — `frame-ancestors` and report-only don't work there).
 
-Core directive families a Lead should be fluent in:
+**The directives a Lead should be fluent in:**
 
-- `script-src` — the highest-value directive. `script-src 'self'` blocks inline `<script>` blocks, `javascript:` URLs, and `eval`-family calls (`eval`, `new Function`, `setTimeout(string)`) by default, and only allows script tags whose `src` matches an allow-listed origin.
-- `'unsafe-inline'` — effectively disables the inline-script protection; **a Lead should treat any CSP containing this as providing near-zero XSS mitigation**, since the vast majority of real-world XSS payloads are inline `<script>` or `on*` attribute injections.
-- **Nonces and hashes** — the modern replacement for `'unsafe-inline'`. Server generates a cryptographically random nonce per response (`script-src 'nonce-r4nd0m123'`), and only `<script nonce="r4nd0m123">` tags matching it execute. Because the nonce is regenerated per-response and never predictable, an attacker who injects a `<script>` tag cannot guess the nonce to attach, so their injected script simply fails to execute — silently neutralized rather than blocked-and-erroring. Hash-based (`'sha256-...'`) works for known static inline scripts but doesn't scale to dynamically rendered inline scripts (SSR'd initial-state blobs), which is why nonces are preferred for SSR apps.
-- `object-src 'none'` — blocks Flash/plugin-based XSS vectors, still recommended as a blanket default.
-- `base-uri 'self'` — prevents an attacker-injected `<base href="evil.com">` from silently rewriting all relative URLs on the page (script srcs, form actions) to point at an attacker origin — a commonly forgotten directive.
-- `frame-ancestors` — the modern replacement for the `X-Frame-Options` header, controls who can iframe you (clickjacking defense, related but distinct threat model from XSS/CSRF).
-- **Report-only mode** (`Content-Security-Policy-Report-Only` + `report-uri`/`report-to`) — the operationally critical rollout mechanism. A Lead does not ship a strict CSP cold to production; they ship report-only first, harvest violation reports for real (not synthetic) traffic for days/weeks, fix the false positives (a third-party analytics snippet that needs allow-listing, an inline event handler the codebase didn't know still existed), and only then flip to enforcing mode. This operational sequencing — not the directive syntax — is the actual Staff-level signal.
+| Directive | What it does | Watch out for |
+|---|---|---|
+| `script-src 'self'` | Blocks inline `<script>`, `javascript:` URLs, and `eval`-family calls by default; only allows scripts from allow-listed origins | `'unsafe-inline'` disables the entire protection — treat any CSP that has it as near-zero XSS mitigation |
+| Nonces (`'nonce-...'`) | Server generates a random per-response nonce; only `<script nonce="...">` tags matching it execute — an injected `<script>` can't guess it, so it silently fails | Hashes (`'sha256-...'`) work for static inline scripts but don't scale to dynamically rendered ones like SSR state blobs |
+| `object-src 'none'` | Blocks Flash/plugin-based vectors | Cheap, safe as a blanket default |
+| `base-uri 'self'` | Stops an injected `<base href="evil.com">` from silently rewriting every relative URL on the page | Commonly forgotten |
+| `frame-ancestors` | Controls who can iframe you (clickjacking defense) | Modern replacement for `X-Frame-Options` |
+| Report-only mode | `Content-Security-Policy-Report-Only` + `report-to` ships the policy without enforcing it, just collecting violation reports | This is the real Staff-level signal — nobody ships a strict CSP cold |
 
-**Trust-boundary reasoning interviewers are probing for:** CSP is often the *last* line of defense, not the first — it doesn't replace output encoding or framework auto-escaping, because a sufficiently permissive `script-src` (broad third-party CDN allow-lists, `'unsafe-eval'` for a legacy dependency) can still leave real gaps. A nuanced answer acknowledges CSP's own bypass classes: JSONP endpoints on an allow-listed origin can be abused to execute arbitrary script (an allow-listed CDN hosting a JSONP callback endpoint effectively grants script execution), and Angular's older versions had documented CSP bypasses via its template sandbox. CSP is a mitigation that reduces blast radius and buys detection time (via violation reporting), not a silver bullet.
+A Lead never ships a strict CSP straight to enforcing mode. They ship report-only first, harvest violation reports against real traffic for days or weeks, fix the false positives (an analytics snippet that needs allow-listing, an inline handler nobody knew still existed), and only then flip to enforcing. That operational sequencing — not the directive syntax — is what interviewers are actually listening for.
+
+CSP is also not a complete answer by itself — it's the *last* line of defense, not a replacement for output encoding. A broad `script-src` allow-list can still leave real gaps: a JSONP endpoint on an allow-listed CDN can be abused to execute arbitrary script, and some frameworks have had documented CSP bypasses via their own template sandboxes.
+
+> **Key takeaway:** CSP reduces blast radius and buys detection time — it's insurance for when the other defenses fail, not a substitute for them. Treat rollout as a migration project (report-only → enforce), not a header you add once and forget.
 
 ## 📊 Visual Architecture & Logic
 

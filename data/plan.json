@@ -963,6 +963,104 @@
             "tags": ["dsa", "complexity", "big-o", "algorithms"]
           }
         ]
+      },
+      {
+        "id": "category-8",
+        "name": "AI & LLM-Integrated Frontend Engineering",
+        "description": "Building, securing, and leading AI/LLM-powered frontend features — the newest FAANG interview signal area, spanning both hands-on implementation and Lead-level tooling/culture decisions",
+        "topics": [
+          {
+            "id": "ai-integrated-ui-streaming",
+            "name": "Streaming AI/LLM responses in the UI: SSE/fetch streaming, token-by-token rendering, backpressure, cancellation",
+            "category": "AI & LLM-Integrated Frontend Engineering",
+            "difficulty": "Hard",
+            "estimatedHours": 3,
+            "priority": "High",
+            "status": "not-started",
+            "score": 0,
+            "passingScore": 70,
+            "recommendedWeek": "Week 3-4",
+            "tags": ["ai", "llm", "streaming", "sse", "ux"]
+          },
+          {
+            "id": "conversational-ui-patterns",
+            "name": "Conversational UI patterns: chat interfaces, optimistic sends, regenerate/retry, rendering markdown & code in messages",
+            "category": "AI & LLM-Integrated Frontend Engineering",
+            "difficulty": "Medium",
+            "estimatedHours": 3,
+            "priority": "High",
+            "status": "not-started",
+            "score": 0,
+            "passingScore": 70,
+            "recommendedWeek": "Week 3-4",
+            "tags": ["ai", "chat-ui", "ux", "markdown"]
+          },
+          {
+            "id": "ai-output-security-rendering",
+            "name": "Securely rendering AI-generated content: prompt injection, XSS from LLM output, sanitizing markdown/HTML",
+            "category": "AI & LLM-Integrated Frontend Engineering",
+            "difficulty": "Hard",
+            "estimatedHours": 2,
+            "priority": "High",
+            "status": "not-started",
+            "score": 0,
+            "passingScore": 70,
+            "recommendedWeek": "Week 3-4",
+            "tags": ["ai", "security", "xss", "prompt-injection"]
+          },
+          {
+            "id": "agentic-ui-patterns",
+            "name": "Agentic UI patterns: visualizing tool calls, human-in-the-loop confirmation, multi-step task progress",
+            "category": "AI & LLM-Integrated Frontend Engineering",
+            "difficulty": "Medium",
+            "estimatedHours": 2,
+            "priority": "Medium",
+            "status": "not-started",
+            "score": 0,
+            "passingScore": 70,
+            "recommendedWeek": "Week 6-7",
+            "tags": ["ai", "agents", "ux", "tool-use"]
+          },
+          {
+            "id": "client-side-ai-inference",
+            "name": "Client-side AI inference: WebGPU/WASM on-device models, when to run in-browser vs call a server",
+            "category": "AI & LLM-Integrated Frontend Engineering",
+            "difficulty": "Medium",
+            "estimatedHours": 2,
+            "priority": "Low",
+            "status": "not-started",
+            "score": 0,
+            "passingScore": 70,
+            "recommendedWeek": "Week 6-7",
+            "tags": ["ai", "webgpu", "wasm", "on-device"]
+          },
+          {
+            "id": "leading-ai-tool-adoption",
+            "name": "Leading AI-tool adoption: rolling out Copilot/Claude Code, setting review standards and guardrails for AI-generated code",
+            "category": "AI & LLM-Integrated Frontend Engineering",
+            "difficulty": "Medium",
+            "estimatedHours": 2,
+            "priority": "High",
+            "status": "not-started",
+            "score": 0,
+            "passingScore": 70,
+            "recommendedWeek": "Week 3-4",
+            "tags": ["ai", "leadership", "tooling-adoption", "code-review"]
+          },
+          {
+            "id": "ai-assisted-eng-culture",
+            "name": "AI's impact on engineering culture: mentoring junior engineers in an AI-augmented team, redefining PR/code-review expectations",
+            "category": "AI & LLM-Integrated Frontend Engineering",
+            "difficulty": "Medium",
+            "estimatedHours": 2,
+            "priority": "High",
+            "status": "not-started",
+            "score": 0,
+            "passingScore": 70,
+            "recommendedWeek": "Week 3-4",
+            "tags": ["ai", "leadership", "mentoring", "engineering-culture"]
+          }
+        ]
       }
     ]
   }

@@ -449,12 +449,19 @@
   }
 
   .topic-name {
+    display: block;
     font-family: var(--font-mono);
     font-size: 13px;
     font-weight: 400;
     color: var(--text);
     max-width: 420px;
     line-height: 1.4;
+    text-decoration: none;
+  }
+
+  .topic-name:hover {
+    color: var(--accent);
+    text-decoration: underline;
   }
 
   .tags-list {
@@ -902,6 +909,11 @@ Structure:
 ## 🧠 Core Technical Deep Dive
 (Extensive explanation. Go deep into the JavaScript engine, browser runtime, memory management, or specific framework internals. Do not explain basics.)
 
+Readability requirements for this section (depth and scannability are not in tension — say precise things briefly):
+- Prefer short paragraphs (3-4 sentences max) over long ones. Split any paragraph that's stacking more than two distinct ideas.
+- Whenever you're contrasting multiple items (types of an attack/pattern, defenses, API options, trade-offs), use a Markdown table instead of writing them out as prose — a reader should be able to grasp the shape of the comparison in a few seconds before reading the detail.
+- End each major subsection with a one-line "> **Key takeaway:** ..." callout summarizing the point for someone skimming.
+
 ## 📊 Visual Architecture & Logic
 (Provide at least TWO Mermaid.js diagrams:
 1. A flow diagram (graph TD) explaining the logic/execution process.
@@ -911,6 +923,9 @@ Structure:
 - ALWAYS wrap node text in double quotes if it contains symbols, punctuation, or mathematical notation (e.g., ":", "/", "(n)", "←", "?").
 - NEVER use "\\n" for line breaks inside nodes. Use HTML "<br>" tags instead.
 - Ensure notations like "O(n)" or "fn()" are strictly wrapped in double quotes to avoid breaking the parser.
+- NEVER use "style" (or any other Mermaid reserved word) as a custom classDef name — it collides with Mermaid's own "style nodeId ..." directive and breaks the parser. Pick a distinct name (e.g. "styleStage" instead of "style").
+- Inside sequenceDiagram blocks specifically, do NOT use "<br>" inside Note or message text — this site's renderer extracts the diagram source in a way that turns "<br>" into a real line break before Mermaid parses it, which breaks the single-line statement grammar sequence diagrams rely on. Keep sequenceDiagram labels on one line, or split into multiple Note statements instead. ("<br>" inside flowchart/graph node brackets is fine and unaffected — this restriction is sequenceDiagram-only.)
+- Keep individual diagrams focused: if a flow would need more than ~12-15 nodes, split it into two smaller, clearly-labeled diagrams (e.g. "Diagram 1a — Request phase" / "Diagram 1b — Response phase") rather than one sprawling one.
 
 ## 🏢 Interview Context & FAANG Signals
 (Where this appears in the interview loop and the specific "Lead signals" interviewers are looking for.)
@@ -1273,7 +1288,7 @@ function renderTopicRow(t) {
 
   return `<tr class="topic-row">
     <td>
-      <div class="topic-name">${escHtml(t.name)}</div>
+      <a class="topic-name" href="topic-detail.html?id=${topicId}" target="_blank" rel="noopener">${escHtml(t.name)}</a>
       <div class="tags-list">${tagsHtml}</div>
     </td>
     <td>${statusSelect}</td>

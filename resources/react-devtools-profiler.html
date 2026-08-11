@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React DevTools Profiler — Live Debugging Playground</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        :root {
+            --primary: #61dafb;
+            --dark: #20232a;
+            --text: #ffffff;
+            --gray: #282c34;
+            --accent: #f08d49;
+            --good: #4ade80;
+            --bad: #f87171;
+            --code-bg: #1e1e1e;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--dark);
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: var(--gray);
+            padding: 3rem 2rem;
+            text-align: center;
+            border-bottom: 4px solid var(--primary);
+        }
+        nav {
+            position: sticky;
+            top: 0;
+            background: var(--gray);
+            padding: 1rem;
+            z-index: 100;
+            text-align: center;
+            border-bottom: 1px solid #444;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 4px;
+        }
+        nav a {
+            color: var(--primary);
+            margin: 0 12px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+        main {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        section {
+            margin-bottom: 4rem;
+            padding: 2.5rem;
+            background: var(--gray);
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+        }
+        h1, h2, h3, h4 { color: var(--primary); }
+        code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: "Fira Code", "Courier New", monospace;
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            border-left: 3px solid var(--primary);
+            font-family: "Fira Code", "Courier New", monospace;
+            font-size: 0.85rem;
+        }
+        .playground {
+            border: 2px dashed var(--accent);
+            padding: 2rem;
+            margin: 2rem 0;
+            border-radius: 12px;
+            background: rgba(240, 141, 73, 0.05);
+        }
+        .jank-explanation { font-size: 0.9rem; color: #aaa; font-style: italic; }
+        .callout {
+            background: rgba(97, 218, 251, 0.08);
+            border-left: 3px solid var(--primary);
+            padding: 1rem 1.25rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            margin: 1.5rem 0;
+        }
+        button {
+            padding: 0.7rem 1.4rem;
+            background: var(--primary);
+            color: var(--dark);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        button.secondary { background: #444; color: var(--text); }
+        label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; }
+        .stat-row { display: flex; gap: 16px; flex-wrap: wrap; margin: 1rem 0; }
+        .stat-badge {
+            background: rgba(0,0,0,0.3);
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            font-family: "Fira Code", monospace;
+            font-size: 0.85rem;
+            border: 1px solid #444;
+        }
+        .stat-badge span { color: var(--primary); font-weight: bold; }
+        .stat-badge.good span { color: var(--good); }
+        .stat-badge.bad span { color: var(--bad); }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>React DevTools Profiler — Live Debugging Playground 🔥</h1>
+    <p>A real bug, real React Profiler data, live in your browser</p>
+</header>
+
+<nav>
+    <a href="#overview">Overview</a>
+    <a href="#demo">Live Demo</a>
+    <a href="#real-devtools">Compare With Real DevTools</a>
+</nav>
+
+<main>
+    <section id="overview">
+        <h2>1. The bug this page reproduces</h2>
+        <p>40 <code>ProductRow</code> components, each wrapped in <code>React.memo</code>. A "tick" button simulates something unrelated re-rendering the shared parent — think of it as a clock in the header, or any sibling state change that has nothing to do with the product list.</p>
+        <p>With the bug present, the parent defines <code>onSelect</code> as a fresh arrow function on every render, including the unrelated tick updates — a new reference every time, which defeats every row's <code>React.memo</code> check even though no product data changed.</p>
+        <pre><code>// BUG: new function reference every render, even for unrelated ticks
+const onSelect = (id) => selectProduct(id);
+
+// FIX: stable reference across renders
+const onSelect = useCallback((id) => selectProduct(id), []);</code></pre>
+        <p>The panel below is built on React's real, public <code>&lt;Profiler&gt;</code> API — the same instrumentation the actual DevTools extension uses internally — wrapping the list and every individual row. Nothing here is a mockup; the durations and render/bail-out status are genuinely captured from your browser as you click.</p>
+    </section>
+
+    <section id="demo">
+        <h2>2. Live demo</h2>
+        <div id="react-root"></div>
+        <p class="jank-explanation">Click "Trigger unrelated re-render" a few times with the fix off, then turn the fix on and click again — watch the bars flip from colored to gray, and the duration drop.</p>
+    </section>
+
+    <section id="real-devtools">
+        <h2>3. Compare against the real extension</h2>
+        <div class="callout">
+            If you have the <strong>React Developer Tools</strong> browser extension installed, open your browser's DevTools on this page and switch to its <strong>Profiler</strong> tab. This page runs genuine React 18, so you'll see the actual <code>ProductList</code> and <code>ProductRow</code> components in the real tool — record the same "Trigger unrelated re-render" interaction there and compare its flame chart against the panel above. Same underlying data, same reasoning, real tool.
+        </div>
+    </section>
+</main>
+
+<script type="text/babel" data-presets="react">
+const { useState, useCallback, useRef, memo, Profiler, Fragment } = React;
+
+const PRODUCT_COUNT = 40;
+const PRODUCTS = Array.from({ length: PRODUCT_COUNT }, (_, i) => ({ id: 'p' + i, name: 'Product ' + (i + 1) }));
+const SIMULATED_ROW_WORK_MS = 1.2;
+
+function ProductRowInner({ product, onSelect, simulateWork, commitLogRef }) {
+    const prevPropsRef = useRef(null);
+    const prev = prevPropsRef.current;
+    const changed = [];
+    if (prev) {
+        if (!Object.is(prev.product, product)) changed.push('product');
+        if (!Object.is(prev.onSelect, onSelect)) changed.push('onSelect');
+    } else {
+        changed.push('initial mount');
+    }
+    prevPropsRef.current = { product, onSelect };
+
+    if (simulateWork) {
+        const start = performance.now();
+        while (performance.now() - start < SIMULATED_ROW_WORK_MS) { /* simulate real render work */ }
+    }
+
+    // Ground truth: this line only executes if the function body actually ran,
+    // i.e. React.memo did NOT bail this row out of the commit.
+    commitLogRef.current.set(product.id, changed);
+
+    return <li className="row">{product.name}</li>;
+}
+const ProductRow = memo(ProductRowInner);
+
+function TrackedRow({ product, onSelect, simulateWork, commitLogRef, onRowRender }) {
+    return (
+        <Profiler id={product.id} onRender={(id, phase, actualDuration) => onRowRender(product.id, actualDuration)}>
+            <ProductRow product={product} onSelect={onSelect} simulateWork={simulateWork} commitLogRef={commitLogRef} />
+        </Profiler>
+    );
+}
+
+function FlameBar({ id, name, rendered, duration, changed }) {
+    const pct = Math.min(100, (duration / 4) * 100); // scale for visibility
+    return (
+        <div className="flame-row" title={rendered ? `re-rendered: ${changed.join(', ')}` : 'bailed out (memo)'}>
+            <span className="flame-label">{name}</span>
+            <div className="flame-track">
+                <div
+                    className={'flame-fill ' + (rendered ? 'rendered' : 'bailed')}
+                    style={{ width: rendered ? Math.max(pct, 6) + '%' : '100%' }}
+                ></div>
+            </div>
+            <span className="flame-duration">{rendered ? duration.toFixed(2) + 'ms' : 'bailed'}</span>
+        </div>
+    );
+}
+
+// Demo owns the entire interactive tree (tick/fix/simulate state, the
+// Profiler-wrapped rows, everything). It's memoized and receives only a
+// single stable callback prop (`onReport`), so it NEVER re-renders just
+// because Root updates the report panel below it. This matters: without
+// this isolation, displaying the profiler data would itself cause a re-render
+// that (in bug mode) recreates the unstable callback, which re-renders every
+// row, which reports again, which displays again — an infinite feedback loop
+// caused by the very act of visualizing the bug. Splitting Demo out and
+// memoizing it is the fix, and it's the same technique the rest of this site
+// teaches: isolate what changes from what doesn't, at a real component
+// boundary, not just visually.
+const Demo = memo(function Demo({ onReport }) {
+    const [, forceTick] = useState(0);
+    const [useFix, setUseFix] = useState(false);
+    const [simulateWork, setSimulateWork] = useState(true);
+
+    const commitLogRef = useRef(new Map());
+    const rowDurationsRef = useRef(new Map());
+    const listDurationRef = useRef(null);
+    const scheduledRef = useRef(false);
+
+    const onSelectBuggy = (id) => { /* demo: selection intentionally not wired up */ };
+    const onSelectFixed = useCallback((id) => { /* demo: selection intentionally not wired up */ }, []);
+    const onSelect = useFix ? onSelectFixed : onSelectBuggy;
+
+    function finalizeReport() {
+        scheduledRef.current = false;
+        const rendered = [];
+        const bailed = [];
+        PRODUCTS.forEach(p => {
+            if (commitLogRef.current.has(p.id)) {
+                rendered.push({
+                    id: p.id,
+                    name: p.name,
+                    changed: commitLogRef.current.get(p.id),
+                    duration: rowDurationsRef.current.get(p.id) || 0,
+                });
+            } else {
+                bailed.push({ id: p.id, name: p.name, duration: rowDurationsRef.current.get(p.id) || 0 });
+            }
+        });
+        onReport({
+            list: listDurationRef.current,
+            rendered,
+            bailed,
+            renderedCount: rendered.length,
+            totalCount: PRODUCTS.length,
+            useFix,
+        });
+    }
+
+    function scheduleFinalize() {
+        if (!scheduledRef.current) {
+            scheduledRef.current = true;
+            Promise.resolve().then(finalizeReport);
+        }
+    }
+
+    function handleListRender(id, phase, actualDuration, baseDuration) {
+        listDurationRef.current = { actualDuration, baseDuration, phase };
+        scheduleFinalize();
+    }
+
+    function handleRowRender(productId, actualDuration) {
+        rowDurationsRef.current.set(productId, actualDuration);
+        scheduleFinalize();
+    }
+
+    function triggerTick() {
+        commitLogRef.current = new Map();
+        rowDurationsRef.current = new Map();
+        forceTick(t => t + 1);
+    }
+
+    function reset() {
+        commitLogRef.current = new Map();
+        rowDurationsRef.current = new Map();
+        listDurationRef.current = null;
+        onReport(null);
+    }
+
+    return (
+        <Fragment>
+            <div className="demo-controls">
+                <div className="btn-row">
+                    <button onClick={triggerTick}>Trigger unrelated re-render (tick)</button>
+                    <button className="secondary" onClick={reset}>Reset</button>
+                </div>
+                <div className="toggle-row">
+                    <label>
+                        <input type="checkbox" checked={useFix} onChange={e => setUseFix(e.target.checked)} />
+                        Apply the fix (wrap onSelect in useCallback)
+                    </label>
+                    <label>
+                        <input type="checkbox" checked={simulateWork} onChange={e => setSimulateWork(e.target.checked)} />
+                        Simulate ~1.2ms of render work per row
+                    </label>
+                </div>
+            </div>
+
+            <Profiler id="ProductList" onRender={handleListRender}>
+                <ul className="product-list" style={{ display: 'none' }}>
+                    {PRODUCTS.map(p => (
+                        <TrackedRow
+                            key={p.id}
+                            product={p}
+                            onSelect={onSelect}
+                            simulateWork={simulateWork}
+                            commitLogRef={commitLogRef}
+                            onRowRender={handleRowRender}
+                        />
+                    ))}
+                </ul>
+            </Profiler>
+        </Fragment>
+    );
+});
+
+function Root() {
+    const [report, setReport] = useState(null);
+    const handleReport = useCallback((r) => setReport(r), []);
+
+    return (
+        <Fragment>
+            <Demo onReport={handleReport} />
+            <ReportPanel report={report} />
+        </Fragment>
+    );
+}
+
+function ReportPanel({ report }) {
+    if (!report) {
+        return <p className="jank-explanation">Click "Trigger unrelated re-render" to capture the first commit.</p>;
+    }
+    const { list, rendered, bailed, renderedCount, totalCount, useFix } = report;
+    const summary = renderedCount === 0
+        ? `0 / ${totalCount} rows re-rendered — React.memo bailed out, all props were referentially equal.`
+        : renderedCount === totalCount
+        ? `${totalCount} / ${totalCount} rows re-rendered — every row's props changed reference (see "why" below).`
+        : `${renderedCount} / ${totalCount} rows re-rendered.`;
+
+    return (
+        <Fragment>
+            <div className="stat-row">
+                <div className={'stat-badge ' + (list && list.actualDuration > 5 ? 'bad' : 'good')}>
+                    List actualDuration: <span>{list ? list.actualDuration.toFixed(2) + 'ms' : '—'}</span>
+                </div>
+                <div className="stat-badge">
+                    List baseDuration: <span>{list ? list.baseDuration.toFixed(2) + 'ms' : '—'}</span>
+                </div>
+                <div className={'stat-badge ' + (renderedCount === 0 ? 'good' : 'bad')}>
+                    Rows re-rendered: <span>{renderedCount} / {totalCount}</span>
+                </div>
+                <div className="stat-badge">
+                    Fix applied: <span>{useFix ? 'yes' : 'no'}</span>
+                </div>
+            </div>
+            <p className="jank-explanation">{summary}</p>
+            <div className="flame-chart">
+                {rendered.map(r => (
+                    <FlameBar key={r.id} id={r.id} name={r.name} rendered={true} duration={r.duration} changed={r.changed} />
+                ))}
+                {bailed.slice(0, 8).map(r => (
+                    <FlameBar key={r.id} id={r.id} name={r.name} rendered={false} duration={r.duration} changed={[]} />
+                ))}
+                {bailed.length > 8 && (
+                    <p className="jank-explanation">...and {bailed.length - 8} more bailed-out rows (gray, omitted for space).</p>
+                )}
+            </div>
+        </Fragment>
+    );
+}
+
+ReactDOM.createRoot(document.getElementById('react-root')).render(<Root />);
+</script>
+
+<style>
+    .demo-controls { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem; }
+    .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .toggle-row { display: flex; gap: 24px; flex-wrap: wrap; }
+    .flame-chart { display: flex; flex-direction: column; gap: 4px; margin-top: 1rem; max-height: 420px; overflow-y: auto; padding-right: 4px; }
+    .flame-row { display: flex; align-items: center; gap: 10px; font-family: "Fira Code", monospace; font-size: 0.78rem; }
+    .flame-label { width: 90px; flex-shrink: 0; color: #ccc; }
+    .flame-track { flex: 1; background: rgba(0,0,0,0.3); border-radius: 4px; height: 18px; overflow: hidden; }
+    .flame-fill { height: 100%; border-radius: 4px; transition: width 0.2s ease; }
+    .flame-fill.rendered { background: linear-gradient(90deg, #f08d49, #f87171); }
+    .flame-fill.bailed { background: #444; }
+    .flame-duration { width: 60px; text-align: right; flex-shrink: 0; color: #999; }
+</style>
+
+</body>
+</html>
