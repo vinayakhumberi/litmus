@@ -174,6 +174,8 @@ graph TD
     class L decision
 ```
 
+**→ Reference:** [`resources/react-api-quick-reference.html`](resources/react-api-quick-reference.html) has a one-page cheat sheet for `useTransition`, `startTransition`, `useDeferredValue`, and `Suspense` alongside every other hook covered across the React topics — including which scheduling lane each actually uses.
+
 ## 🏢 Interview Context & FAANG Signals
 
 This topic surfaces most often in **coding rounds** ("this search box is laggy over a large list, fix it") and **system design rounds** touching any UI with expensive derived rendering — search-as-you-type, tab switchers with heavy content, dashboards recomputing on filter changes. It also appears in **behavioral rounds** as "tell me about a rendering performance problem you diagnosed."

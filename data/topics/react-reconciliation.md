@@ -1,4 +1,4 @@
-# React Reconciliation and Virtual DOM Diffing Algorithm
+# React Reconciliation, Fiber Architecture, and Concurrent Rendering
 
 ## 🎯 Executive Summary
 
@@ -9,7 +9,7 @@ This topic is not a "nice to know" at Staff level — it is table stakes. Interv
 Why it matters for Leads specifically:
 - Misconfigured reconciliation causes O(n²) subtree re-renders at scale, invisible in local dev, catastrophic in production with large lists or deeply nested trees.
 - Key misuse is one of the most common sources of subtle, hard-to-reproduce state bugs in complex UIs.
-- Understanding the fiber scheduler is a prerequisite for reasoning about Concurrent Mode, `useTransition`, and `Suspense` — all of which are now mainstream interview topics at FAANG.
+- The fiber scheduler is the mechanism underneath Concurrent Mode, `useTransition`, and `Suspense` — all mainstream FAANG interview topics — so understanding it here is what makes reasoning about those correctly possible, not just a prerequisite to look up later.
 - You will be asked to diagnose performance regressions in system design rounds. Without reconciliation internals, your diagnosis will always be one abstraction layer too shallow.
 
 ---
@@ -68,6 +68,8 @@ React maintains **two fiber trees** simultaneously:
 - **Work-in-progress tree**: the in-progress computation of what the next render will look like.
 
 Every fiber has an `alternate` pointer linking it to its twin in the other tree. When a render completes, the trees are swapped atomically — the WIP tree becomes current. This is how Concurrent Mode achieves interruptibility: the WIP tree can be discarded and rebuilt from scratch without affecting the visible UI.
+
+This comes at a real memory cost — React briefly holds two full fiber trees, plus their effect lists and scheduling metadata, in memory simultaneously. It's a deliberate trade: more memory for the guarantee that an interrupted render can never corrupt what's already on screen.
 
 ---
 
@@ -183,9 +185,59 @@ const TransitionLane1  = 0b0000000000000000000000001000000;
 const IdleLane         = 0b0100000000000000000000000000000;
 ```
 
+**What each lane actually means in practice:**
+
+| Lane | Priority tier | Triggered by | Preempted by | Notes |
+|---|---|---|---|---|
+| `SyncLane` | Highest — synchronous | Discrete user events: click, keydown, discrete form input outside a transition | Nothing — always wins immediately | Legacy `ReactDOM.render`/class `setState` calls made outside a transition typically land here too |
+| `InputContinuousLane` | Near-highest | Continuous input: drag, pointer move, wheel/scroll-driven updates | `SyncLane` | Kept separate from `SyncLane` because continuous events fire far more often — treating every pointer-move as fully synchronous would itself drop frames |
+| `DefaultLane` | Normal | A plain `setState` call outside any special API — where most updates land without asking for special treatment | `SyncLane`, `InputContinuousLane` | The "no special priority requested" tier — this is where most ordinary app code ends up by default |
+| `TransitionLanes` (16 reserved slots) | Low, explicitly deprioritized | Anything wrapped in `startTransition`, or the "catch-up" render from `useDeferredValue` | Every lane above it | React reserves *multiple* transition lanes, not just one, specifically so unrelated transitions in different parts of the tree don't block each other |
+| `RetryLanes` | Low, tied to async resolution | A Suspense boundary's retry render once its pending promise resolves | Depends on the lane of the update that originally triggered the suspend | Not chosen manually — assigned internally once a suspended subtree becomes ready to retry |
+| `IdleLane` | Lowest | Work React can defer indefinitely if nothing more urgent needs the thread | Everything | The closest thing to "run this whenever the browser is otherwise caught up" |
+
 `useTransition` marks updates as TransitionLane, allowing React to defer them in favor of SyncLane (user input). The fiber scheduler can **interleave** high-priority updates into a lower-priority render by abandoning the WIP tree, processing the urgent update, then replaying the deferred work.
 
 This has a non-obvious consequence: **render functions may execute multiple times** in Concurrent Mode. Any render-phase side effect (mutation, network call) will execute multiple times. This is not a bug — it is a design contract. The Strict Mode double-invocation in development is explicitly exposing this contract.
+
+---
+
+### Cooperative Scheduling: How React Actually Yields to the Browser
+
+Interruptibility isn't automatic just because the tree is a linked list — something has to actually decide *when* to stop working and hand control back. React's scheduler wraps the render-phase work loop in a time-budget check:
+
+```javascript
+function workLoopConcurrent() {
+  while (workInProgress !== null && !shouldYield()) {
+    workInProgress = performUnitOfWork(workInProgress);
+  }
+}
+```
+
+`shouldYield()` asks the host environment whether the current frame's time budget has been exhausted. If it has, React hands control back to the browser via a `MessageChannel`-posted task rather than `setTimeout` — `MessageChannel` messages run as macrotasks without the minimum-delay clamping browsers apply to timers, keeping the yield-and-resume cycle tight enough to feel seamless. The browser gets a chance to process input, run layout, and paint; React's scheduler then resumes exactly where it left off, walking `child`/`sibling`/`return` pointers from the last processed fiber.
+
+The practical effect is **time slicing**:
+
+```text
+Without Fiber:  [ ---------------- 120ms render, one uninterruptible block ---------------- ]
+With Fiber:     [ -- render -- ][ yield: browser paints/handles input ][ -- render -- ][ commit ]
+```
+
+---
+
+### Suspense and Selective Hydration: What Interruptibility Actually Enables
+
+Suspense isn't a separate feature bolted onto React — it's a direct consequence of Fiber being able to pause and resume work. When a component throws a promise during render (signaling "not ready yet"), React pauses that subtree's work-in-progress fiber, renders the nearest `<Suspense fallback>` in its place, and later resumes exactly where it paused once the promise resolves — all without touching the already-committed current tree. The old synchronous recursive reconciler had no mechanism to pause mid-tree at all, which is why Suspense-style patterns were never viable before React 16.
+
+The same interruptibility makes **selective hydration** possible on server-rendered pages: instead of hydrating the entire page in one synchronous, uninterruptible pass, React can prioritize whichever region the user actually interacts with first — clicking a nav item before the footer has hydrated bumps that region's hydration into a higher lane, ahead of content nobody has touched yet. This is a scheduling decision using the same lanes model covered above, not a separate mechanism.
+
+**Lead-level point:** this is why Suspense boundary placement is an architectural decision with real UX consequences, not just a loading-state convenience. A boundary drawn around the wrong granularity either serializes hydration/streaming behind unrelated slow content, or fragments the page into so many independent boundaries that coordination overhead outweighs the benefit.
+
+---
+
+### Concurrent Rendering Is Opt-In, Not Automatic
+
+React 18 does not render "fully concurrently" by default — most updates still process synchronously in the same lane they always did. Concurrent behavior (interruptible rendering, lane-based deprioritization) only activates for updates that explicitly opt in: `startTransition`, `useDeferredValue`, and Suspense-driven work. Claiming "React 18 is fully concurrent" is a common and telling mistake in interviews — the accurate framing is that React 18 shipped the *capability* for concurrent rendering behind specific APIs, not a wholesale change to how every update behaves.
 
 ---
 
@@ -295,6 +347,10 @@ sequenceDiagram
 
 ---
 
+**→ Try it hands-on:** [`resources/react-reconciliation.html`](resources/react-reconciliation.html) walks through this pipeline visually and interactively — run the same update as a blocking React-15-style render vs. a concurrent Fiber render side by side, trace priority lanes as a bitmask engine, and follow the full trace from click to screen. Also see [`resources/react-api-quick-reference.html`](resources/react-api-quick-reference.html) for a one-page cheat sheet of every hook/API covered across the React topics, including which scheduling lane each one actually uses.
+
+---
+
 ## 🏢 Interview Context & FAANG Signals
 
 ### Where It Appears
@@ -389,6 +445,20 @@ The Lead answer: names the algorithm, explains the state-travel contract, and gi
 > **Why it's wrong:** Writing render functions or component bodies with side effects (logging analytics, mutating external refs, network calls) that assume single-execution. In Concurrent Mode, React may invoke the render function multiple times before committing. Teams that disable StrictMode's double-invocation lose the only early-warning system for this class of bug.
 >
 > **✓ Correct Lead Approach:** Treat the render phase as a pure computation. All side effects belong in `useEffect` (post-commit, async) or `useLayoutEffect` (post-commit, synchronous). Treat StrictMode's double-invocation as a correctness test, not a nuisance to suppress.
+
+---
+
+> ### ✕ Treating Concurrent Rendering as Parallelism
+> **Why it's wrong:** JavaScript remains single-threaded even under Concurrent Mode. "Concurrent" describes interruptible, priority-ordered scheduling of work on one thread — not multiple renders executing at the same instant. Describing it as parallelism in an interview is an immediate depth signal in the wrong direction.
+>
+> **✓ Correct Lead Approach:** Frame concurrent rendering as cooperative scheduling: React can pause, abandon, and resume units of work between browser tasks, but only one unit of work ever executes at any given moment.
+
+---
+
+> ### ✕ Assuming React 18 Renders Everything Concurrently by Default
+> **Why it's wrong:** Most updates in a React 18 app still process exactly as they did pre-18 — synchronously, in the default lane. Concurrent behavior only applies to updates that explicitly opt in via `startTransition`, `useDeferredValue`, or Suspense-driven boundaries.
+>
+> **✓ Correct Lead Approach:** Describe React 18 as shipping concurrent *capabilities* behind specific APIs, not a blanket change to rendering behavior — and be able to name exactly which APIs trigger it.
 
 ---
 
@@ -649,5 +719,74 @@ A team uses `<Component key={Math.random()} />` to force a component to fully re
 ```
 
 **Lead signal:** Distinguishes between using key as an identity signal (correct, intentional) vs. using key as a reset escape hatch (masking a bug). Articulates the performance cost in concrete terms. Redirects to fixing the actual problem.
+
+</details>
+
+---
+
+### Scenario 9: The Suspense Waterfall
+
+**Problem Statement:**
+A product page has nested Suspense boundaries: `<Suspense><ProductInfo /><Suspense><Reviews /><Suspense><Recommendations /></Suspense></Suspense></Suspense>`. Each component fetches its own data after it mounts. Users report the page takes far longer to fully load than the sum of the three fetch times would suggest. Diagnose and fix.
+
+<details>
+<summary>📋 Staff-Level Solution</summary>
+
+Nesting Suspense boundaries this way creates a **request waterfall**: `Reviews` doesn't start fetching until it mounts, which doesn't happen until `ProductInfo`'s boundary resolves and React reveals the next level of the tree, which doesn't happen until `Recommendations`'s boundary resolves in turn. Each fetch is serialized behind the one above it, even though none of the three actually depend on each other's data.
+
+The fix is architectural, not a Suspense configuration change: hoist the data fetching above the component tree so all three requests start in parallel, and give each its own independent Suspense boundary at the same tree depth instead of nesting them:
+
+```typescript
+// Nested boundaries force sequential reveal — and sequential fetch start,
+// since each component only fetches its own data on mount.
+<Suspense fallback={<Skeleton />}>
+  <ProductInfo />
+  <Suspense fallback={<Skeleton />}>
+    <Reviews />
+    <Suspense fallback={<Skeleton />}>
+      <Recommendations />
+    </Suspense>
+  </Suspense>
+</Suspense>
+
+// Sibling boundaries let all three requests start together; each resolves
+// and reveals independently, whichever finishes first.
+<Suspense fallback={<Skeleton />}><ProductInfo /></Suspense>
+<Suspense fallback={<Skeleton />}><Reviews /></Suspense>
+<Suspense fallback={<Skeleton />}><Recommendations /></Suspense>
+```
+
+**Lead insight to surface in interview:** Suspense boundaries control *reveal* order and fallback granularity — they don't control *when a fetch starts*. That's a data-fetching architecture decision (fetch-on-render vs. fetch-then-render, or a cache that initiates requests independently of mount) layered on top. Conflating the two is the root cause of most Suspense waterfall bugs. With streaming SSR, this also determines chunk flush order to the client — sibling boundaries stream independently, nested ones block behind their parent's resolution.
+
+</details>
+
+---
+
+### Scenario 10: Hydration Freezes a Low-End Android Device for 5 Seconds
+
+**Problem Statement:**
+A server-rendered page hydrates in one synchronous pass. On a low-end Android device, the page is visible almost immediately (thanks to SSR) but completely unresponsive to any input for nearly 5 seconds while hydration completes. Redesign the hydration strategy.
+
+<details>
+<summary>📋 Staff-Level Solution</summary>
+
+The visible-but-unresponsive gap is the classic symptom of synchronous hydration blocking the main thread on a device with a fraction of the CPU budget the page was tested on. The fix is **selective hydration**, made possible by wrapping independent regions of the page in their own Suspense boundaries so React can hydrate them as separate, interruptible units of work instead of one uninterruptible pass over the whole tree:
+
+```typescript
+<Header />                                  {/* hydrates eagerly, small and cheap */}
+<Suspense fallback={<NavSkeleton />}>
+  <Nav />                                   {/* hydrated ASAP, but independently */}
+</Suspense>
+<Suspense fallback={<FeedSkeleton />}>
+  <MainFeed />                              {/* larger, hydrates without blocking Nav */}
+</Suspense>
+<Suspense fallback={<FooterSkeleton />}>
+  <Footer />                                {/* lowest priority, hydrates last */}
+</Suspense>
+```
+
+Critically, selective hydration is priority-aware at runtime, not just at code-split time: if the user clicks inside `MainFeed` while `Footer` is still waiting to hydrate, React bumps `MainFeed`'s hydration into a higher-priority lane ahead of `Footer`'s, so the region the user is actually trying to interact with becomes responsive first — this is the lanes model applied to hydration, not a separate mechanism.
+
+**Lead insight to surface in interview:** this is a case where the fix is "adopt an architecture that was previously impossible," not "optimize the existing one" — pre-Fiber, hydration had no pause/resume capability at all, so this class of fix simply didn't exist as an option. I'd also push back on any proposal to fix this by disabling SSR or lazy-loading everything client-side instead — that trades a 5-second unresponsive-but-visible page for a blank page during the initial fetch, which is very likely worse for perceived performance and for Core Web Vitals (LCP) even though it "solves" the freeze.
 
 </details>

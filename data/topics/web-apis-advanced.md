@@ -359,6 +359,10 @@ sequenceDiagram
 
 ---
 
+**→ Try it hands-on:** [`resources/web-apis-advanced.html`](resources/web-apis-advanced.html) is a live playground for all four APIs — drag a ball with `requestAnimationFrame` batching toggled on/off, compare a blocking vs. `requestIdleCallback` job queue while the UI stays interactive, watch `IntersectionObserver` firings stay flat while a naive scroll-and-`getBoundingClientRect` comparison climbs fast, and inject DOM nodes to see `MutationObserver`'s batching in real time.
+
+---
+
 ## 🏢 Interview Context & FAANG Signals
 
 ### Where this topic appears in the loop

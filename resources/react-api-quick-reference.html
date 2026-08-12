@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React API Quick Reference — Hooks &amp; Methods Cheat Sheet</title>
+    <style>
+        :root {
+            --primary: #61dafb;
+            --dark: #20232a;
+            --text: #ffffff;
+            --gray: #282c34;
+            --accent: #f08d49;
+            --text-muted: #999;
+            --code-bg: #1e1e1e;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--dark);
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: var(--gray);
+            padding: 3rem 2rem;
+            text-align: center;
+            border-bottom: 4px solid var(--primary);
+        }
+        main {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem 4rem;
+        }
+        h1, h2 { color: var(--primary); }
+        h2 {
+            margin-top: 3rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #444;
+        }
+        code {
+            background: var(--code-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-family: "Fira Code", "Courier New", monospace;
+            font-size: 0.9em;
+            color: var(--accent);
+        }
+        p.lede { color: var(--text-muted); max-width: 700px; }
+        .table-wrap { overflow-x: auto; margin-top: 1.5rem; border-radius: 8px; }
+        table {
+            width: 100%;
+            min-width: 900px;
+            border-collapse: collapse;
+            background: var(--gray);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 0.9rem 1.1rem;
+            text-align: left;
+            border-bottom: 1px solid #3a3f4b;
+            vertical-align: top;
+        }
+        th {
+            color: var(--primary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: rgba(97, 218, 251, 0.06);
+        }
+        tr:last-child td { border-bottom: none; }
+        td.lane { font-size: 0.85rem; color: #d6bcfa; }
+        td.lane .na { color: var(--text-muted); font-style: italic; }
+        td.distinguishing { font-size: 0.85rem; color: #ddd; }
+        td.covered { color: var(--text-muted); font-size: 0.8rem; white-space: nowrap; }
+        td.covered a { color: var(--primary); text-decoration: none; }
+        td.covered a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>React API Quick Reference 📋</h1>
+    <p>Every hook, component, and method covered across the React deep-dive topics — one scan, no digging</p>
+</header>
+
+<main>
+    <p class="lede">Grouped by what each API actually controls, not alphabetically — so you can find "the thing that defers a value" without already knowing it's called <code>useDeferredValue</code>. The <strong>Lane</strong> column is the priority tier the underlying update/read actually gets scheduled in — a lot of these APIs don't have a fixed lane at all; the lane comes from where you call them, and that distinction is itself worth knowing. The "Covered in depth" column links to the topic where the full reasoning, trade-offs, and pitfalls live; this page is a lookup table, not a replacement for reading those.</p>
+
+    <h2>State &amp; Lifecycle</h2>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>API</th><th>What it does</th><th>Lane</th><th>Distinguishing info</th><th>Covered in depth</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>useState</code></td>
+                <td>Local component state; calling the setter schedules a re-render with the new value.</td>
+                <td class="lane">Inherits the caller's context — Sync/Discrete from a direct event handler, Default otherwise, Transition if wrapped in <code>startTransition</code>.</td>
+                <td class="distinguishing">Has no fixed priority of its own — the same setter call can land in different lanes depending on where it's called from.</td>
+                <td class="covered">react-reconciliation</td>
+            </tr>
+            <tr>
+                <td><code>useReducer</code></td>
+                <td>Local state managed via a reducer function — same re-render trigger as <code>useState</code>, better suited to complex or interdependent state transitions.</td>
+                <td class="lane">Same as <code>useState</code> — determined entirely by calling context.</td>
+                <td class="distinguishing">Choosing this over <code>useState</code> is a code-organization decision; it changes nothing about scheduling.</td>
+                <td class="covered">react-reconciliation</td>
+            </tr>
+            <tr>
+                <td><code>useRef</code></td>
+                <td>Mutable value that persists across renders <em>without</em> triggering one when it changes. Also used to hold a reference to a DOM node.</td>
+                <td class="lane"><span class="na">N/A</span> — mutating <code>.current</code> never schedules work at all.</td>
+                <td class="distinguishing">The only hook here completely invisible to the scheduler; also the mechanism <code>Profiler</code>-style instrumentation uses to survive re-renders without triggering more of them.</td>
+                <td class="covered">react-devtools-profiler</td>
+            </tr>
+            <tr>
+                <td><code>useContext</code></td>
+                <td>Reads a Context's current value. Re-renders the consuming component whenever the context's value reference changes — regardless of which field the component actually reads.</td>
+                <td class="lane">Inherits whichever lane the <em>provider's</em> value-changing update was scheduled in.</td>
+                <td class="distinguishing">Re-renders on ANY change to the value reference, even fields the component never reads — the classic context-invalidation trap.</td>
+                <td class="covered">react-reconciliation</td>
+            </tr>
+            <tr>
+                <td><code>useEffect</code></td>
+                <td>Runs a side effect after the commit is painted to the screen — asynchronous, doesn't block the browser's paint.</td>
+                <td class="lane">Not lane-based — scheduled as a "passive effect" asynchronously after commit, via the same <code>MessageChannel</code>-based scheduler.</td>
+                <td class="distinguishing">Any <code>setState</code> called inside it starts a brand-new update with its own, independent lane.</td>
+                <td class="covered">react-reconciliation</td>
+            </tr>
+            <tr>
+                <td><code>useLayoutEffect</code></td>
+                <td>Same as <code>useEffect</code>, but runs synchronously after commit, <em>before</em> the browser paints. Use only for measurements/DOM reads that must happen before the user sees a frame — it blocks paint until it finishes.</td>
+                <td class="lane">Runs inside the synchronous commit phase — blocks the browser from painting regardless of what lane the triggering render was in.</td>
+                <td class="distinguishing">The one hook here that can single-handedly cause jank on its own, since its work can't be deferred or interrupted.</td>
+                <td class="covered">react-reconciliation</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+    <h2>Memoization</h2>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>API</th><th>What it does</th><th>Lane</th><th>Distinguishing info</th><th>Covered in depth</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>useMemo</code></td>
+                <td>Caches a computed <strong>value</strong> between renders, keyed by a dependency array compared with <code>Object.is</code>. Only worth it for genuinely expensive computations — it has its own bookkeeping cost.</td>
+                <td class="lane"><span class="na">N/A</span> — resolved synchronously within whatever render is currently executing; schedules nothing of its own.</td>
+                <td class="distinguishing">The comparison itself has a real cost paid on every render, even the ones where it hits cache — a wrong trade if the cached work was cheap to begin with.</td>
+                <td class="covered">react-memoization</td>
+            </tr>
+            <tr>
+                <td><code>useCallback</code></td>
+                <td>Caches a <strong>function reference</strong> between renders. Literally <code>useMemo(() =&gt; fn, deps)</code> — exists specifically to stabilize callback props passed to memoized children.</td>
+                <td class="lane"><span class="na">N/A</span> — same as <code>useMemo</code>, since it <em>is</em> <code>useMemo</code> under the hood.</td>
+                <td class="distinguishing">Caches the reference only, not behavior — the closure still captures whatever was in scope at creation, which is why wrong deps cause stale-closure bugs, not just missed optimizations.</td>
+                <td class="covered">react-memoization</td>
+            </tr>
+            <tr>
+                <td><code>React.memo</code></td>
+                <td>Wraps a component; skips its re-render when triggered by a parent if every prop is shallow-equal to the previous render. Has no effect on re-renders caused by the component's own state or context.</td>
+                <td class="lane"><span class="na">N/A</span> — a bailout check performed during reconciliation, not a scheduled update.</td>
+                <td class="distinguishing">Only guards against parent-triggered re-renders; zero effect on re-renders from the component's own state or a context it consumes.</td>
+                <td class="covered">react-memoization</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+    <h2>Concurrent Rendering</h2>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>API</th><th>What it does</th><th>Lane</th><th>Distinguishing info</th><th>Covered in depth</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>useTransition</code></td>
+                <td>Returns <code>[isPending, startTransition]</code> — marks the state updates called inside <code>startTransition</code> as low-priority, and exposes a pending flag tied to the actual commit.</td>
+                <td class="lane"><strong>Transition lane</strong> — one of several transition-lane bitmask slots, so unrelated transitions don't needlessly block each other.</td>
+                <td class="distinguishing">Only covers <code>setState</code> calls made synchronously inside the callback — anything after an <code>await</code> needs its own separate <code>startTransition</code> call.</td>
+                <td class="covered">react-18-features</td>
+            </tr>
+            <tr>
+                <td><code>startTransition</code></td>
+                <td>The standalone version of <code>useTransition</code>'s setter, without the <code>isPending</code> flag. Only affects <code>setState</code> calls made synchronously inside its callback — not anything after an <code>await</code>.</td>
+                <td class="lane"><strong>Transition lane</strong> — identical scheduling behavior to <code>useTransition</code>'s setter.</td>
+                <td class="distinguishing">Usable outside components/hooks entirely (class components, vanilla event handlers) — <code>useTransition</code> can't be.</td>
+                <td class="covered">react-18-features</td>
+            </tr>
+            <tr>
+                <td><code>useDeferredValue</code></td>
+                <td>Returns a "lagging" copy of a value you don't own the setter for (a prop, context, or store value) — React updates it at low priority instead of you having to wrap a <code>setState</code> call yourself.</td>
+                <td class="lane">The immediately-returned old value comes from whatever lane is currently rendering; the "catch-up" re-render to the new value is scheduled in a <strong>Transition lane</strong>.</td>
+                <td class="distinguishing">No <code>isPending</code> flag — detect staleness yourself by comparing <code>value !== deferredValue</code>.</td>
+                <td class="covered">react-18-features</td>
+            </tr>
+            <tr>
+                <td><code>Suspense</code></td>
+                <td>Declarative boundary that shows a fallback while a subtree "suspends" (throws a promise) — a lazy import, or async data. Only avoids a fallback flash if the triggering update is wrapped in a transition.</td>
+                <td class="lane"><span class="na">Not a lane itself</span> — the retry render after the promise resolves uses whatever lane fits the resolution, usually Default unless the original trigger was a transition.</td>
+                <td class="distinguishing">Whether the fallback flashes or the old UI stays visible with <code>isPending</code> depends entirely on the triggering update's lane — Suspense doesn't decide this on its own.</td>
+                <td class="covered">react-18-features, react-reconciliation</td>
+            </tr>
+            <tr>
+                <td><code>React.lazy</code></td>
+                <td>Lazily loads a component's module, suspending the nearest <code>Suspense</code> boundary until it resolves — the canonical example of a component "suspending."</td>
+                <td class="lane">Same as <code>Suspense</code> — the retry lane depends on the triggering context, not on <code>React.lazy</code> itself.</td>
+                <td class="distinguishing">The simplest way to trigger a suspend — good mental-model anchor for how data-fetching libraries suspend too.</td>
+                <td class="covered">react-reconciliation</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+    <h2>External State &amp; Diagnostics</h2>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>API</th><th>What it does</th><th>Lane</th><th>Distinguishing info</th><th>Covered in depth</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>useSyncExternalStore</code></td>
+                <td>Subscribes a component to a non-React store (Redux, Zustand, a custom store) with a guarantee against "tearing" — every component reading the store during the same concurrent render sees a consistent snapshot, even across interrupted/resumed work.</td>
+                <td class="lane"><span class="na">Deliberately not lane-based</span> for the read itself — forces a synchronous, consistent snapshot regardless of what lane the surrounding render is in, specifically to prevent tearing.</td>
+                <td class="distinguishing">The correct primitive for any external store used inside an app that has adopted concurrent features — direct <code>getState()</code> reads in render are a real correctness bug once concurrency is in play, not just a style issue.</td>
+                <td class="covered">react-reconciliation, react-memoization</td>
+            </tr>
+            <tr>
+                <td><code>Profiler</code></td>
+                <td>The public component/API DevTools' own Profiler tab is built on. Wraps a subtree and reports <code>actualDuration</code> (real cost this commit) and <code>baseDuration</code> (worst-case cost with no memoization) per commit via <code>onRender</code>.</td>
+                <td class="lane"><span class="na">N/A</span> — pure instrumentation, has no effect on scheduling.</td>
+                <td class="distinguishing"><code>onRender</code> fires for a wrapped boundary even when its subtree bails out via <code>memo</code> — that's how gray ("bailed") bars in the real DevTools Profiler are possible at all.</td>
+                <td class="covered">react-devtools-profiler</td>
+            </tr>
+            <tr>
+                <td><code>Fragment</code></td>
+                <td>Groups a list of children without adding an extra wrapping DOM node. Not performance-related — purely a composition tool.</td>
+                <td class="lane"><span class="na">N/A</span> — no rendering or scheduling behavior of its own at all.</td>
+                <td class="distinguishing">Included here only because it shows up in code examples across the other docs, not because it has anything to do with performance.</td>
+                <td class="covered">react-devtools-profiler (code examples)</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+</main>
+
+</body>
+</html>

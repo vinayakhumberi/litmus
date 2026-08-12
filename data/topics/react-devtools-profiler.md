@@ -109,7 +109,9 @@ The commit dropped from ~68ms to ~2ms, and the fix was a one-line change three c
 
 *(Representative numbers — exact values depend on your machine and build mode. The interactive version below captures real numbers from React's own Profiler API live in your browser, including a working toggle between the buggy and fixed versions of this exact example.)*
 
-**→ Try it hands-on:** [`resources/react-devtools-profiler.html`](../../resources/react-devtools-profiler.html) reproduces this exact scenario as a live app — real React, real `<Profiler>` data, a flame-chart-style view that updates as you interact, and a fix toggle so you can watch the bars go from colored to gray in real time. It also runs real enough React that the actual React DevTools browser extension will show the same components if you have it installed, so you can cross-check the built-in visualization against the real tool on the same page.
+**→ Try it hands-on:** [`resources/react-devtools-profiler.html`](resources/react-devtools-profiler.html) reproduces this exact scenario as a live app — real React, real `<Profiler>` data, a flame-chart-style view that updates as you interact, and a fix toggle so you can watch the bars go from colored to gray in real time. It also runs real enough React that the actual React DevTools browser extension will show the same components if you have it installed, so you can cross-check the built-in visualization against the real tool on the same page.
+
+**→ Reference:** [`resources/react-api-quick-reference.html`](resources/react-api-quick-reference.html) has a one-page cheat sheet for every hook/API covered across the React topics, including which scheduling lane each actually uses.
 
 ## 🏢 Interview Context & FAANG Signals
 

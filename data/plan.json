@@ -136,29 +136,16 @@
         "topics": [
           {
             "id": "react-reconciliation",
-            "name": "React reconciliation and virtual DOM diffing algorithm",
+            "name": "React reconciliation, Fiber architecture, and concurrent rendering",
             "category": "React & Frontend Frameworks (Deep)",
             "difficulty": "Hard",
-            "estimatedHours": 4,
+            "estimatedHours": 5,
             "priority": "High",
             "status": "not-started",
             "score": 0,
             "passingScore": 70,
             "recommendedWeek": "Week 1-2",
-            "tags": ["react", "vdom", "reconciliation", "internals"]
-          },
-          {
-            "id": "react-fiber-concurrent",
-            "name": "Fiber architecture and concurrent rendering",
-            "category": "React & Frontend Frameworks (Deep)",
-            "difficulty": "Hard",
-            "estimatedHours": 4,
-            "priority": "High",
-            "status": "not-started",
-            "score": 0,
-            "passingScore": 70,
-            "recommendedWeek": "Week 1-2",
-            "tags": ["react", "fiber", "concurrent", "internals"]
+            "tags": ["react", "vdom", "reconciliation", "fiber", "concurrent", "internals"]
           },
           {
             "id": "react-18-features",

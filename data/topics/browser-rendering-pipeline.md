@@ -199,6 +199,8 @@ sequenceDiagram
     Note over JS,Paint: "Result: O(1) layout for the whole batch"
 ```
 
+**→ Try it hands-on:** [`resources/browser-rendering-pipeline.html`](resources/browser-rendering-pipeline.html) is a live playground for everything above — a pipeline strip that lights up in sync with the actual Mermaid diagram, a cost inspector that measures real `Layout` vs `Paint` vs `Composite` timing on the same 180 elements, a layout-thrashing race (naive vs batched, real measured milliseconds), a compositor-thread freeze test you can watch happen, and a `content-visibility: auto` render-cost comparison.
+
 ## 🏢 Interview Context & FAANG Signals
 
 This topic surfaces in three loop stages: **system design** ("design a data grid / infinite feed / animation-heavy dashboard"), **coding/debugging rounds** ("here's a laggy component, fix it"), and **behavioral/technical leadership rounds** ("tell me about a performance regression you led the fix for"). Interviewers at this level are not testing recall of the five stages — they're testing whether you **reason from symptom to stage to root cause to systemic fix**.

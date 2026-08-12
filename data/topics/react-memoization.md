@@ -120,6 +120,8 @@ sequenceDiagram
     Note over C: "Child render actually skipped"
 ```
 
+**→ Reference:** [`resources/react-api-quick-reference.html`](resources/react-api-quick-reference.html) has a one-page cheat sheet for `useMemo`, `useCallback`, and `React.memo` alongside every other hook covered across the React topics — including which scheduling lane each actually uses (or, for these three, why the concept doesn't really apply to them).
+
 ## 🏢 Interview Context & FAANG Signals
 
 This topic shows up constantly in **coding rounds** ("this list re-renders too often, fix it") and is a near-guaranteed **follow-up question** after any React performance discussion, because it's an easy way to distinguish memorized API knowledge from real understanding. It also appears in **code review exercises**, where candidates are shown a component full of `useMemo`/`useCallback` and asked which ones are actually doing anything.
