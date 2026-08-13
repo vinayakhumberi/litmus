@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Critical Rendering Path Playground: Bytes → First Paint</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #61dafb;
+            --dark: #20232a;
+            --text: #ffffff;
+            --gray: #282c34;
+            --accent: #f08d49;
+            --good: #4ade80;
+            --bad: #f87171;
+            --code-bg: #1e1e1e;
+
+            --c-html: #4a5568;   --c-html-bright: #cbd5e0;
+            --c-css: #3182ce;    --c-css-bright: #90cdf4;
+            --c-block: #dd6b20;  --c-block-bright: #fbd38d;
+            --c-render: #805ad5; --c-render-bright: #d6bcfa;
+            --c-fcp: #38a169;    --c-fcp-bright: #9ae6b4;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--dark);
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: var(--gray);
+            padding: 3rem 2rem;
+            text-align: center;
+            border-bottom: 4px solid var(--primary);
+        }
+        header p.subtitle { color: #aaa; }
+        header p.crossref { font-size: 0.85rem; margin-top: 1rem; }
+        header p.crossref a { color: var(--primary); }
+        nav {
+            position: sticky;
+            top: 0;
+            background: var(--gray);
+            padding: 1rem;
+            z-index: 100;
+            text-align: center;
+            border-bottom: 1px solid #444;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 4px;
+        }
+        nav a {
+            color: var(--primary);
+            margin: 0 12px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+
+        /* Persistent CRP strip */
+        .pipeline-sticky {
+            position: sticky;
+            top: 57px;
+            z-index: 90;
+            background: rgba(32, 35, 42, 0.97);
+            backdrop-filter: blur(6px);
+            border-bottom: 1px solid #444;
+            padding: 0.9rem 1rem 0.7rem;
+        }
+        .pipeline-strip {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .stage {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            letter-spacing: 0.02em;
+            border: 1px solid transparent;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.25s ease, color 0.25s ease;
+            background: rgba(255,255,255,0.04);
+            color: #777;
+        }
+        .stage[data-stage="html"]   { border-color: rgba(203,213,224,0.25); }
+        .stage[data-stage="css"]    { border-color: rgba(144,205,244,0.25); }
+        .stage[data-stage="block"]  { border-color: rgba(251,211,141,0.25); }
+        .stage[data-stage="render"] { border-color: rgba(214,188,250,0.25); }
+        .stage[data-stage="fcp"]    { border-color: rgba(154,230,180,0.25); }
+
+        .stage[data-stage="html"].active   { background: var(--c-html);   color: var(--c-html-bright);   box-shadow: 0 0 18px rgba(203,213,224,0.6); transform: scale(1.08); }
+        .stage[data-stage="css"].active    { background: var(--c-css);    color: var(--c-css-bright);    box-shadow: 0 0 18px rgba(144,205,244,0.6); transform: scale(1.08); }
+        .stage[data-stage="block"].active  { background: var(--c-block);  color: var(--c-block-bright);  box-shadow: 0 0 18px rgba(251,211,141,0.6); transform: scale(1.08); }
+        .stage[data-stage="render"].active { background: var(--c-render); color: var(--c-render-bright); box-shadow: 0 0 18px rgba(214,188,250,0.6); transform: scale(1.08); }
+        .stage[data-stage="fcp"].active    { background: var(--c-fcp);    color: var(--c-fcp-bright);    box-shadow: 0 0 18px rgba(154,230,180,0.6); transform: scale(1.08); }
+
+        .pipe-arrow { color: #555; font-size: 1.1rem; }
+        .pipeline-caption {
+            max-width: 700px;
+            margin: 0.6rem auto 0;
+            text-align: center;
+            font-size: 0.78rem;
+            color: #888;
+            min-height: 1.2em;
+        }
+
+        main {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        section {
+            margin-bottom: 4rem;
+            padding: 2.5rem;
+            background: var(--gray);
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+        }
+        h1, h2, h3, h4 { color: var(--primary); }
+        pre, code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: "Fira Code", "Courier New", monospace;
+        }
+        .diagram {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+            scroll-margin-top: 220px;
+        }
+        .diagram svg .node.diagram-node-active rect,
+        .diagram svg .node.diagram-node-active polygon,
+        .diagram svg .node.diagram-node-active path,
+        .diagram svg .node.diagram-node-active circle {
+            stroke: #fff !important;
+            stroke-width: 3px !important;
+        }
+        .diagram svg .node.diagram-node-active {
+            animation: diagram-pulse 0.7s ease-in-out infinite alternate;
+        }
+        @keyframes diagram-pulse {
+            from { filter: drop-shadow(0 0 3px rgba(0,0,0,0.5)); }
+            to   { filter: drop-shadow(0 0 14px rgba(255,255,255,0.95)); }
+        }
+        .playground {
+            border: 2px dashed var(--accent);
+            padding: 2rem;
+            margin: 2rem 0;
+            border-radius: 12px;
+            background: rgba(240, 141, 73, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
+        button {
+            padding: 0.8rem 1.6rem;
+            background: var(--primary);
+            color: var(--dark);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95rem;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        button.secondary { background: #444; color: var(--text); }
+
+        .jank-explanation { font-size: 0.9rem; color: #aaa; font-style: italic; }
+        .stat-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+        .stat-badge {
+            background: rgba(0,0,0,0.3);
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            font-family: "Fira Code", monospace;
+            font-size: 0.9rem;
+            border: 1px solid #444;
+        }
+        .stat-badge span { color: var(--primary); font-weight: bold; }
+        .stat-badge.bad span { color: var(--bad); }
+        .stat-badge.good span { color: var(--good); }
+        .stat-badge.flash { animation: badge-flash 0.6s ease; }
+        @keyframes badge-flash {
+            0%   { background: rgba(255,255,255,0.35); border-color: rgba(255,255,255,0.6); }
+            100% { background: rgba(0,0,0,0.3); border-color: #444; }
+        }
+
+        /* ---------- Script race timeline ---------- */
+        .timeline-wrap { display: flex; flex-direction: column; gap: 14px; }
+        .timeline-row { display: flex; align-items: center; gap: 12px; }
+        .timeline-label { width: 130px; flex-shrink: 0; font-size: 0.85rem; }
+        .timeline-label b { display: block; }
+        .timeline-label small { color: #999; }
+        .timeline-track {
+            position: relative;
+            flex: 1;
+            height: 30px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px;
+            overflow: visible;
+        }
+        /* Parser row: a sequence of discrete, independently-timed segments
+           (waterfall-style) instead of one continuously-growing fill — each
+           segment appears at its own real start time with its own duration. */
+        .wf-seg {
+            position: absolute; top: 0; left: 0; height: 100%;
+            width: 0%;
+            transition: none;
+        }
+        .wf-seg:first-child { border-radius: 6px 0 0 6px; }
+        .wf-parse { background: linear-gradient(90deg, var(--c-html), var(--c-html-bright)); }
+        .wf-stall {
+            background: repeating-linear-gradient(45deg, var(--c-block), var(--c-block) 6px, var(--c-block-bright) 6px, var(--c-block-bright) 12px);
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+        }
+        .wf-stall span {
+            font-size: 0.6rem; font-weight: bold; color: #2a1a05;
+            white-space: nowrap; padding: 0 4px;
+        }
+        .timeline-ghost {
+            position: absolute; top: 0; bottom: 0;
+            width: 2px;
+            background: repeating-linear-gradient(to bottom, #666 0 4px, transparent 4px 8px);
+        }
+        .timeline-fetch {
+            position: absolute; top: 6px; height: 18px;
+            border-radius: 4px;
+            width: 0%;
+            opacity: 0.5;
+        }
+        .timeline-exec {
+            position: absolute; top: 0; height: 30px;
+            width: 0px;
+            border-radius: 3px;
+        }
+        .fetch-block { background: var(--c-block); }
+        .fetch-async { background: var(--accent); }
+        .fetch-defer { background: var(--c-render); }
+        .exec-block { background: var(--c-block-bright); }
+        .exec-async { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+        .exec-defer { background: var(--c-render-bright); }
+
+        .timeline-marker {
+            position: absolute; top: -20px;
+            font-size: 0.7rem;
+            color: #ccc;
+            white-space: nowrap;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .timeline-marker.shown { opacity: 1; }
+        .timeline-axis { display: flex; justify-content: space-between; font-size: 0.7rem; color: #666; padding-left: 142px; }
+
+        /* ---------- Preload scanner ---------- */
+        .scanner-source {
+            position: relative;
+            background: var(--code-bg);
+            border-radius: 8px;
+            padding: 2.2rem 1rem 1rem 1rem;
+            font-family: "Fira Code", monospace;
+            font-size: 0.85rem;
+            line-height: 2.4;
+        }
+        .scanner-line { position: relative; color: #999; transition: color 0.2s; }
+        .scanner-line.parsed { color: #ddd; }
+        .scanner-line .cursor {
+            position: absolute;
+            top: -1.5rem;
+            left: 0;
+            opacity: 0;
+            transition: opacity 0.15s, left 0.3s ease;
+            font-size: 0.72rem;
+            white-space: nowrap;
+            background: rgba(0,0,0,0.55);
+            padding: 1px 7px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+        .scanner-line .cursor.shown { opacity: 1; }
+        .scanner-line .cursor.main { color: var(--c-block-bright); left: 0; }
+        .scanner-line .cursor.pre { color: var(--primary); left: 110px; }
+        .scanner-badge {
+            display: inline-block;
+            margin-left: 10px;
+            font-size: 0.7rem;
+            background: rgba(97,218,251,0.15);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 1px 8px;
+            border-radius: 10px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .scanner-badge.shown { opacity: 1; }
+        .scanner-badge.wait { background: rgba(221,107,32,0.2); border-color: var(--c-block); color: var(--c-block-bright); }
+
+        /* ---------- CSS blocking comparison ---------- */
+        .fcp-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .fcp-label { width: 210px; flex-shrink: 0; font-size: 0.85rem; }
+        .fcp-track { position: relative; flex: 1; height: 34px; background: rgba(0,0,0,0.3); border-radius: 6px; }
+        .fcp-fill { position: absolute; top: 0; left: 0; height: 100%; border-radius: 6px; width: 0%; transition: width 1s cubic-bezier(.2,.9,.3,1); }
+        .fcp-fill.blocking { background: linear-gradient(90deg, var(--c-block), var(--c-block-bright)); }
+        .fcp-fill.critical { background: linear-gradient(90deg, var(--c-fcp), var(--c-fcp-bright)); }
+        .fcp-flag {
+            position: absolute; top: -26px;
+            transform: translateX(-50%);
+            font-size: 0.75rem;
+            color: var(--text);
+            opacity: 0;
+            transition: opacity 0.3s, left 1s cubic-bezier(.2,.9,.3,1);
+            white-space: nowrap;
+        }
+        .fcp-flag.shown { opacity: 1; }
+
+        /* ---------- Font demo ---------- */
+        .font-demo-zone { display: flex; gap: 2rem; flex-wrap: wrap; }
+        .font-demo-card {
+            flex: 1;
+            min-width: 260px;
+            background: rgba(0,0,0,0.25);
+            border-radius: 10px;
+            padding: 1.2rem;
+            border: 1px solid #444;
+        }
+        .font-demo-card h4 { margin-top: 0; }
+        .font-demo-text {
+            font-size: 1.6rem;
+            min-height: 2.4rem;
+            display: flex;
+            align-items: center;
+        }
+        .font-demo-text.fallback-font { font-family: Georgia, "Times New Roman", serif; }
+        .font-demo-text.final-font { font-family: "Fira Code", "Courier New", monospace; font-weight: bold; }
+        .font-demo-text.invisible { opacity: 0; }
+        .font-demo-text.swapped { animation: swap-flash 0.5s ease; }
+        @keyframes swap-flash {
+            0% { background: rgba(97,218,251,0.35); }
+            100% { background: transparent; }
+        }
+        .font-demo-status { font-size: 0.8rem; color: #999; margin-top: 6px; min-height: 1.2em; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #444; }
+        th { color: var(--primary); }
+        td.block-cell { color: var(--c-block-bright); }
+        td.fix-cell { color: var(--c-fcp-bright); }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Critical Rendering Path Playground ⚡</h1>
+    <p class="subtitle">Bytes → DOM/CSSOM → Render Tree → First Contentful Paint — watched, not just read</p>
+    <p class="crossref">Covers what happens <em>before</em> and <em>up to</em> first paint. For what happens after — Layout, Paint, Composite mechanics, thrashing, compositor animation — see the <a href="browser-rendering-pipeline.html">Browser Rendering Pipeline Playground</a>.</p>
+</header>
+
+<nav>
+    <a href="#overview">Overview</a>
+    <a href="#race">Script Race</a>
+    <a href="#scanner">Preload Scanner</a>
+    <a href="#css">CSS Blocking</a>
+    <a href="#font">Font Loading</a>
+    <a href="#summary">Summary</a>
+</nav>
+
+<div class="pipeline-sticky">
+    <div class="pipeline-strip" id="pipeline-strip">
+        <div class="stage" data-stage="html">HTML Parse</div>
+        <div class="pipe-arrow">→</div>
+        <div class="stage" data-stage="css">CSS Parse</div>
+        <div class="pipe-arrow">→</div>
+        <div class="stage" data-stage="block">Blocked?</div>
+        <div class="pipe-arrow">→</div>
+        <div class="stage" data-stage="render">Render Tree</div>
+        <div class="pipe-arrow">→</div>
+        <div class="stage" data-stage="fcp">FCP</div>
+    </div>
+    <div class="pipeline-caption" id="pipeline-caption">This strip lights up as you run the demos below — every render-blocking decision on this page traces back to one of these five moments.</div>
+</div>
+
+<main>
+    <section id="overview">
+        <h2>1. The Critical Rendering Path, End to End</h2>
+        <p>Every byte on the way to a painted pixel takes one of these routes. Which resources sit where in this graph — not their file size — is what determines how fast the user sees <em>anything</em>.</p>
+
+        <div class="btn-row">
+            <button onclick="simulateInitialLoad()">▶ Simulate a page load</button>
+        </div>
+        <p class="jank-explanation">Watch the strip above and the diagram below light up together. Notice the script-blocking branch: it's a loop back into HTML parsing, not a one-way street — that's the part everyone underestimates.</p>
+
+        <div class="diagram" id="overview-diagram">
+            <pre class="mermaid">
+            graph TD
+                HB["HTML bytes"] --> HP["HTML Parser"]
+                HP --> SC{"Sync &lt;script&gt; tag?"}
+                SC -- "Yes" --> BLK["Parser pauses"]
+                BLK --> EXEC["Fetch + execute script"]
+                EXEC --> HP
+                SC -- "No" --> DOM["DOM Tree"]
+                CB["CSS bytes"] --> CP["CSS Parser"]
+                CP --> CSSOM["CSSOM Tree<br>(all-or-nothing)"]
+                DOM --> RT["Render Tree"]
+                CSSOM --> RT
+                RT --> LPC["Layout → Paint → Composite"]
+                LPC --> FCP["First Contentful Paint"]
+
+                classDef htmlC fill:#4a5568,stroke:#cbd5e0,color:#fff
+                classDef cssC fill:#3182ce,stroke:#90cdf4,color:#fff
+                classDef blockC fill:#dd6b20,stroke:#fbd38d,color:#fff
+                classDef renderC fill:#805ad5,stroke:#d6bcfa,color:#fff
+                classDef fcpC fill:#38a169,stroke:#9ae6b4,color:#fff
+
+                class HB,HP,DOM htmlC
+                class CB,CP,CSSOM cssC
+                class SC,BLK,EXEC blockC
+                class RT,LPC renderC
+                class FCP fcpC
+            </pre>
+        </div>
+    </section>
+
+    <section id="race">
+        <h2>2. Script Loading Race — Blocking vs Async vs Defer</h2>
+        <p>JavaScript is single-threaded. <strong>Fetching</strong> a script happens off the main thread — the browser's network stack handles downloads in parallel with everything else. <strong>Executing</strong> it does not — execution always runs on the exact same main thread as HTML parsing, so the moment any script's code actually runs, parsing cannot also be running. Nothing in this race uses a separate thread; the three attributes only change <em>when the fetch starts</em> and <em>when execution is allowed to interrupt parsing</em>.</p>
+        <p class="jank-explanation">Legend for the top bar: <strong style="color:var(--c-html-bright)">blue</strong> = parser actively advancing. <strong style="color:var(--c-block-bright)">orange</strong> = parser cannot advance — either fully stalled waiting on a blocking script's fetch <em>and</em> execution, or very briefly interrupted by a script whose execution just became ready to run.</p>
+
+        <div class="playground">
+            <div class="btn-row">
+                <button onclick="runScriptRace()">▶ Run the Race</button>
+                <button class="secondary" onclick="resetScriptRace()">Reset</button>
+            </div>
+
+            <div class="timeline-wrap">
+                <div class="timeline-row">
+                    <div class="timeline-label"><b>HTML Parser</b><small>4500ms of real work</small></div>
+                    <div class="timeline-track" id="track-parser">
+                        <div class="timeline-ghost" id="parser-ghost" title="Where parsing would finish with zero blocking scripts"></div>
+                        <div class="wf-seg wf-parse" id="wf-p1"></div>
+                        <div class="wf-seg wf-stall" id="wf-stall-block"><span>⏸ stalled — blocking script fetch + exec</span></div>
+                        <div class="wf-seg wf-parse" id="wf-p2"></div>
+                        <div class="wf-seg wf-stall" id="wf-stall-async" title="Async's execution briefly interrupts parsing here"></div>
+                        <div class="wf-seg wf-parse" id="wf-p3"></div>
+                        <div class="timeline-marker" id="marker-dcl">DCL</div>
+                    </div>
+                </div>
+                <div class="timeline-row">
+                    <div class="timeline-label"><b>Blocking</b><small>&lt;script src&gt;</small></div>
+                    <div class="timeline-track" id="track-block">
+                        <div class="timeline-fetch fetch-block" id="fetch-block"></div>
+                        <div class="timeline-exec exec-block" id="exec-block"></div>
+                        <div class="timeline-marker" id="marker-block">executes</div>
+                    </div>
+                </div>
+                <div class="timeline-row">
+                    <div class="timeline-label"><b>Async</b><small>&lt;script async&gt;</small></div>
+                    <div class="timeline-track" id="track-async">
+                        <div class="timeline-fetch fetch-async" id="fetch-async"></div>
+                        <div class="timeline-exec exec-async" id="exec-async"></div>
+                        <div class="timeline-marker" id="marker-async">executes</div>
+                    </div>
+                </div>
+                <div class="timeline-row">
+                    <div class="timeline-label"><b>Defer</b><small>&lt;script defer&gt;</small></div>
+                    <div class="timeline-track" id="track-defer">
+                        <div class="timeline-fetch fetch-defer" id="fetch-defer"></div>
+                        <div class="timeline-exec exec-defer" id="exec-defer"></div>
+                        <div class="timeline-marker" id="marker-defer">executes</div>
+                    </div>
+                </div>
+                <div class="timeline-axis"><span>t=0</span><span>async &amp; defer fetch immediately — blocking's fetch waits for the parser to physically reach it</span></div>
+            </div>
+
+            <p class="jank-explanation" id="race-caption">Fetches for async and defer start immediately, discovered ahead of time — the blocking script's fetch only starts once the parser physically reaches it, because there's no attribute telling the browser it's safe to look ahead. That gap alone is a real cost, before execution timing even enters the picture.</p>
+            <div class="stat-row">
+                <div class="stat-badge bad" id="race-block-badge">Blocking finishes HTML parse at: <span>—</span></div>
+                <div class="stat-badge good" id="race-baseline-badge">Would've finished at (no blocking script): <span>4500ms</span></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="scanner">
+        <h2>3. The Preload Scanner Looks Ahead</h2>
+        <p>The main parser and the preload scanner are two separate passes over the same markup. When the main parser is stuck waiting on a blocking script, the preload scanner keeps going — it just can't <em>execute</em> anything, only discover and start fetching it.</p>
+
+        <div class="playground">
+            <div class="btn-row">
+                <button onclick="runScannerDemo()">▶ Run Scanner Race</button>
+                <button class="secondary" onclick="resetScannerDemo()">Reset</button>
+            </div>
+
+            <div class="scanner-source" id="scanner-source">
+                <div class="scanner-line" data-line="0">&lt;head&gt;<span class="cursor main" data-cursor="main-0">👷 parser</span><span class="cursor pre" data-cursor="pre-0">⚡ scanner</span></div>
+                <div class="scanner-line" data-line="1">  &lt;link rel="stylesheet" href="theme.css"&gt;<span class="scanner-badge" data-badge="1">fetch started</span></div>
+                <div class="scanner-line" data-line="2">  &lt;script src="analytics.js"&gt;&lt;/script&gt;<span class="scanner-badge wait" data-badge="2">fetch started</span></div>
+                <div class="scanner-line" data-line="3">  &lt;script src="app.js"&gt;&lt;/script&gt;<span class="scanner-badge" data-badge="3">fetch started</span></div>
+                <div class="scanner-line" data-line="4">&lt;/head&gt;</div>
+                <div class="scanner-line" data-line="5">&lt;body&gt;</div>
+                <div class="scanner-line" data-line="6">  &lt;img src="hero.jpg"&gt;<span class="scanner-badge" data-badge="6">fetch started</span></div>
+                <div class="scanner-line" data-line="7">&lt;/body&gt;</div>
+            </div>
+
+            <p class="jank-explanation" id="scanner-caption">Click Run — the ⚡ scanner cursor will reach <code>app.js</code> and <code>hero.jpg</code> and start fetching them while the 👷 main parser is still stuck waiting on <code>analytics.js</code> to download and execute.</p>
+        </div>
+    </section>
+
+    <section id="css">
+        <h2>4. Render-Blocking CSS vs. Critical CSS Inlining</h2>
+        <p>Same total stylesheet. Same simulated network. The only difference: whether the browser needs the <em>whole</em> thing before it's allowed to paint anything.</p>
+
+        <div class="playground">
+            <div class="btn-row">
+                <button onclick="runCssDemo()">▶ Run Both Scenarios</button>
+                <button class="secondary" onclick="resetCssDemo()">Reset</button>
+            </div>
+
+            <div>
+                <div class="fcp-row">
+                    <div class="fcp-label"><b>Full stylesheet</b><br><small>render-blocking, 1800ms to fetch + parse</small></div>
+                    <div class="fcp-track">
+                        <div class="fcp-fill blocking" id="fcp-fill-blocking"></div>
+                        <div class="fcp-flag" id="fcp-flag-blocking">🏁 FCP</div>
+                    </div>
+                </div>
+                <div class="fcp-row">
+                    <div class="fcp-label"><b>Critical CSS inlined</b><br><small>~2KB inline, rest loads async after</small></div>
+                    <div class="fcp-track">
+                        <div class="fcp-fill critical" id="fcp-fill-critical"></div>
+                        <div class="fcp-flag" id="fcp-flag-critical">🏁 FCP</div>
+                    </div>
+                </div>
+            </div>
+
+            <p class="jank-explanation" id="css-explain">Both scenarios have the DOM ready at the same moment (~500ms) — the only variable is how much CSS has to be ready before the browser is allowed to paint.</p>
+            <div class="stat-row">
+                <div class="stat-badge bad" id="css-blocking-badge">Full stylesheet FCP: <span>—</span></div>
+                <div class="stat-badge good" id="css-critical-badge">Critical CSS FCP: <span>—</span></div>
+                <div class="stat-badge" id="css-diff-badge">Difference: <span>—</span></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="font">
+        <h2>5. Font Loading: Invisible Text vs. Immediate Fallback</h2>
+        <p>Two text blocks, two <code>font-display</code> values, one simulated slow font (timing is fixed here so the effect is reliably visible regardless of your actual connection — the show/hide and swap <em>behavior</em> is exactly how real browsers implement each value).</p>
+
+        <div class="playground">
+            <div class="btn-row">
+                <button onclick="runFontDemo()">▶ Simulate a Slow Font Load (2s)</button>
+                <button class="secondary" onclick="resetFontDemo()">Reset</button>
+            </div>
+
+            <div class="font-demo-zone">
+                <div class="font-demo-card">
+                    <h4>font-display: block <small>(default-ish behavior)</small></h4>
+                    <div class="font-demo-text fallback-font" id="font-block-text">Book a demo</div>
+                    <div class="font-demo-status" id="font-block-status">Idle — click the button above</div>
+                </div>
+                <div class="font-demo-card">
+                    <h4>font-display: swap</h4>
+                    <div class="font-demo-text fallback-font" id="font-swap-text">Book a demo</div>
+                    <div class="font-demo-status" id="font-swap-status">Idle — click the button above</div>
+                </div>
+            </div>
+            <p class="jank-explanation">Watch the left card go fully invisible for the load duration — that's the FOIT (Flash of Invisible Text) period. The right card shows the fallback font immediately and swaps the instant the "font" is ready, never leaving a blank gap.</p>
+        </div>
+    </section>
+
+    <section id="summary">
+        <h2>6. Summary Table</h2>
+        <table>
+            <thead>
+                <tr><th>Resource</th><th>Default behavior</th><th>Lead-approved fix</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="block-cell"><strong>Stylesheet in &lt;head&gt;</strong></td>
+                    <td>Render-blocking, all-or-nothing CSSOM</td>
+                    <td class="fix-cell">Inline above-the-fold critical CSS, load the rest via preload + swap</td>
+                </tr>
+                <tr>
+                    <td class="block-cell"><strong>&lt;script src&gt; (no attribute)</strong></td>
+                    <td>Blocks HTML parsing at its position; fetch not discovered by scanner as early</td>
+                    <td class="fix-cell"><code>defer</code> for app code, <code>async</code> only for independent scripts</td>
+                </tr>
+                <tr>
+                    <td><strong>Web font</strong></td>
+                    <td>Invisible text until loaded (FOIT) with default <code>font-display</code></td>
+                    <td class="fix-cell"><code>font-display: swap</code> (or <code>optional</code> above the fold)</td>
+                </tr>
+                <tr>
+                    <td><strong>LCP image</strong></td>
+                    <td>Fine by default — the danger is accidentally lazy-loading it</td>
+                    <td class="fix-cell">Never <code>loading="lazy"</code>; use <code>fetchpriority="high"</code></td>
+                </tr>
+            </tbody>
+        </table>
+        <p class="jank-explanation" style="margin-top:1.5rem;">Once first paint happens, everything becomes a Layout/Paint/Composite question — that's a different playground: <a href="browser-rendering-pipeline.html" style="color:var(--primary);">Browser Rendering Pipeline Playground →</a></p>
+    </section>
+</main>
+
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+    /* ---------- Pipeline strip (shared across all demos) ---------- */
+    const stageEls = {
+        html: document.querySelector('.stage[data-stage="html"]'),
+        css: document.querySelector('.stage[data-stage="css"]'),
+        block: document.querySelector('.stage[data-stage="block"]'),
+        render: document.querySelector('.stage[data-stage="render"]'),
+        fcp: document.querySelector('.stage[data-stage="fcp"]'),
+    };
+    const captionEl = document.getElementById('pipeline-caption');
+    let igniteTimers = [];
+
+    const diagramStageClass = { html: 'htmlC', css: 'cssC', block: 'blockC', render: 'renderC', fcp: 'fcpC' };
+
+    function highlightDiagramStages(stages) {
+        document.querySelectorAll('.diagram svg .node.diagram-node-active').forEach(g => g.classList.remove('diagram-node-active'));
+        stages.forEach(s => {
+            const cls = diagramStageClass[s];
+            if (!cls) return;
+            document.querySelectorAll('.diagram svg .node.' + cls).forEach(g => g.classList.add('diagram-node-active'));
+        });
+    }
+
+    function ignite(stages, caption, holdMs) {
+        holdMs = holdMs || 900;
+        igniteTimers.forEach(t => clearTimeout(t));
+        igniteTimers = [];
+        Object.values(stageEls).forEach(el => el.classList.remove('active'));
+        stages.forEach(s => {
+            const el = stageEls[s];
+            void el.offsetWidth;
+            el.classList.add('active');
+        });
+        highlightDiagramStages(stages);
+        if (caption) captionEl.textContent = caption;
+        igniteTimers.push(setTimeout(() => {
+            Object.values(stageEls).forEach(el => el.classList.remove('active'));
+            highlightDiagramStages([]);
+        }, holdMs));
+    }
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    /* ---------- Overview walkthrough ---------- */
+    async function simulateInitialLoad() {
+        const diagramEl = document.getElementById('overview-diagram');
+        if (diagramEl) diagramEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        await sleep(700);
+        ignite(['html'], 'HTML parser starts building the DOM as bytes stream in…', 1000);
+        await sleep(1100);
+        ignite(['css'], 'In parallel, CSS bytes arrive and build the CSSOM — all or nothing, no partial CSSOM ever ships.', 1000);
+        await sleep(1100);
+        ignite(['block'], 'Parser hits a synchronous &lt;script&gt; — pauses, fetches, executes, then resumes HTML parsing.', 1200);
+        await sleep(1300);
+        ignite(['render'], 'DOM + CSSOM merge into the Render Tree, then Layout → Paint → Composite run.', 1000);
+        await sleep(1100);
+        ignite(['fcp'], 'First Contentful Paint. Everything above this line is what determines when this moment happens.', 1500);
+    }
+
+    /* ---------- Section 2: Script Loading Race ---------- */
+    const PARSE_UNITS = 4500;      // total units of pure parsing work
+    const BLOCK_POS = 1500;        // parse-units completed when the parser hits the blocking <script>
+    const BLOCK_FETCH = 1100;      // fetch duration once the parser reaches it
+    const BLOCK_EXEC = 400;        // main-thread execution time
+    const ASYNC_FETCH_DUR = 3600;  // wall-clock time (from t=0) for async's fetch to complete
+    const ASYNC_EXEC_DUR = 200;    // main-thread execution time once async is ready
+    const DEFER_FETCH_DUR = 2200;  // wall-clock time (from t=0) for defer's fetch to complete
+
+    // The parser advances 1:1 with wall-clock time except during two real stalls:
+    // the blocking script's full fetch+exec, and async's brief exec-only interrupt.
+    // Both are main-thread work, so both genuinely push total completion back —
+    // this is a real delay, not a decorative overlay on top of an unaffected bar.
+    const blockStallStart = BLOCK_POS;
+    const blockStallEnd = blockStallStart + BLOCK_FETCH + BLOCK_EXEC;
+    const asyncStallStart = ASYNC_FETCH_DUR;
+    const asyncStallEnd = asyncStallStart + ASYNC_EXEC_DUR;
+
+    const totalStallTime = (blockStallEnd - blockStallStart) + (asyncStallEnd - asyncStallStart);
+    const PARSE_FINISH = PARSE_UNITS + totalStallTime;
+    const DCL_TIME = PARSE_FINISH + 60;
+
+    function pct(ms) { return (ms / DCL_TIME) * 100; }
+    document.getElementById('parser-ghost').style.left = pct(PARSE_UNITS) + '%';
+
+    function setTransition(el, prop, durationMs) {
+        el.style.transition = durationMs > 0 ? `${prop} ${durationMs}ms linear` : 'none';
+    }
+
+    // Waterfall reveal: a segment sits at a fixed left position (its start time)
+    // and grows its own width starting exactly at that real moment — a genuine
+    // Gantt-style build-up instead of one bar sliding continuously.
+    function growSegment(el, startMs, durationMs) {
+        el.style.left = pct(startMs) + '%';
+        setTimeout(() => {
+            setTransition(el, 'width', durationMs);
+            requestAnimationFrame(() => {
+                el.style.width = (pct(startMs + durationMs) - pct(startMs)) + '%';
+            });
+        }, startMs);
+    }
+
+    function runScriptRace() {
+        resetScriptRace(true);
+        ignite(['html', 'block'], 'Blocking fetch only starts once the parser physically reaches it — async and defer were already fetching by then.', 1500);
+
+        // Parser waterfall: five segments in sequence, each appearing at its own real start time.
+        growSegment(document.getElementById('wf-p1'), 0, blockStallStart);
+        growSegment(document.getElementById('wf-stall-block'), blockStallStart, blockStallEnd - blockStallStart);
+        growSegment(document.getElementById('wf-p2'), blockStallEnd, asyncStallStart - blockStallEnd);
+        growSegment(document.getElementById('wf-stall-async'), asyncStallStart, asyncStallEnd - asyncStallStart);
+        growSegment(document.getElementById('wf-p3'), asyncStallEnd, PARSE_FINISH - asyncStallEnd);
+
+        // Blocking script fetch+exec bars, positioned starting at blockStallStart
+        growSegment(document.getElementById('fetch-block'), blockStallStart, BLOCK_FETCH);
+        setTimeout(() => {
+            const execBlock = document.getElementById('exec-block');
+            execBlock.style.left = pct(blockStallStart + BLOCK_FETCH) + '%';
+            setTransition(execBlock, 'width', BLOCK_EXEC);
+            requestAnimationFrame(() => { execBlock.style.width = '5px'; });
+            document.getElementById('marker-block').style.left = pct(blockStallStart + BLOCK_FETCH) + '%';
+            document.getElementById('marker-block').classList.add('shown');
+            ignite(['block'], 'Parser reaches the blocking script — it has to stop completely, not just wait: it can\'t even discover what comes next until this resolves.', 1500);
+        }, blockStallStart + BLOCK_FETCH);
+
+        setTimeout(() => {
+            ignite(['html'], 'Blocking script done — parser resumes from exactly where it paused.', 1200);
+        }, blockStallEnd);
+
+        // Async: fetch starts immediately, off the main thread — parser is untouched during this
+        growSegment(document.getElementById('fetch-async'), 0, ASYNC_FETCH_DUR);
+        setTimeout(() => {
+            const execAsync = document.getElementById('exec-async');
+            execAsync.style.left = pct(asyncStallStart) + '%';
+            execAsync.style.width = '5px';
+            document.getElementById('marker-async').style.left = pct(asyncStallStart) + '%';
+            document.getElementById('marker-async').classList.add('shown');
+            ignite(['block'], 'Async\'s fetch was off-thread and never touched parsing — but the instant it\'s ready, execution runs on the SAME main thread as parsing, so it genuinely pauses the parser too (that orange notch just appeared) — just far more briefly and unpredictably than a blocking script.', 1800);
+        }, asyncStallStart);
+
+        // Defer: fetch starts immediately, off the main thread; execution waits until parsing fully completes
+        growSegment(document.getElementById('fetch-defer'), 0, DEFER_FETCH_DUR);
+
+        setTimeout(() => {
+            const execDefer = document.getElementById('exec-defer');
+            execDefer.style.left = pct(PARSE_FINISH) + '%';
+            execDefer.style.width = '5px';
+            document.getElementById('marker-defer').style.left = pct(PARSE_FINISH) + '%';
+            document.getElementById('marker-defer').classList.add('shown');
+
+            document.getElementById('marker-dcl').style.left = pct(DCL_TIME) + '%';
+            document.getElementById('marker-dcl').classList.add('shown');
+
+            document.getElementById('race-block-badge').querySelector('span').textContent = PARSE_FINISH + 'ms';
+            ignite(['render', 'fcp'], 'Defer\'s fetch finished ages ago (' + DEFER_FETCH_DUR + 'ms) but it waits for parsing to fully finish before executing, in document order — including the extra time async\'s interrupt just added.', 1600);
+        }, PARSE_FINISH);
+    }
+
+    function resetScriptRace(silent) {
+        ['wf-p1', 'wf-stall-block', 'wf-p2', 'wf-stall-async', 'wf-p3', 'fetch-block', 'exec-block', 'fetch-async', 'exec-async', 'fetch-defer', 'exec-defer'].forEach(id => {
+            const el = document.getElementById(id);
+            el.style.transition = 'none';
+            el.style.width = el.classList.contains('timeline-exec') ? '0px' : '0%';
+            el.style.left = '0%';
+        });
+        ['marker-block', 'marker-async', 'marker-defer', 'marker-dcl'].forEach(id => {
+            document.getElementById(id).classList.remove('shown');
+        });
+        document.getElementById('race-block-badge').querySelector('span').textContent = '—';
+        if (!silent) ignite([], '', 1);
+    }
+
+    /* ---------- Section 3: Preload Scanner ---------- */
+    async function runScannerDemo() {
+        resetScannerDemo(true);
+        ignite(['html'], 'Main parser starts at the top of the document…', 1000);
+        const cap = document.getElementById('scanner-caption');
+
+        function showCursor(id) { document.querySelector(`[data-cursor="${id}"]`).classList.add('shown'); }
+        function hideCursor(id) { document.querySelector(`[data-cursor="${id}"]`).classList.remove('shown'); }
+        function parsedLine(n) { document.querySelector(`[data-line="${n}"]`).classList.add('parsed'); }
+        function showBadge(n) { document.querySelector(`[data-badge="${n}"]`).classList.add('shown'); }
+
+        showCursor('main-0');
+        await sleep(1000);
+        cap.textContent = '⚡ Preload scanner races ahead independently of the main parser…';
+        showBadge('1');
+        await sleep(1000);
+        hideCursor('main-0');
+        parsedLine(1);
+        document.querySelectorAll('[data-cursor="main-0"]').forEach(el => { el.dataset.cursor = 'main-1'; });
+
+        // Main parser reaches the blocking script and stalls
+        await sleep(900);
+        cap.textContent = '👷 Main parser reaches analytics.js — it must stop and wait for this to download before it can even know what comes next.';
+        parsedLine(2);
+        ignite(['block'], 'Main parser blocked on analytics.js — meanwhile the scanner keeps moving.', 3800);
+        const line2 = document.querySelector('[data-line="2"]');
+        const mainCursor2 = document.createElement('span');
+        mainCursor2.className = 'cursor main shown';
+        mainCursor2.textContent = '👷 parser (waiting…)';
+        line2.appendChild(mainCursor2);
+
+        await sleep(1100);
+        cap.textContent = '⚡ Scanner discovers app.js and hero.jpg while the main parser is still stuck — both fetches start now, well before the parser physically arrives.';
+        showBadge('3');
+        await sleep(1000);
+        showBadge('6');
+
+        await sleep(1700);
+        cap.textContent = 'Main parser is finally free — reaching the remaining lines one at a time now, same as it always does.';
+        mainCursor2.remove();
+        await sleep(500);
+        parsedLine(3);
+        await sleep(450);
+        parsedLine(4);
+        await sleep(450);
+        parsedLine(5);
+        await sleep(450);
+        parsedLine(6);
+        await sleep(450);
+        parsedLine(7);
+        await sleep(300);
+        cap.textContent = 'By the time the main parser reaches app.js and hero.jpg, both are already mid-download (or done) — the scanner bought that time back.';
+        ignite(['render', 'fcp'], 'Discovery (scanner) and execution (parser) are two different clocks — this is why moving a script tag changes execution order, not necessarily fetch start time.', 1600);
+    }
+
+    function resetScannerDemo(silent) {
+        document.querySelectorAll('.scanner-line').forEach(l => l.classList.remove('parsed'));
+        document.querySelectorAll('.cursor').forEach(c => c.classList.remove('shown'));
+        document.querySelectorAll('.scanner-badge').forEach(b => b.classList.remove('shown'));
+        document.querySelectorAll('[data-cursor="main-1"]').forEach(el => { el.dataset.cursor = 'main-0'; });
+        document.getElementById('scanner-caption').textContent = 'Click Run — the ⚡ scanner cursor will reach app.js and hero.jpg and start fetching them while the 👷 main parser is still stuck waiting on analytics.js to download and execute.';
+        if (!silent) ignite([], '', 1);
+    }
+
+    /* ---------- Section 4: CSS render-blocking vs critical CSS ---------- */
+    const DOM_READY = 800;
+    const FULL_CSS_TIME = 3200;
+    const CRITICAL_CSS_TIME = 1000; // inline CSS is essentially free, gated by DOM ready instead
+
+    function runCssDemo() {
+        resetCssDemo(true);
+        ignite(['css', 'block'], 'Full stylesheet must finish entirely before Render Tree can be built — the browser refuses to paint with a partial CSSOM.', 2000);
+
+        const fillB = document.getElementById('fcp-fill-blocking');
+        const fillC = document.getElementById('fcp-fill-critical');
+        const flagB = document.getElementById('fcp-flag-blocking');
+        const flagC = document.getElementById('fcp-flag-critical');
+        const maxTime = FULL_CSS_TIME;
+
+        // Transition durations are set explicitly per run so the bar's fill
+        // animation finishes in sync with the setTimeout that reveals each
+        // scenario's FCP flag — the CSS default is just a 0-width resting state.
+        setTransition(fillB, 'width', FULL_CSS_TIME);
+        setTransition(fillC, 'width', CRITICAL_CSS_TIME);
+        flagB.style.transition = `left ${FULL_CSS_TIME}ms linear, opacity 0.3s ease`;
+        flagC.style.transition = `left ${CRITICAL_CSS_TIME}ms linear, opacity 0.3s ease`;
+
+        requestAnimationFrame(() => {
+            fillB.style.width = '100%';
+            fillC.style.width = (CRITICAL_CSS_TIME / maxTime * 100) + '%';
+            flagB.style.left = '100%';
+            flagC.style.left = (CRITICAL_CSS_TIME / maxTime * 100) + '%';
+        });
+
+        setTimeout(() => {
+            flagC.classList.add('shown');
+            document.getElementById('css-critical-badge').querySelector('span').textContent = CRITICAL_CSS_TIME + 'ms';
+            ignite(['render', 'fcp'], 'Critical CSS is already enough — the browser paints while the rest of the stylesheet keeps loading in the background.', 1200);
+        }, CRITICAL_CSS_TIME);
+
+        setTimeout(() => {
+            flagB.classList.add('shown');
+            document.getElementById('css-blocking-badge').querySelector('span').textContent = FULL_CSS_TIME + 'ms';
+            const diff = FULL_CSS_TIME - CRITICAL_CSS_TIME;
+            document.getElementById('css-diff-badge').querySelector('span').textContent = diff + 'ms faster (' + Math.round(diff / FULL_CSS_TIME * 100) + '%)';
+            document.getElementById('css-explain').textContent = 'The full-stylesheet scenario just spent ' + diff + 'ms with a blank/white page waiting on CSS the critical-CSS version didn\'t need for that first paint.';
+        }, FULL_CSS_TIME);
+    }
+
+    function resetCssDemo(silent) {
+        ['fcp-fill-blocking', 'fcp-fill-critical'].forEach(id => {
+            const el = document.getElementById(id);
+            el.style.transition = 'none';
+            el.style.width = '0%';
+            requestAnimationFrame(() => { el.style.transition = ''; });
+        });
+        ['fcp-flag-blocking', 'fcp-flag-critical'].forEach(id => {
+            const el = document.getElementById(id);
+            el.classList.remove('shown');
+            el.style.transition = 'none';
+            el.style.left = '0%';
+            requestAnimationFrame(() => { el.style.transition = ''; });
+        });
+        document.getElementById('css-blocking-badge').querySelector('span').textContent = '—';
+        document.getElementById('css-critical-badge').querySelector('span').textContent = '—';
+        document.getElementById('css-diff-badge').querySelector('span').textContent = '—';
+        document.getElementById('css-explain').textContent = 'Both scenarios have the DOM ready at the same moment (~500ms) — the only variable is how much CSS has to be ready before the browser is allowed to paint.';
+        if (!silent) ignite([], '', 1);
+    }
+
+    /* ---------- Section 5: Font loading FOIT vs swap ---------- */
+    const FONT_LOAD_MS = 2000;
+
+    function runFontDemo() {
+        resetFontDemo(true);
+        ignite(['render'], 'Text using a webfont hits this decision the instant the render tree needs to paint it.', 1500);
+
+        const blockText = document.getElementById('font-block-text');
+        const blockStatus = document.getElementById('font-block-status');
+        const swapText = document.getElementById('font-swap-text');
+        const swapStatus = document.getElementById('font-swap-status');
+
+        blockText.classList.add('invisible');
+        blockStatus.textContent = 'Blocking period: text is fully invisible while the font downloads…';
+        swapStatus.textContent = 'Fallback font shown immediately — no invisible period at all.';
+
+        setTimeout(() => {
+            blockText.classList.remove('invisible');
+            blockText.classList.remove('fallback-font');
+            blockText.classList.add('final-font', 'swapped');
+            blockStatus.textContent = 'Font arrived — text appears for the first time, ' + FONT_LOAD_MS + 'ms after it could have been reading fallback text.';
+
+            swapText.classList.remove('fallback-font');
+            swapText.classList.add('final-font', 'swapped');
+            swapStatus.textContent = 'Font arrived — swaps from fallback to final font. User had readable text the entire time.';
+
+            ignite(['fcp'], 'Same font, same network delay — only the invisible period differs, and it\'s a pure UX cost with no technical benefit for most above-the-fold text.', 1600);
+        }, FONT_LOAD_MS);
+    }
+
+    function resetFontDemo(silent) {
+        ['font-block-text', 'font-swap-text'].forEach(id => {
+            const el = document.getElementById(id);
+            el.classList.remove('invisible', 'final-font', 'swapped');
+            el.classList.add('fallback-font');
+        });
+        document.getElementById('font-block-status').textContent = 'Idle — click the button above';
+        document.getElementById('font-swap-status').textContent = 'Idle — click the button above';
+        if (!silent) ignite([], '', 1);
+    }
+</script>
+
+</body>
+</html>
