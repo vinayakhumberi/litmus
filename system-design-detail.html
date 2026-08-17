@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Study Course — FAANG Prep</title>
+<title>System Design — FAANG Prep</title>
 <!-- Dependencies: Tailwind CSS + Typography -->
 <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,7 +25,7 @@
           summit: {
             bg: '#0a0a0a',
             paper: '#fdfcfb',
-            accent: '#3b82f6', 
+            accent: '#3b82f6',
             'accent-dark': '#1d4ed8',
           }
         }
@@ -36,8 +36,8 @@
 
 <style type="text/tailwindcss">
   @layer base {
-    body { 
-      @apply bg-white text-zinc-900 transition-colors duration-200 dark:bg-summit-bg dark:text-zinc-100 overflow-x-hidden; 
+    body {
+      @apply bg-white text-zinc-900 transition-colors duration-200 dark:bg-summit-bg dark:text-zinc-100 overflow-x-hidden;
       font-feature-settings: "cv02", "cv03", "cv04", "ss01";
     }
     body.light-theme { @apply bg-summit-paper; }
@@ -48,7 +48,7 @@
     @apply bg-slate-900 p-4 md:p-8 rounded-lg border border-slate-800 my-8 flex justify-center overflow-x-auto shadow-xl;
     background-color: ghostwhite;
   }
-  
+
   .mermaid-target svg {
     @apply w-full h-auto;
     max-width: 100%;
@@ -62,18 +62,18 @@
   .edgeLabel, .edgeLabel rect, .edgeLabel foreignObject, .edgeLabel foreignObject div, .edgeLabel foreignObject span, .edgeLabel p {
     background-color: #000000 !important; fill: #000000 !important; color: #ffffff !important;
   }
-  
+
   .code-wrap { @apply relative my-6 w-full overflow-hidden; }
   .copy-btn-code {
-    @apply absolute top-3 right-3 bg-zinc-800 text-zinc-400 text-[9px] px-2 py-1 rounded border border-zinc-700 
+    @apply absolute top-3 right-3 bg-zinc-800 text-zinc-400 text-[9px] px-2 py-1 rounded border border-zinc-700
     hover:bg-summit-accent hover:text-white transition-all opacity-0 pointer-events-none font-mono uppercase tracking-tighter;
   }
   .code-wrap:hover .copy-btn-code { @apply opacity-100 pointer-events-auto; }
 
-  pre[class*="language-"] { 
-    @apply m-0 rounded-lg text-xs md:text-sm border border-zinc-800 bg-zinc-950 p-4 md:p-5 leading-relaxed overflow-x-auto whitespace-pre-wrap md:whitespace-pre !important; 
+  pre[class*="language-"] {
+    @apply m-0 rounded-lg text-xs md:text-sm border border-zinc-800 bg-zinc-950 p-4 md:p-5 leading-relaxed overflow-x-auto whitespace-pre-wrap md:whitespace-pre !important;
   }
-  
+
   /* Interactive Elements */
   details { @apply bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg mb-5 overflow-hidden transition-all w-full; }
   details[open] { @apply ring-1 ring-summit-accent/30; }
@@ -88,7 +88,7 @@
 
 <!-- Mobile Header -->
 <div class="lg:hidden sticky top-0 z-50 bg-white/80 dark:bg-summit-bg/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 px-6 py-4 flex items-center justify-between">
-  <a href="index.html" class="font-mono text-[9px] font-bold tracking-widest text-zinc-400">← TRACKER</a>
+  <a href="system-design.html" class="font-mono text-[9px] font-bold tracking-widest text-zinc-400">← SYSTEM DESIGN</a>
   <button onclick="toggleSidebar()" class="text-zinc-900 dark:text-white p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
   </button>
@@ -98,10 +98,10 @@
   <!-- Sidebar -->
   <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 lg:static lg:block transform transition-transform duration-300 mobile-closed flex flex-col border-r border-zinc-200 dark:border-zinc-800 p-6 bg-zinc-50 dark:bg-zinc-950">
     <div class="flex items-center justify-between lg:block mb-10">
-      <a href="index.html" class="font-mono text-[9px] font-bold tracking-[0.2em] text-zinc-400 hover:text-summit-accent transition-colors">← TRACKER</a>
+      <a href="system-design.html" class="font-mono text-[9px] font-bold tracking-[0.2em] text-zinc-400 hover:text-summit-accent transition-colors">← SYSTEM DESIGN</a>
       <button onclick="toggleSidebar()" class="lg:hidden p-2">✕</button>
     </div>
-    
+
     <div class="text-[9px] uppercase tracking-[0.2em] font-extrabold text-zinc-400/80 mb-4 px-2">On this page</div>
     <nav class="flex-1 overflow-y-auto">
       <ul id="toc" class="space-y-0.5"></ul>
@@ -124,7 +124,7 @@
         prose-code:text-summit-accent prose-code:bg-zinc-100 prose-code:dark:bg-zinc-800/80 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-semibold prose-code:text-[12px] md:prose-code:text-[13px] prose-code:before:content-none prose-code:after:content-none
         ">
         <div class="flex items-center gap-3 text-zinc-400 text-sm italic">
-          <span class="animate-pulse">Building course module...</span>
+          <span class="animate-pulse">Loading system design answer...</span>
         </div>
       </div>
     </div>
@@ -141,13 +141,13 @@
   if (isLight) { document.body.classList.add('light-theme'); } else { document.documentElement.classList.add('dark'); }
 
   const urlParams = new URLSearchParams(window.location.search);
-  const topicId = urlParams.get('id');
+  const docId = urlParams.get('doc');
 
   function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebar-overlay');
     const isClosed = sidebar.classList.contains('mobile-closed');
-    
+
     if (isClosed) {
       sidebar.classList.remove('mobile-closed');
       overlay.classList.remove('hidden');
@@ -169,14 +169,14 @@
   }
 
   async function loadMarkdown() {
-    if (!topicId) return;
+    if (!docId) return;
     try {
-      const res = await fetch(`data/topics/${topicId}.md`);
+      const res = await fetch(`system-design/${docId}.md`);
       if (!res.ok) throw new Error();
       const markdown = await res.text();
       renderMarkdown(markdown);
     } catch (err) {
-      document.getElementById('markdown-content').innerHTML = `<h1>Topic Not Found</h1><p class="text-sm">Create <code>data/topics/${topicId}.md</code> to view content.</p>`;
+      document.getElementById('markdown-content').innerHTML = `<h1>Not Found</h1><p class="text-sm">Create <code>system-design/${docId}.md</code> to view content.</p>`;
     }
   }
 

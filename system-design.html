@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>System Design — FAANG Prep</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+  }
+</script>
+<style type="text/tailwindcss">
+  @layer base {
+    body {
+      @apply bg-zinc-50 text-zinc-900 transition-colors duration-200 dark:bg-[#0a0a0a] dark:text-zinc-100;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    body.light-theme { @apply bg-[#fdfcfb]; }
+  }
+</style>
+</head>
+<body class="antialiased">
+
+<div class="max-w-4xl mx-auto px-6 py-12 lg:py-20">
+  <header class="mb-12 flex justify-between items-end border-b border-zinc-200 dark:border-zinc-800 pb-8">
+    <div>
+        <a href="index.html" class="text-[10px] font-bold tracking-widest text-zinc-400 hover:text-blue-500 mb-4 block uppercase">← Back to Tracker</a>
+        <h1 class="text-4xl font-extrabold tracking-tight">System Design</h1>
+        <p class="text-zinc-500 mt-2">Worked step-by-step answers to real frontend system design prompts — framework applied, with the "why" behind every decision.</p>
+    </div>
+    <div id="file-count" class="text-xs font-mono text-zinc-500 bg-zinc-100 dark:bg-zinc-900 px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-800">
+        Scanning...
+    </div>
+  </header>
+
+  <div class="mb-8 flex gap-3">
+    <input type="text" id="search" oninput="filterDocs()" placeholder="Search system design answers..." class="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-3 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all">
+    <button onclick="openGenerateModal()" class="flex-shrink-0 bg-blue-500 hover:bg-blue-600 text-white font-bold px-5 py-3 rounded-xl transition-all flex items-center gap-2">
+        <span>+</span> Generate New Answer
+    </button>
+  </div>
+
+  <div id="docs-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <!-- Docs injected here -->
+  </div>
+
+  <div id="empty-state" class="hidden py-20 text-center">
+    <div class="text-4xl mb-4">🗺️</div>
+    <h3 class="text-lg font-bold">No system design answers found</h3>
+    <p class="text-zinc-500 text-sm">Add Markdown files to the <code>/system-design</code> folder to see them here.</p>
+  </div>
+</div>
+
+<!-- Generate Prompt Modal -->
+<div id="generate-modal-backdrop" class="hidden fixed inset-0 bg-black/70 z-50 items-center justify-center p-5">
+  <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex-shrink-0">
+      <div>
+        <h3 class="font-bold text-lg">Generate a New System Design Answer</h3>
+        <p class="text-xs text-zinc-500 mt-0.5">Fill in a problem statement, copy the prompt, paste it into a new Claude conversation.</p>
+      </div>
+      <button onclick="closeGenerateModal()" class="text-zinc-400 hover:text-zinc-900 dark:hover:text-white w-8 h-8 flex items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-800 flex-shrink-0">✕</button>
+    </div>
+    <div class="px-6 py-5 overflow-y-auto flex-1">
+      <label class="text-xs font-bold uppercase tracking-wider text-zinc-500 block mb-2">Problem statement</label>
+      <input id="problem-input" type="text" placeholder="e.g. Design a real-time multiplayer whiteboard" onkeydown="if(event.key==='Enter') generatePrompt()" class="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all mb-4">
+      <button onclick="generatePrompt()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all mb-5">Generate Prompt</button>
+
+      <div id="generated-output" class="hidden">
+        <label class="text-xs font-bold uppercase tracking-wider text-zinc-500 block mb-2">Suggested filename</label>
+        <code id="suggested-filename" class="block bg-zinc-100 dark:bg-zinc-800 rounded-lg px-3 py-2 text-xs mb-4"></code>
+
+        <label class="text-xs font-bold uppercase tracking-wider text-zinc-500 block mb-2">Prompt</label>
+        <pre id="prompt-output" class="bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 text-xs whitespace-pre-wrap max-h-80 overflow-y-auto font-mono"></pre>
+      </div>
+    </div>
+    <div id="modal-footer" class="hidden px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 flex-shrink-0">
+      <button id="copy-btn" onclick="copyGeneratedPrompt()" class="w-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold py-3 rounded-xl transition-all">Copy Prompt</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const isLight = localStorage.getItem('theme') === 'light';
+  if (isLight) { document.body.classList.add('light-theme'); } else { document.documentElement.classList.add('dark'); }
+
+  let allFiles = [];
+
+  async function scanDocs() {
+    const grid = document.getElementById('docs-grid');
+    const empty = document.getElementById('empty-state');
+    const counter = document.getElementById('file-count');
+
+    const isGitHubPages = window.location.hostname.includes('github.io');
+
+    try {
+      if (isGitHubPages) {
+        // 1. Production: Use GitHub API to list files
+        const pathParts = window.location.pathname.split('/').filter(Boolean);
+        const repo = pathParts[0]; // Assumes repo name is the first part of path
+        const owner = window.location.hostname.split('.')[0];
+
+        const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/system-design`);
+        if (!response.ok) throw new Error("API Limit or Repo Privacy issue");
+
+        const files = await response.json();
+        allFiles = files
+          .filter(file => file.name.endsWith('.md'))
+          .map(file => ({
+              name: file.name.replace('.md', '').replace(/-/g, ' ').replace(/_/g, ' '),
+              filename: file.name,
+              docId: file.name.replace('.md', ''),
+          }));
+      } else {
+        // 2. Development: Parse "Index of" page from local server
+        const response = await fetch('./system-design/');
+        if (!response.ok) throw new Error("Local directory listing not supported");
+
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const links = Array.from(doc.querySelectorAll('a'));
+
+        allFiles = links
+          .map(link => link.getAttribute('href'))
+          .filter(href => href && href.endsWith('.md'))
+          .map(href => {
+              const decoded = decodeURIComponent(href);
+              return {
+                  name: decoded.replace('.md', '').replace(/-/g, ' ').replace(/_/g, ' '),
+                  filename: decoded,
+                  docId: decoded.replace('.md', ''),
+              };
+          });
+      }
+
+      renderFiles(allFiles);
+    } catch (err) {
+      console.warn("Automated scan failed:", err.message);
+      grid.classList.add('hidden');
+      empty.classList.remove('hidden');
+      counter.textContent = "Scan Error";
+    }
+  }
+
+  function renderFiles(files) {
+    const grid = document.getElementById('docs-grid');
+    const empty = document.getElementById('empty-state');
+    const counter = document.getElementById('file-count');
+
+    if (files.length === 0) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        counter.textContent = "0 Answers";
+        return;
+    }
+
+    empty.classList.add('hidden');
+    counter.textContent = `${files.length} System Design Answers`;
+
+    grid.innerHTML = files.map(file => `
+        <a href="system-design-detail.html?doc=${encodeURIComponent(file.docId)}" class="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/5 transition-all">
+            <div class="flex justify-between items-start mb-4">
+                <span class="text-2xl group-hover:scale-110 transition-transform">🗺️</span>
+                <span class="text-[9px] font-mono text-zinc-400 border border-zinc-200 dark:border-zinc-800 px-2 py-0.5 rounded">MD</span>
+            </div>
+            <h3 class="font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-blue-500 transition-colors capitalize">${file.name}</h3>
+            <p class="text-xs text-zinc-500 mt-1 font-mono opacity-60">${file.filename}</p>
+        </a>
+    `).join('');
+  }
+
+  function filterDocs() {
+    const q = document.getElementById('search').value.toLowerCase();
+    const filtered = allFiles.filter(f => f.name.toLowerCase().includes(q) || f.filename.toLowerCase().includes(q));
+    renderFiles(filtered);
+  }
+
+  // ─── Generate Prompt Modal ──────────────────────────────────────────────
+  const SYSTEM_DESIGN_PROMPT_TEMPLATE = (problemStatement) => `You are my FAANG Frontend Lead/Staff interview coach. I am preparing for a frontend system design interview at Meta, Google, Amazon, Microsoft, or a similar company. I have 11 years of frontend experience.
+
+Today's problem statement: "${problemStatement}"
+
+---
+OUTPUT INSTRUCTIONS:
+Format your ENTIRE response as a high-fidelity Markdown (.md) document. This is a worked, step-by-step answer to the problem statement above — not a generic concept explainer. Apply a repeatable frontend system design framework to this specific question, structured as the actual steps I'd narrate out loud in a 45-minute interview. At every major decision, give an explicit "why" and name at least one real alternative that was considered and rejected — that reasoning is what's actually being evaluated, not the final diagram.
+
+Structure:
+# Design a [Problem Name]
+
+**How to use this document:** one sentence framing this as a worked answer to a real interview prompt, applying the framework, with a note that a condensed rehearsal summary is at the end.
+
+## Step 0 — Scope the Prompt (~2-3 min)
+- The clarifying questions I should actually ask
+- Why scoping first matters (prevents designing the wrong thing)
+- The concrete scoped-down version the rest of the document designs against — state assumptions explicitly, don't silently assume them
+
+## Step 1 — Requirements (~3-5 min)
+- A functional requirements table and a non-functional requirements table
+- A short callout on WHY the non-functional requirements specifically are what drive the hardest downstream technical decision
+
+## Step 2 — High-Level Architecture (~10-15 min)
+- The overall shape: components, data flow direction, where state lives
+- Why this shape follows from the requirements (not "because it's a default")
+- One Mermaid graph TD diagram showing the high-level architecture or primary execution flow
+- A "> **Key takeaway:**" callout
+
+## Step 3 — [Name the Hardest Sub-Problem] Deep Dive (~15-20 min)
+- Identify the ONE genuinely hard technical decision this problem hinges on
+- A comparison table contrasting the 2-3 real technical approaches (not a false binary) — include a "real-world adopters" row if genuinely known
+- An explicit decision with reasoning tied back to Step 1's requirements, AND an explicit statement of the condition under which the rejected alternative would actually be the right call
+- One Mermaid sequenceDiagram walking through the concrete mechanism (e.g., two clients/requests interacting over time, including a failure/edge case like a dropped connection or a race condition)
+- A "> **Key takeaway:**" callout
+
+## Step 4 — [A Secondary But Architecturally Distinct Concern] (~5 min)
+- Something that looks like it could reuse Step 3's solution but architecturally shouldn't (e.g., ephemeral presence data vs. durable document state, read-path caching vs. write-path consistency)
+- Why it's handled differently, explicitly
+
+## Step 5 — Cross-Cutting Concerns (~5 min)
+- A table: Performance, Accessibility, Security, Offline/network resilience, Testing — each with a concrete, problem-specific statement, not a generic platitude
+
+## Step 6 — Trade-offs & Wrap-up (~3-5 min)
+- Explicitly list 2-3 alternative approaches that were considered and rejected, with the specific reason each fails against this problem's requirements
+- What I'd revisit given more time or at 10x scale
+
+## 60-Second Rehearsal Summary
+- A dense bullet recap of the entire design, for last-minute review before a real interview
+
+---
+
+**Mermaid Syntax Requirements (v10+):**
+- ALWAYS wrap node text in double quotes if it contains symbols, punctuation, or mathematical notation.
+- NEVER use "\\n" for line breaks inside flowchart nodes — use HTML "<br>" tags instead.
+- NEVER use "style" (or any other Mermaid reserved word) as a custom classDef name — pick a distinct name instead.
+- Inside sequenceDiagram blocks specifically, do NOT use "<br>" inside Note or message text — keep labels on one line, or split into multiple Note statements. ("<br>" inside flowchart/graph nodes is fine — this restriction is sequenceDiagram-only.)
+- Keep each diagram to roughly 12-15 nodes max.
+
+Use professional technical language. Use \`\`\`typescript for all code blocks. Return ONLY the markdown content. No conversational preamble.`;
+
+  function slugify(text) {
+    return text
+      .toLowerCase()
+      .replace(/^design an?\s+/i, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  function openGenerateModal() {
+    document.getElementById('generate-modal-backdrop').classList.remove('hidden');
+    document.getElementById('generate-modal-backdrop').classList.add('flex');
+    document.getElementById('generated-output').classList.add('hidden');
+    document.getElementById('modal-footer').classList.add('hidden');
+    document.getElementById('problem-input').value = '';
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('problem-input').focus(), 50);
+  }
+
+  function closeGenerateModal() {
+    document.getElementById('generate-modal-backdrop').classList.add('hidden');
+    document.getElementById('generate-modal-backdrop').classList.remove('flex');
+    document.body.style.overflow = '';
+  }
+
+  function generatePrompt() {
+    const input = document.getElementById('problem-input').value.trim();
+    if (!input) { document.getElementById('problem-input').focus(); return; }
+
+    const prompt = SYSTEM_DESIGN_PROMPT_TEMPLATE(input);
+    document.getElementById('prompt-output').textContent = prompt;
+    document.getElementById('suggested-filename').textContent = `system-design/${slugify(input)}.md`;
+    document.getElementById('generated-output').classList.remove('hidden');
+    document.getElementById('modal-footer').classList.remove('hidden');
+  }
+
+  function copyGeneratedPrompt() {
+    const text = document.getElementById('prompt-output').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copy-btn');
+      const old = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = old, 2000);
+    });
+  }
+
+  document.getElementById('generate-modal-backdrop').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeGenerateModal();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeGenerateModal();
+  });
+
+  scanDocs();
+</script>
+</body>
+</html>
