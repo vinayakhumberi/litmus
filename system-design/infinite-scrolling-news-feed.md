@@ -86,6 +86,33 @@ The one genuinely hard technical decision this problem hinges on: **how do you k
 
 > **When I'd reconsider DOM recycling:** if profiling after shipping measured virtualization showed scroll performance was still insufficient — for example, on low-end devices at a much higher post-density-per-screen than assumed here — the recycling approach would be the next lever to pull. Naming this condition is the difference between "I picked one option" and "I understand what would change my mind."
 
+The fetch trigger and the height measurement are two separate observers doing two separate jobs — a common mistake is trying to make one do both:
+
+```typescript
+// Triggers the next page fetch before the sentinel is actually on screen,
+// so the next batch is ready before the user hits the bottom.
+useEffect(() => {
+  const observer = new IntersectionObserver(
+    ([entry]) => { if (entry.isIntersecting) fetchNextPage(); },
+    { rootMargin: '400px' }
+  );
+  if (sentinelRef.current) observer.observe(sentinelRef.current);
+  return () => observer.disconnect();
+}, [fetchNextPage]);
+
+// Corrects a post's estimated height to its real rendered height once known,
+// which is what lets the virtualizer's offset calculations stay accurate.
+function usePostHeight(onMeasured: (height: number) => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const ro = new ResizeObserver(([entry]) => onMeasured(entry.contentRect.height));
+    if (ref.current) ro.observe(ref.current);
+    return () => ro.disconnect();
+  }, [onMeasured]);
+  return ref;
+}
+```
+
 ### The failure mode that actually matters: layout shift from late-measured content
 
 ```mermaid

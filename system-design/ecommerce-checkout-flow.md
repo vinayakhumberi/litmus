@@ -84,9 +84,33 @@ The one genuinely hard technical decision this problem hinges on: **how do you c
 
 > **When full redirect would be the right call:** if a specific payment method being supported simply doesn't offer a hosted-fields SDK and only integrates via redirect — a real, common constraint with some regional payment methods and BNPL providers, not a hypothetical. Naming this shows the decision was made against real integration constraints, not just a general preference.
 
+The hosted-fields integration itself — the card input never becomes our own DOM element, it's mounted from the provider's own script into a container we point at:
+
+```typescript
+// The card element is rendered by the provider's iframe into this container -
+// keystrokes for card number/CVV never touch our own DOM or JS at all.
+const cardElement = elements.create('card');
+cardElement.mount('#card-element');
+
+async function submitPayment() {
+  const { token } = await stripe.createToken(cardElement); // raw card data never reaches our code
+  return fetch('/api/orders', {
+    method: 'POST',
+    headers: { 'Idempotency-Key': idempotencyKey },
+    body: JSON.stringify({ paymentToken: token.id }),
+  });
+}
+```
+
 ### Idempotent submission: the retry-safe mechanism
 
-A client-generated idempotency key (a UUID) is created once when the user reaches the payment step, and included on every submission attempt for that checkout — including retries after a network failure or the user clicking "Pay" again. The backend uses this key to recognize a retried request as the same attempt and returns the original result instead of charging a second time.
+A client-generated idempotency key (a UUID, generated once and reused across retries — see `idempotencyKey` in the snippet above) is created when the user reaches the payment step, and included on every submission attempt for that checkout — including retries after a network failure or the user clicking "Pay" again:
+
+```typescript
+const idempotencyKey = useRef(crypto.randomUUID()).current; // one per checkout attempt, not per click
+```
+
+The backend uses this key to recognize a retried request as the same attempt and returns the original result instead of charging a second time.
 
 ```mermaid
 sequenceDiagram

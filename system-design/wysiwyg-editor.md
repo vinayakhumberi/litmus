@@ -84,6 +84,27 @@ The one genuinely hard technical decision this problem hinges on: **how much do 
 
 > **When I'd reconsider fully custom rendering:** if the requirements included something like Google Docs' pixel-perfect print fidelity, or the editor needed to render inside a canvas-based surface for unrelated reasons (e.g., embedded in a whiteboard product). Naming that condition explicitly is what separates "I picked the popular option" from "I understand the actual trade-off."
 
+The interception itself hangs off `beforeinput`, since its `inputType` field is what actually tells us the user's intent — a plain `input` listener only tells us the DOM already changed:
+
+```typescript
+editorRoot.addEventListener('beforeinput', (event: InputEvent) => {
+  if (event.inputType === 'insertCompositionText') return; // let the IME own this entirely
+
+  const handler = transactionHandlers[event.inputType];
+  if (!handler) return; // unhandled type - fall back to native behavior
+
+  event.preventDefault();
+  const transaction = handler(event, currentSelection);
+  applyTransaction(transaction); // updates the model, then patches the DOM to match
+});
+
+editorRoot.addEventListener('compositionstart', () => { interceptionSuspended = true; });
+editorRoot.addEventListener('compositionend', (event: CompositionEvent) => {
+  interceptionSuspended = false;
+  applyTransaction(insertTextTransaction(event.data, currentSelection));
+});
+```
+
 ### The edge case that actually breaks naive implementations: IME composition
 
 ```mermaid

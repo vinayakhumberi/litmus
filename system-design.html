@@ -188,6 +188,8 @@ Today's problem statement: "${problemStatement}"
 OUTPUT INSTRUCTIONS:
 Format your ENTIRE response as a high-fidelity Markdown (.md) document. This is a worked, step-by-step answer to the problem statement above — not a generic concept explainer. Apply a repeatable frontend system design framework to this specific question, structured as the actual steps I'd narrate out loud in a 45-minute interview. At every major decision, give an explicit "why" and name at least one real alternative that was considered and rejected — that reasoning is what's actually being evaluated, not the final diagram.
 
+This must read as unmistakably FRONTEND system design, not general/backend system design described from the client's point of view. Concretely: ground every major decision in real browser/DOM/JS-runtime APIs and mechanisms (e.g. IntersectionObserver, ResizeObserver, BroadcastChannel, the Web Locks API, Service Workers, contentEditable/beforeinput, requestIdleCallback, CSS containment) rather than generic distributed-systems vocabulary borrowed from backend design (avoid leaning on terms like "leader election" or "consensus" without immediately tying them to the specific browser API/mechanism that implements them here). Vague architecture-in-prose without a concrete implementation anchor is exactly what this must NOT read like.
+
 Structure:
 # Design a [Problem Name]
 
@@ -212,12 +214,14 @@ Structure:
 - Identify the ONE genuinely hard technical decision this problem hinges on
 - A comparison table contrasting the 2-3 real technical approaches (not a false binary) — include a "real-world adopters" row if genuinely known
 - An explicit decision with reasoning tied back to Step 1's requirements, AND an explicit statement of the condition under which the rejected alternative would actually be the right call
+- A short, real TypeScript code snippet (5-15 lines) showing the actual browser API or mechanism the chosen approach depends on — not pseudocode standing in for architecture, a snippet someone could recognize as real usage of a real API
 - One Mermaid sequenceDiagram walking through the concrete mechanism (e.g., two clients/requests interacting over time, including a failure/edge case like a dropped connection or a race condition)
 - A "> **Key takeaway:**" callout
 
 ## Step 4 — [A Secondary But Architecturally Distinct Concern] (~5 min)
 - Something that looks like it could reuse Step 3's solution but architecturally shouldn't (e.g., ephemeral presence data vs. durable document state, read-path caching vs. write-path consistency)
 - Why it's handled differently, explicitly
+- A short TypeScript snippet if a distinct browser API is what makes this concern architecturally separate (e.g., a Service Worker push handler, a distinct observer/event) — skip only if the distinction is purely conceptual with no separate API involved
 
 ## Step 5 — Cross-Cutting Concerns (~5 min)
 - A table: Performance, Accessibility, Security, Offline/network resilience, Testing — each with a concrete, problem-specific statement, not a generic platitude

@@ -84,6 +84,27 @@ The one genuinely hard technical decision this problem hinges on: **how do multi
 
 > **When `SharedWorker` would be the right call instead:** if the product's browser support matrix excluded Safari, or if Safari's `SharedWorker` support meaningfully improves — at that point the architecturally cleaner primitive would be worth adopting. Naming this condition explicitly matters more than picking a single "winner" dogmatically.
 
+The ownership lock itself is a direct use of the Web Locks API — no custom polling or `localStorage`-based locking needed, since the browser guarantees only one holder of a named lock at a time, even across tabs:
+
+```typescript
+async function becomeConnectionOwner(onOwnershipGranted: () => void) {
+  // The lock is held for as long as this callback keeps its promise pending.
+  // Returning (or the tab closing) releases it, making it available again.
+  await navigator.locks.request('notification-connection-owner', async (lock) => {
+    if (!lock) return; // another tab already holds it - this tab stays a listener
+    onOwnershipGranted();
+    await new Promise<void>(() => {}); // hold the lock for the tab's lifetime
+  });
+}
+
+const channel = new BroadcastChannel('notifications');
+channel.onmessage = (event: MessageEvent<NotificationEvent>) => applyToLocalStore(event.data);
+
+function broadcastToSiblingTabs(notification: NotificationEvent) {
+  channel.postMessage(notification);
+}
+```
+
 ### The edge case that actually matters: the owner tab closing mid-session
 
 ```mermaid
@@ -118,6 +139,20 @@ sequenceDiagram
 This looks like it could reuse the in-app real-time pipeline from Step 3, but architecturally can't.
 
 **Why it's handled differently:** push notifications must be delivered even when no tab is open at all — there's no tab to elect as a connection owner, no `BroadcastChannel` to relay through (it only works between currently-open contexts of the same origin), and no active WebSocket to receive over. Push instead relies on an entirely separate mechanism: a persistent `PushSubscription` registered once via the Push API and stored server-side, and a Service Worker that stays registered independent of any open tab, woken by the browser's own OS-level push service to handle a `push` event and display a native notification. None of this depends on Step 3's tab-coordination machinery.
+
+```typescript
+// Inside the service worker (sw.js) - runs independent of any open tab,
+// woken by the OS-level push service when a message arrives.
+self.addEventListener('push', (event: PushEvent) => {
+  const payload = event.data?.json();
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      data: { notificationId: payload.id },
+    })
+  );
+});
+```
 
 **Reconciliation:** the service worker's push path and the in-app notification store are two independently-updated views of the same underlying data. When a tab next opens, Step 2's REST fetch naturally reconciles them by pulling current authoritative state — the two paths never need to talk to each other directly, they just converge on the same source of truth eventually.
 

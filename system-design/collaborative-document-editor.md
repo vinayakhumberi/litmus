@@ -91,12 +91,21 @@ This is the hard part of the problem, and where the interview signal actually co
 For rich text specifically, each character (or run of characters) gets a unique, stable position identifier that doesn't change when other characters are inserted or deleted around it — commonly implemented as a fractional-index or a tree-based positioning scheme (this is the approach libraries like Yjs use under the hood). Two clients inserting at "the same visual position" concurrently naturally end up with different, well-ordered position identifiers, so there's no ambiguity to resolve — the CRDT's merge rule (a deterministic tie-breaker, e.g., by client ID, for genuinely simultaneous inserts at the same position) produces the same final ordering on every client without any negotiation.
 
 ```typescript
-// Simplified shape of a CRDT insert operation - not an actual Yjs API
-type InsertOp = {
-  id: { clientId: string; counter: number }; // globally unique, stable
-  afterPositionId: PositionId | null;        // "insert after this element"
-  content: string;
-};
+import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
+
+const doc = new Y.Doc();
+const ytext = doc.getText('content'); // the shared, CRDT-backed text type
+
+// Every local edit to ytext is automatically diffed into CRDT operations and
+// sent over this connection; remote operations are applied and merged the
+// same way, using the position-identifier scheme described above internally.
+const provider = new WebsocketProvider('wss://sync.example.com', 'doc-id', doc);
+
+ytext.observe(() => {
+  // Fires for both local and remote-merged changes - re-render from here
+  renderEditorContent(ytext.toString());
+});
 ```
 
 ### The full round-trip: local edit to remote convergence
@@ -135,7 +144,21 @@ sequenceDiagram
 
 Cursor positions, text selections, and "who's currently viewing this document" are architecturally distinct from the document content itself, and deliberately handled differently.
 
-**Why presence is not part of the CRDT document state:** presence is ephemeral and last-write-wins by nature — if User A's cursor position update from two seconds ago arrives after a more recent one, the old one should simply be discarded, not merged. Running this through the same conflict-free merge machinery as document content would be unnecessary complexity for data that doesn't need durability or conflict resolution at all. A separate, lightweight broadcast channel (piggybacked on the same WebSocket connection, but logically distinct messages) is simpler and cheaper.
+**Why presence is not part of the CRDT document state:** presence is ephemeral and last-write-wins by nature — if User A's cursor position update from two seconds ago arrives after a more recent one, the old one should simply be discarded, not merged. Running this through the same conflict-free merge machinery as document content would be unnecessary complexity for data that doesn't need durability or conflict resolution at all. Yjs ships exactly this as a separate primitive — the awareness protocol — piggybacked on the same connection but with no merge function at all:
+
+```typescript
+import { Awareness } from 'y-protocols/awareness';
+
+const awareness = provider.awareness; // WebsocketProvider exposes this by default
+
+awareness.setLocalStateField('cursor', { position: selectionOffset, userId });
+
+awareness.on('change', () => {
+  // Each remote state simply overwrites the previous one - no CRDT merge involved
+  const remoteStates = Array.from(awareness.getStates().values());
+  renderRemoteCursors(remoteStates);
+});
+```
 
 > **Key takeaway:** not everything flowing through the same connection needs the same consistency guarantees — recognizing which data needs CRDT-grade convergence and which just needs "latest wins, ephemeral" is itself a design decision worth stating explicitly.
 
