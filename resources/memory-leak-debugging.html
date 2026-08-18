@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Leak Debugging Playground — Real Leaks, Real DevTools</title>
+    <style>
+        :root {
+            --primary: #61dafb;
+            --dark: #20232a;
+            --text: #ffffff;
+            --gray: #282c34;
+            --accent: #f08d49;
+            --good: #4ade80;
+            --bad: #f87171;
+            --code-bg: #1e1e1e;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--dark);
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: var(--gray);
+            padding: 3rem 2rem;
+            text-align: center;
+            border-bottom: 4px solid var(--primary);
+        }
+        nav {
+            position: sticky;
+            top: 0;
+            background: var(--gray);
+            padding: 1rem;
+            z-index: 100;
+            text-align: center;
+            border-bottom: 1px solid #444;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 4px;
+        }
+        nav a {
+            color: var(--primary);
+            margin: 0 12px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+        main {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        section {
+            margin-bottom: 4rem;
+            padding: 2.5rem;
+            background: var(--gray);
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+        }
+        h1, h2, h3, h4 { color: var(--primary); }
+        code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: "Fira Code", "Courier New", monospace;
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            border-left: 3px solid var(--primary);
+            font-family: "Fira Code", "Courier New", monospace;
+            font-size: 0.85rem;
+        }
+        .playground {
+            border: 2px dashed var(--accent);
+            padding: 2rem;
+            margin: 2rem 0;
+            border-radius: 12px;
+            background: rgba(240, 141, 73, 0.05);
+        }
+        .jank-explanation { font-size: 0.9rem; color: #aaa; font-style: italic; }
+        .callout {
+            background: rgba(97, 218, 251, 0.08);
+            border-left: 3px solid var(--primary);
+            padding: 1rem 1.25rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            margin: 1.5rem 0;
+        }
+        .warning-callout {
+            background: rgba(248, 113, 113, 0.08);
+            border-left: 3px solid var(--bad);
+            padding: 1rem 1.25rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            margin: 1.5rem 0;
+        }
+        .btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 1rem 0; }
+        button {
+            padding: 0.8rem 1.6rem;
+            background: var(--primary);
+            color: var(--dark);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.95rem;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        button.secondary { background: #444; color: var(--text); }
+        button.danger { background: var(--bad); color: #2a0a0a; }
+        label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; margin: 0.5rem 0; }
+        .stat-row { display: flex; gap: 16px; flex-wrap: wrap; margin: 1rem 0; }
+        .stat-badge {
+            background: rgba(0,0,0,0.3);
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            font-family: "Fira Code", monospace;
+            font-size: 0.85rem;
+            border: 1px solid #444;
+        }
+        .stat-badge span { color: var(--primary); font-weight: bold; }
+        .stat-badge.bad span { color: var(--bad); }
+        .stat-badge.good span { color: var(--good); }
+        ol.steps li { margin-bottom: 0.6rem; }
+        .steps code { color: var(--accent); }
+        #panel-mount-target { min-height: 20px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Memory Leak Debugging Playground 🕵️</h1>
+    <p>Real, verifiable leaks — practice the actual Chrome DevTools Memory panel, not a screenshot of it</p>
+</header>
+
+<nav>
+    <a href="#how-to">How to Use This</a>
+    <a href="#scenario-1">Interval Leak</a>
+    <a href="#scenario-2">Detached DOM Node</a>
+    <a href="#scenario-3">WeakMap vs Map</a>
+</nav>
+
+<main>
+    <section id="how-to">
+        <h2>1. Why no screenshots</h2>
+        <p>A static screenshot of DevTools would go stale the moment Chrome ships a UI update, and worse, it can't actually teach you anything you can't already read in the docs. Every scenario below <strong>genuinely leaks or doesn't</strong> depending on a toggle — the same real JavaScript objects, DOM nodes, and closures described in the write-up, running live in your own browser. Open Chrome DevTools now (<code>F12</code> or <code>Cmd+Opt+I</code>) and follow along with your own Memory panel — that's the actual skill being taught here.</p>
+
+        <div class="callout">
+            <strong>The three-snapshot technique, applied to every scenario below:</strong>
+            <ol class="steps">
+                <li>DevTools → <strong>Memory</strong> tab → select <strong>Heap snapshot</strong> → click <strong>Take snapshot</strong> (this is your baseline).</li>
+                <li>Perform the scenario's "leak" action a few times using the buttons below.</li>
+                <li>Click the <strong>Collect garbage</strong> button in the Memory panel's toolbar (a small circular icon), then take a second snapshot.</li>
+                <li>Perform the same action again, collect garbage again, take a <strong>third</strong> snapshot.</li>
+                <li>Select the third snapshot, change the view dropdown from <strong>Summary</strong> to <strong>Comparison</strong>, and set the baseline to the second snapshot.</li>
+                <li>Sort by <strong>Size Delta</strong> or <strong># New</strong> — this isolates objects that grew across <em>both</em> intervals, which is what a real leak looks like versus incidental retained state.</li>
+            </ol>
+        </div>
+
+        <div class="warning-callout">
+            <strong>Honest caveat:</strong> exact panel names/icons can shift slightly between Chrome versions. The mechanism (heap snapshot → comparison view → retainer tree) has been stable for years and is what to focus on, not the precise pixel layout.
+        </div>
+    </section>
+
+    <section id="scenario-1">
+        <h2>2. Scenario: Forgotten <code>setInterval</code></h2>
+        <p>Each "mount" creates a widget holding a ~50,000-element array, plus a <code>setInterval</code> whose closure references that array. In buggy mode, "Unmount all" only removes <em>our own</em> reference to the widgets — the browser's timer system still holds the interval callback (and everything it closed over) alive, because an uncleared interval is retained by the runtime itself, independent of any variable in your code.</p>
+
+        <div class="playground">
+            <label><input type="checkbox" id="s1-fixed" /> Apply the fix (clear the interval on unmount)</label>
+            <div class="btn-row">
+                <button onclick="mountWidgets(20)">Mount 20 widgets</button>
+                <button class="danger" onclick="unmountAllWidgets()">Unmount all</button>
+            </div>
+            <div class="stat-row">
+                <div class="stat-badge" id="s1-mounted">Widgets currently tracked by us: <span>0</span></div>
+                <div class="stat-badge" id="s1-intervals">Intervals actually still running: <span>0</span></div>
+            </div>
+            <p class="jank-explanation">Try this with the fix OFF: mount, unmount, mount, unmount a few times, then run the three-snapshot technique above and search the Comparison view's class filter for <code>Array</code> or look at growing <code>(closure)</code> entries — the interval callbacks are still alive even though "Widgets currently tracked by us" drops to 0 each time, because <em>your</em> tracking array isn't what's keeping them alive.</p>
+        </div>
+    </section>
+
+    <section id="scenario-2">
+        <h2>3. Scenario: Detached DOM Node via Uncleaned Listener</h2>
+        <p>Each "mount" appends a padded DOM subtree to the page and registers a <code>window</code> resize listener whose closure references that subtree. Removing the panel from the document (what "Unmount" does) does not make it collectible if the listener is never removed — <code>window</code> outlives the panel and keeps the listener, and the listener keeps the node.</p>
+
+        <div class="playground">
+            <label><input type="checkbox" id="s2-fixed" /> Apply the fix (remove the listener on unmount)</label>
+            <div class="btn-row">
+                <button onclick="mountPanel()">Mount a panel</button>
+                <button class="danger" onclick="unmountPanel()">Unmount the panel</button>
+            </div>
+            <div class="stat-row">
+                <div class="stat-badge" id="s2-status">Panel currently in the document: <span>no</span></div>
+                <div class="stat-badge" id="s2-listeners">Resize listeners registered: <span>0</span></div>
+            </div>
+            <div id="panel-mount-target"></div>
+            <p class="jank-explanation">With the fix OFF: mount, then unmount, then take a heap snapshot and type <code>Detached</code> into the class filter search box — Chrome's heap snapshot view has this filter specifically because this pattern is common enough to deserve one-click discovery. With the fix ON, repeat the same steps and confirm nothing shows up under that filter.</p>
+        </div>
+    </section>
+
+    <section id="scenario-3">
+        <h2>4. Scenario: Unbounded <code>Map</code> Cache vs. <code>WeakMap</code></h2>
+        <p>Each "view a user" call creates a DOM node standing in for a user card and a ~10,000-element array standing in for cached summary data, then caches them keyed by the node. The node is never appended anywhere and nothing else references it after the function returns — whether it's collectible depends entirely on which cache holds it.</p>
+
+        <div class="playground">
+            <label><input type="checkbox" id="s3-weak" /> Use WeakMap instead of Map</label>
+            <div class="btn-row">
+                <button onclick="viewUsers(20)">View 20 users</button>
+                <button class="secondary" onclick="resetCaches()">Reset caches</button>
+            </div>
+            <div class="stat-row">
+                <div class="stat-badge" id="s3-regular">Regular Map size: <span>0</span></div>
+                <div class="stat-badge good" id="s3-weak-note">WeakMap size: <span>not inspectable — that's the point</span></div>
+            </div>
+            <p class="jank-explanation">This is the cleanest of the three scenarios to verify: with WeakMap checked, "View 20 users" repeatedly should <em>not</em> cause a growing count in your heap snapshot comparison after forcing GC, since each user-card node becomes unreachable the instant the function returns — a WeakMap doesn't count as a strong reference. With a regular Map, the count should climb linearly with clicks, every time, with no GC able to touch any of it.</p>
+        </div>
+    </section>
+</main>
+
+<script>
+    /* ---------- Scenario 1: forgotten setInterval ---------- */
+    let trackedWidgets = [];
+    let liveIntervalCount = 0;
+
+    function mountWidgets(n) {
+        const fixed = document.getElementById('s1-fixed').checked;
+        for (let i = 0; i < n; i++) {
+            const bigData = new Array(50000).fill('leaked-data-chunk');
+            const id = setInterval(() => { void bigData.length; }, 5000);
+            liveIntervalCount++;
+            trackedWidgets.push({
+                id,
+                cleanup: () => { clearInterval(id); liveIntervalCount--; },
+            });
+        }
+        updateS1Stats();
+        void fixed; // fix only changes what unmount does, not mount
+    }
+
+    function unmountAllWidgets() {
+        const fixed = document.getElementById('s1-fixed').checked;
+        if (fixed) {
+            trackedWidgets.forEach(w => w.cleanup());
+        }
+        // Buggy path: we just drop our own reference. The setInterval callbacks
+        // (and everything their closures captured) are still alive, held by the
+        // browser's own timer registry, not by anything in `trackedWidgets`.
+        trackedWidgets = [];
+        updateS1Stats();
+    }
+
+    function updateS1Stats() {
+        document.querySelector('#s1-mounted span').textContent = trackedWidgets.length;
+        document.querySelector('#s1-intervals span').textContent = liveIntervalCount;
+    }
+
+    /* ---------- Scenario 2: detached DOM node via uncleaned listener ---------- */
+    let activePanel = null;
+    let activeListener = null;
+    let listenerCount = 0;
+
+    function mountPanel() {
+        const target = document.getElementById('panel-mount-target');
+        const panel = document.createElement('div');
+        panel.className = 'leak-panel';
+        panel.innerHTML = '<p>Panel content block</p>'.repeat(200);
+        target.appendChild(panel);
+
+        // Bulked up so the leak is unambiguous to spot in a real heap snapshot
+        // comparison, not just technically present.
+        const panelData = new Array(20000).fill('panel-metadata-chunk');
+        const handleResize = () => { panel.dataset.lastResize = String(Date.now()); void panelData.length; };
+        window.addEventListener('resize', handleResize);
+        listenerCount++;
+
+        activePanel = panel;
+        activeListener = handleResize;
+
+        document.querySelector('#s2-status span').textContent = 'yes';
+        document.querySelector('#s2-listeners span').textContent = listenerCount;
+    }
+
+    function unmountPanel() {
+        const fixed = document.getElementById('s2-fixed').checked;
+        if (!activePanel) return;
+
+        activePanel.parentNode.removeChild(activePanel); // removed from the document either way
+
+        if (fixed) {
+            window.removeEventListener('resize', activeListener);
+            listenerCount--;
+        }
+        // Buggy path: the listener stays registered on `window`, which outlives
+        // the panel and keeps `handleResize` (and therefore `panel`) reachable -
+        // detached from the document, but not collectible.
+
+        activePanel = null;
+        activeListener = fixed ? null : activeListener; // keep the reference alive in buggy mode on purpose
+
+        document.querySelector('#s2-status span').textContent = 'no';
+        document.querySelector('#s2-listeners span').textContent = listenerCount;
+    }
+
+    /* ---------- Scenario 3: unbounded Map vs WeakMap ---------- */
+    let regularCache = new Map();
+    let weakCache = new WeakMap();
+
+    function viewUsers(n) {
+        const useWeak = document.getElementById('s3-weak').checked;
+        for (let i = 0; i < n; i++) {
+            const userNode = document.createElement('div'); // never appended anywhere
+            const summary = { views: 1, data: new Array(10000).fill('x') };
+            if (useWeak) {
+                weakCache.set(userNode, summary);
+            } else {
+                regularCache.set(userNode, summary);
+            }
+            // userNode goes out of scope here. With WeakMap, nothing else holds
+            // it, so it's immediately eligible for collection. With a regular
+            // Map, the cache itself is a strong reference and keeps it forever.
+        }
+        document.querySelector('#s3-regular span').textContent = regularCache.size;
+    }
+
+    function resetCaches() {
+        regularCache = new Map();
+        weakCache = new WeakMap();
+        document.querySelector('#s3-regular span').textContent = '0';
+    }
+</script>
+
+</body>
+</html>

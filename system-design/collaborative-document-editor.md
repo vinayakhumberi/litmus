@@ -144,23 +144,45 @@ sequenceDiagram
 
 Cursor positions, text selections, and "who's currently viewing this document" are architecturally distinct from the document content itself, and deliberately handled differently.
 
-**Why presence is not part of the CRDT document state:** presence is ephemeral and last-write-wins by nature — if User A's cursor position update from two seconds ago arrives after a more recent one, the old one should simply be discarded, not merged. Running this through the same conflict-free merge machinery as document content would be unnecessary complexity for data that doesn't need durability or conflict resolution at all. Yjs ships exactly this as a separate primitive — the awareness protocol — piggybacked on the same connection but with no merge function at all:
+**Why presence is not part of the CRDT document state:** presence is ephemeral and last-write-wins by nature — if User A's cursor position update from two seconds ago arrives after a more recent one, the old one should simply be discarded, not merged. Running this through the same conflict-free merge machinery as document content would be unnecessary complexity for data that doesn't need durability or conflict resolution at all. Yjs ships exactly this as a separate primitive — the awareness protocol — piggybacked on the same connection but with no merge function at all.
+
+> **Key takeaway:** not everything flowing through the same connection needs the same consistency guarantees — recognizing which data needs CRDT-grade convergence and which just needs "latest wins, ephemeral" is itself a design decision worth stating explicitly.
+
+### Keeping a remote cursor valid as the document changes underneath it
+
+Broadcasting "latest wins, ephemeral" only solves *who has the newest cursor update* — it doesn't solve a separate, easy-to-miss problem: **a cursor position stored as a raw character index goes stale the instant anyone edits the document before that point.** If User B's cursor is at index 42 and User A inserts 5 characters at index 10, index 42 is now pointing at the wrong character. A plain integer has no way to know the document shifted under it.
+
+This is why cursor position needs the *same kind of data type* as document content — anchored to a stable position identifier, not a raw offset. Yjs's `RelativePosition` is exactly this: it anchors to a specific CRDT item rather than an index, so it can be resolved back to a correct index against whatever the document's current state is, no matter what edits happened in between.
 
 ```typescript
 import { Awareness } from 'y-protocols/awareness';
 
 const awareness = provider.awareness; // WebsocketProvider exposes this by default
 
-awareness.setLocalStateField('cursor', { position: selectionOffset, userId });
+// Sender: anchor the cursor to a CRDT item, not a raw index
+function broadcastCursor(selectionOffset: number) {
+  const relPos = Y.createRelativePositionFromTypeIndex(ytext, selectionOffset);
+  awareness.setLocalStateField('cursor', Y.encodeRelativePosition(relPos));
+}
 
+// Receiver: resolve it back to a real index against MY current document state -
+// correct even if edits landed between when it was sent and when it's read
 awareness.on('change', () => {
-  // Each remote state simply overwrites the previous one - no CRDT merge involved
-  const remoteStates = Array.from(awareness.getStates().values());
-  renderRemoteCursors(remoteStates);
+  for (const state of awareness.getStates().values()) {
+    const relPos = Y.decodeRelativePosition(state.cursor);
+    const absPos = Y.createAbsolutePositionFromRelativePosition(relPos, doc);
+    if (absPos) updateRemoteCursorIndex(state.userId, absPos.index);
+  }
 });
 ```
 
-> **Key takeaway:** not everything flowing through the same connection needs the same consistency guarantees — recognizing which data needs CRDT-grade convergence and which just needs "latest wins, ephemeral" is itself a design decision worth stating explicitly.
+### Rendering cursors without re-rendering the document
+
+Resolving the index correctly is only half the problem — the other half is not re-rendering the entire document every time a remote cursor moves. Cursor updates are high-frequency (every keystroke, every arrow key, potentially every mouse move), so wiring the resolved index directly into the same state that drives the document's text content would re-render the whole editor on every twitch of every collaborator's cursor — a real, self-inflicted performance bug, not a detail to wave away.
+
+The fix is architectural, not a memoization afterthought: resolved cursor positions live in their own small, isolated piece of state, rendered as a thin absolutely-positioned overlay above the text (converting the resolved index to pixel coordinates via `range.getBoundingClientRect()`). Only that overlay re-renders on a cursor move; the document content re-renders only when content itself actually changes. This is the same state-isolation principle behind `React.memo`-driven optimization, applied here at the architecture level instead of a component-memoization level — a high-frequency, low-importance value should never sit in the same state as something expensive and mostly-unrelated.
+
+> **Key takeaway:** cursor sync is really two separate problems wearing one trenchcoat — keeping the *position value* correct as the document mutates (a data-type problem, solved by relative positions), and keeping the *rendering* of that position cheap (a state-isolation problem, solved by a separate overlay). Conflating them into "just broadcast the cursor index" misses both.
 
 ---
 

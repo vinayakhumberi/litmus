@@ -31,14 +31,34 @@ Every time JavaScript runs a function (or the global program, or `eval`), the en
 
 "Hoisting" is just the observable behavior of step 1 happening before step 2. Nothing physically moves — the binding was created in the creation phase; your code just runs against bindings that already exist.
 
-```
-Creation Phase (before any code runs)          Execution Phase (line by line)
-┌─────────────────────────────┐                ┌─────────────────────────────┐
-│ var x        → undefined     │                │ x = 5          (assignment)  │
-│ function f() → [Function f]  │  ────────────► │ f()            (already      │
-│ let y        → <TDZ>         │                │                 callable)    │
-│ const z      → <TDZ>         │                │ y = 10  (TDZ ends here)      │
-└─────────────────────────────┘                └─────────────────────────────┘
+```mermaid
+%%{init: {"theme": "base", "themeVariables": {"background":"transparent","primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#64748b","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontFamily":"\"Plus Jakarta Sans\", sans-serif","fontSize":"14px"}}}%%
+graph LR
+    subgraph CP["Creation Phase — before any code runs"]
+        A["var x → undefined"]
+        B["function f() → [Function f]<br>fully callable"]
+        C["let y → TDZ<br>(uninitialized)"]
+        D["const z → TDZ<br>(uninitialized)"]
+    end
+    subgraph EP["Execution Phase — line by line"]
+        E["x = 5<br>(assignment)"]
+        F["f()<br>already callable, no error"]
+        G["y = 10<br>TDZ ends here"]
+    end
+
+    A -.->|"assigned"| E
+    B -.->|"invoked"| F
+    C -.->|"TDZ ends"| G
+
+    classDef varClass fill:#0369a1,stroke:#7dd3fc,color:#f0f9ff,stroke-width:1.5px;
+    classDef fnClass fill:#047857,stroke:#6ee7b7,color:#ecfdf5,stroke-width:1.5px;
+    classDef tdzClass fill:#b91c1c,stroke:#fca5a5,color:#fef2f2,stroke-width:1.5px;
+    classDef execClass fill:#4338ca,stroke:#c4b5fd,color:#f5f3ff,stroke-width:1.5px;
+
+    class A varClass;
+    class B fnClass;
+    class C,D tdzClass;
+    class E,F,G execClass;
 ```
 
 ### Hoisting behavior, precisely, by declaration type
@@ -212,13 +232,13 @@ sequenceDiagram
     participant IF as "inner() Closure"
 
     CS->>OF: "outer() invoked — context pushed"
-    OF->>HP: "Lexical Environment created<br>(holds: count = 0)"
-    OF->>IF: "inner() created — captures<br>[[Environment]] pointer to outer's LE"
+    OF->>HP: "Lexical Environment created (holds: count = 0)"
+    OF->>IF: "inner() created — captures [[Environment]] pointer to outer's LE"
     OF->>CS: "outer() returns — context popped"
-    Note over CS,OF: "Stack frame is gone,<br>but LE is still referenced by inner()"
-    Note over HP: "Lexical Environment survives on heap<br>— NOT garbage collected"
+    Note over CS,OF: "Stack frame is gone, but LE is still referenced by inner()"
+    Note over HP: "Lexical Environment survives on heap — NOT garbage collected"
     CS->>IF: "inner() invoked later (e.g. via setTimeout)"
-    IF->>HP: "Resolve `count` via retained<br>[[Environment]] reference"
+    IF->>HP: "Resolve count via retained [[Environment]] reference"
     HP->>IF: "count = 0 → mutate → count = 1"
     IF->>CS: "Return updated count"
 ```
