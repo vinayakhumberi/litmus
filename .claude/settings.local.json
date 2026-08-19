@@ -16,7 +16,12 @@
       "Bash(mkdir -p /private/tmp/pptest_agentic)",
       "Bash(python3 -m http.server 9018 --directory /Users/carollucas/Documents/jurassic/litmus)",
       "Bash(pkill -f \"http.server 9018\")",
-      "Bash(rm -rf /private/tmp/pptest_agentic)"
+      "Bash(rm -rf /private/tmp/pptest_agentic)",
+      "Bash(python3 -m http.server 9032)",
+      "Bash(mkdir -p /private/tmp/pptest_verify2)",
+      "Read(//private/tmp/**)",
+      "Bash(npm init *)",
+      "Bash(node check.js)"
     ]
   }
 }
