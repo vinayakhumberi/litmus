@@ -6,7 +6,17 @@
       "Bash(node --check /tmp/leak_check.js)",
       "Bash(grep -n \"id: 'global', name: 'Global', vars: \\\\[{ name: '\\(scope\\)', value: '→' }\\\\] }\" /Users/carollucas/Documents/jurassic/litmus/resources/js-memory-visualizer.html)",
       "Bash(pkill -f \"http.server 9010\")",
-      "Bash(rm -rf /private/tmp/pptest_controls)"
+      "Bash(rm -rf /private/tmp/pptest_controls)",
+      "Bash(pkill -f \"http.server 901\")",
+      "Bash(mkdir -p /private/tmp/pptest_final2)",
+      "Bash(python3 -m http.server 9012 --directory /Users/carollucas/Documents/jurassic/litmus)",
+      "Bash(npm install *)",
+      "Bash(mkdir -p /private/tmp/pptest_websec)",
+      "Bash(python3 -m http.server 9015 --directory /Users/carollucas/Documents/jurassic/litmus)",
+      "Bash(mkdir -p /private/tmp/pptest_agentic)",
+      "Bash(python3 -m http.server 9018 --directory /Users/carollucas/Documents/jurassic/litmus)",
+      "Bash(pkill -f \"http.server 9018\")",
+      "Bash(rm -rf /private/tmp/pptest_agentic)"
     ]
   }
 }

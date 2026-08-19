@@ -8,11 +8,19 @@ This topic is a "must-know" because it's a proxy for a broader Lead signal: **do
 
 ## 🧠 Core Technical Deep Dive
 
-### The trust model: why XSS exists at all
+The concepts here connect much more clearly as one incident than as five separate topics — so this is told as a single continuous story, following a fictional team's response to a real vulnerability report against Meridian's comments feature, from the first triage message through the org-wide fix.
 
-The browser treats any HTML, CSS, or JS parsed from a trusted origin's response as **fully privileged** — there's no runtime distinction between a `<script>` tag the developer wrote and one that ended up in the response because user input got concatenated into HTML. Once it's parsed, it runs with full access to `document.cookie` (unless `HttpOnly`), the DOM, `localStorage`, and `fetch` with ambient credentials. Injected script isn't "sandboxed lite JS" — to the JS engine, it's indistinguishable from first-party code. That's the whole reason XSS is catastrophic rather than merely annoying.
+### Act 1 — A bug bounty report, and the trust model it exploits
 
-**The three XSS types, at a glance:**
+The report is blunt: a comment containing `![x](javascript:alert(document.cookie))` executes script for every viewer of the post. Before touching any code, the on-call Lead needs to explain — to themselves, and soon to a director — *why* this is even possible, because the answer determines how seriously to treat it.
+
+The browser makes no runtime distinction between a `<script>` tag the developer wrote and one that ended up in the response because user input got concatenated into HTML. Once anything is parsed as markup, it runs fully privileged: full access to `document.cookie` (unless `HttpOnly`), the DOM, `localStorage`, and `fetch` with ambient credentials attached. Injected script isn't sandboxed-lite JavaScript — to the JS engine, it's indistinguishable from first-party code. That single fact is why this bounty report gets escalated immediately rather than filed as a cosmetic bug.
+
+> **Key takeaway:** XSS is catastrophic rather than merely annoying because the browser's trust model has no concept of "script that arrived via user input" — once parsed, injected code has exactly the same privileges as code the team wrote.
+
+### Act 2 — Triaging the payload: source, sink, and why the framework didn't save them
+
+The team's first move is classifying *which* XSS this is, because the fix and the blast radius differ sharply by type:
 
 | Type | Payload source | Requires a click? | Severity |
 |---|---|---|---|
@@ -20,29 +28,29 @@ The browser treats any HTML, CSS, or JS parsed from a trusted origin's response 
 | **Reflected** | Echoed back from the current request (query params, form fields) | Yes — victim clicks a crafted URL | Medium |
 | **DOM-based** | Client-side only, never touches the server | Varies | High — server-side defenses (WAF, input validation) see nothing |
 
-DOM-based XSS is the vector modern SPAs are most exposed to, because routing logic increasingly reads directly from `location` and renders it. The pattern to recognize: a client-side **source** (`location.hash`, `location.search`, `document.referrer`, `postMessage` data) flowing into a client-side **sink** (`innerHTML`, `document.write`, `eval`, `setTimeout(string)`, `location.href =`).
+This one's stored — the payload is sitting in the database, firing on every page view — which puts it at the top of the severity table before anyone's even read a line of code. Tracing it back, the comment goes through a markdown-to-HTML converter and lands in the DOM via `dangerouslySetInnerHTML`.
 
-**Why framework auto-escaping isn't a complete answer**
+That's the moment the "wait, doesn't React auto-escape everything?" question comes up in the incident channel, and it's worth answering precisely. React, Vue, and Angular auto-escape *text interpolation* (`{value}` in JSX, `{{ value }}` in Vue) by routing it through `textContent`, which never triggers HTML parsing at all. But every framework ships an escape hatch that bypasses exactly that protection — `dangerouslySetInnerHTML` in React, `v-html` in Vue, `[innerHTML]` in Angular (though Angular also runs a `DomSanitizer` by default, which is why it's comparatively harder to XSS out of the box).
 
-React/Vue/Angular auto-escape *text interpolation* (`{value}` in JSX, `{{ value }}` in Vue) by routing it through `textContent`, which never triggers HTML parsing. But every framework has an escape hatch that bypasses this:
+The markdown-to-HTML library isn't a security boundary either — it only converts syntax, and most such libraries will happily emit `<img src="javascript:...">` if the markdown syntax permits arbitrary URLs in image/link syntax, which is exactly what happened here.
 
-- `dangerouslySetInnerHTML` (React)
-- `v-html` (Vue)
-- `[innerHTML]` (Angular — though Angular also runs a `DomSanitizer` by default, which is why it's comparatively harder to XSS out of the box)
+Digging further turns up a second surface nobody had flagged: a `<a href={userInput}>` field elsewhere in the app, which *looks* safe because it's ordinary JSX interpolation — but if `userInput` is a `javascript:` URL, the framework renders it verbatim, and a click executes it.
 
-A single `dangerouslySetInnerHTML` fed by unsanitized markdown-to-HTML rendering — a very common pattern for user bios and rich-text comments — reintroduces the full vulnerability class the framework was otherwise protecting against. Knowing that **the framework's default posture isn't the same as the codebase's actual posture** is the Staff-level distinction here.
+The lesson the team writes down: **escaping is context-sensitive**. HTML-entity-escaping text content does nothing to neutralize a `javascript:` URL in an `href`, or a payload breaking out of a `<script>` block via a `</script>` string inside a server-embedded JSON blob. The exact same family of bug shows up again later — in SSR state serialization, in unguarded `postMessage` handlers, and in `location.hash`-driven DOM XSS — different sinks, same underlying category error of trusting a value that came from outside the app.
 
-There's a second, subtler surface: **attribute and URL sinks**. `<a href={userInput}>` looks safe — it's JSX interpolation — but if `userInput` is `javascript:alert(document.cookie)`, the framework renders it verbatim, and a click executes it. The mental model to hold onto: **escaping is context-sensitive**. HTML-entity-escaping text content does nothing to neutralize a `javascript:` URL in an `href`, or a payload breaking out of a `<script>` block via `</script>` inside a JSON blob embedded server-side.
+> **Key takeaway:** auto-escaping only covers the interpolation paths the framework controls — every escape hatch and every non-text-content sink (URLs, attributes, inline scripts) is its own separate attack surface, and this incident's payload found one nobody had audited.
 
-> **Key takeaway:** Auto-escaping only covers the interpolation paths the framework controls. Every escape hatch (`dangerouslySetInnerHTML`, `v-html`, raw `innerHTML`) and every non-text-content sink (URLs, attributes, inline scripts) is its own separate attack surface, needing its own defense.
+### Act 3 — The unrelated finding that turns out to be worse: CSRF hiding behind "we use JWTs"
 
-### CSRF: the same-origin policy's deliberate blind spot
+While the XSS fix is in flight, a teammate reviewing the same code path mentions, almost in passing, that the password-change endpoint "doesn't need CSRF protection, since we use JWT auth, not cookies." That claim turns out to be wrong in a way that matters: the JWT is stored in a cookie (specifically so `HttpOnly` protects it from exactly the kind of theft this incident is about), and the browser attaches it automatically on every request to the origin — regardless of who initiated that request.
 
-CSRF isn't a bug in the same-origin policy (SOP) — it's a consequence of a deliberate exception. SOP stops `evil.com`'s JavaScript from **reading** a response from `bank.com`. It does *not* stop `evil.com` from **causing a request to be sent** to `bank.com` — a `<form>` POST, an `<img src>` GET — and the browser attaches `bank.com`'s cookies to that request automatically, because cookie attachment is scoped to the request's *target*, not its *initiator*. The attacker can't read the response, but for a state-changing operation they don't need to — firing the request with ambient credentials is the entire attack.
+This is the same-origin policy's deliberate blind spot, not a bug in it. SOP stops `evil.com`'s JavaScript from *reading* a response from Meridian's API. It does not stop `evil.com` from *causing a request to be sent* — a `<form>` POST, an `<img src>` GET — and cookie attachment is scoped to the request's target, not its initiator.
 
-This is why CSRF specifically targets **cookie-based session auth**. It doesn't affect schemes where the credential must be *explicitly attached by JavaScript* (e.g. a bearer token read from memory and set as a `fetch` header), because `evil.com`'s form has no way to read `bank.com`'s storage or construct a custom header. That's the trade-off a Lead should be able to name: bearer tokens outside cookies sidestep CSRF entirely, but make XSS-based token theft a bigger prize (steal it once, no live CSRF vector needed) — while `HttpOnly` cookies are immune to XSS theft but are exactly the credential CSRF exploits.
+For a state-changing endpoint like password change, the attacker never needs to read the response; firing the request with the victim's ambient session cookie attached is the entire attack.
 
-**The three real defenses:**
+The CSRF-immunity property comes specifically from a credential having to be *explicitly attached by JavaScript reading from memory*, not from the token format. A bearer token set as a `fetch` header is immune, because `evil.com`'s form has no way to read storage or construct a custom header. The same JWT sitting in a cookie is not immune at all, because the browser does the attaching automatically either way.
+
+That's also the trade-off worth naming out loud: bearer tokens outside cookies sidestep CSRF entirely, but turn XSS-based token theft into a bigger prize — steal it once from `localStorage`, no live CSRF vector needed afterward — while `HttpOnly` cookies are immune to XSS theft but are exactly the credential CSRF exploits. Neither option is free; they trade one attack surface for a different one. The team writes down the layered fix for the password-change endpoint specifically:
 
 | Defense | How it works | Where it falls short |
 |---|---|---|
@@ -50,15 +58,15 @@ This is why CSRF specifically targets **cookie-based session auth**. It doesn't 
 | **CSRF tokens** (synchronizer pattern) | Server embeds a per-session random token in the page; client must echo it back. SOP blocks the attacker from *reading* the page to steal that token | Only works if the server actually verifies it on every state-changing route |
 | **Custom header requirement** | Plain `<form>` submissions can't set arbitrary headers — only `fetch`/XHR can, which triggers a CORS preflight the server can reject | Doesn't help if the same endpoint also accepts plain form-encoded POSTs |
 
-None of these should be deployed alone. `SameSite=Lax` plus CSRF tokens is the standard combination: `SameSite` is a browser behavior you don't fully control the rollout of, while tokens are a server-verifiable guarantee.
+None of these ship alone. `SameSite=Lax` (bumped to `Strict` for this specific high-value cookie) plus a server-verified CSRF token becomes the standard combination on the password-change route: `SameSite` is browser behavior the team doesn't fully control the rollout of, while the token is a server-verifiable guarantee that doesn't depend on every client honoring a cookie attribute correctly.
 
-> **Key takeaway:** CSRF only works because cookies are attached automatically, regardless of who initiated the request. Anything that makes the credential *not* automatic (bearer tokens) or *not* attachable cross-site (`SameSite`) closes the hole — layer both, don't rely on either alone.
+> **Key takeaway:** CSRF only works because cookies are attached automatically regardless of who initiated the request — anything that makes the credential not automatic (bearer tokens) or not attachable cross-site (`SameSite`) closes the hole, and this incident found a real endpoint where neither had actually been done.
 
-### CSP: shifting from "prevent the injection" to "neuter the injection"
+### Act 4 — Deciding the sanitizer fix isn't enough on its own: rolling out CSP
 
-Everything above tries to *prevent* untrusted content from entering the DOM. Content-Security-Policy assumes injection **will** happen sometimes, and instead constrains *what injected code is allowed to do*, enforced by the browser via an HTTP response header (or a `<meta>` tag, with reduced coverage — `frame-ancestors` and report-only don't work there).
+The immediate fix — inserting a DOMPurify pass between the markdown converter and `dangerouslySetInnerHTML`, configured with an explicit allow-list of tags and URL schemes — ships within the day. But the postmortem discussion asks a harder question: what stops the *next* instance of this bug class, the one nobody's found yet?
 
-**The directives a Lead should be fluent in:**
+That's the argument for Content-Security-Policy, and it requires a mental shift the team has to make explicitly: everything in Acts 1 through 3 tries to *prevent* untrusted content from entering the DOM. CSP assumes injection will happen again sometime, and instead constrains what injected code is *allowed to do*, enforced by the browser via an HTTP response header. The directives the team actually needs:
 
 | Directive | What it does | Watch out for |
 |---|---|---|
@@ -69,11 +77,21 @@ Everything above tries to *prevent* untrusted content from entering the DOM. Con
 | `frame-ancestors` | Controls who can iframe you (clickjacking defense) | Modern replacement for `X-Frame-Options` |
 | Report-only mode | `Content-Security-Policy-Report-Only` + `report-to` ships the policy without enforcing it, just collecting violation reports | This is the real Staff-level signal — nobody ships a strict CSP cold |
 
-A Lead never ships a strict CSP straight to enforcing mode. They ship report-only first, harvest violation reports against real traffic for days or weeks, fix the false positives (an analytics snippet that needs allow-listing, an inline handler nobody knew still existed), and only then flip to enforcing. That operational sequencing — not the directive syntax — is what interviewers are actually listening for.
+Nobody on the team seriously proposes shipping a strict policy straight to enforcing mode — real pages almost always have inline scripts, third-party tags, and legacy `eval`-adjacent code that a strict CSP will break on contact, and the checkout page alone has three third-party SDKs configuring themselves via inline `<script>` blocks.
 
-CSP is also not a complete answer by itself — it's the *last* line of defense, not a replacement for output encoding. A broad `script-src` allow-list can still leave real gaps: a JSONP endpoint on an allow-listed CDN can be abused to execute arbitrary script, and some frameworks have had documented CSP bypasses via their own template sandboxes.
+So the rollout becomes a migration project: report-only first, harvesting violation reports against real traffic for weeks, triaging false positives (nonce-ing the legitimate inline scripts, allow-listing required third-party origins), and only then flipping to enforcing — starting with lower-risk pages, checkout last, because that's where a mistake is most expensive.
 
-> **Key takeaway:** CSP reduces blast radius and buys detection time — it's insurance for when the other defenses fail, not a substitute for them. Treat rollout as a migration project (report-only → enforce), not a header you add once and forget.
+CSP earns its keep precisely in scenarios like this incident: even if a future sanitizer has its own bypass, a `script-src` with no `'unsafe-inline'` and nonce-based inline scripts would still block an injected `<script>` tag from running at all, containing the blast radius even while the sanitizer itself was vulnerable. It's not a replacement for output encoding — a broad allow-list can still leave real gaps, like a JSONP endpoint on an allow-listed CDN abused to execute arbitrary script — but it's the layer that survives when everything upstream of it fails.
+
+> **Key takeaway:** CSP reduces blast radius and buys detection time — it's insurance for when the other defenses fail, not a substitute for them, and this incident's postmortem is exactly the moment a Lead uses to justify (or accelerate) the rollout.
+
+### Act 5 — Closing the loop: making the bug class structurally harder to reintroduce
+
+The final piece of the postmortem is the one that separates a Senior fix from a Lead one: patching this specific comment did nothing to stop the *next* engineer from writing a new `dangerouslySetInnerHTML` call fed by unsanitized input next quarter. The team greps the codebase for every other use of the same vulnerable sinks — `dangerouslySetInnerHTML`, `v-html`, raw `innerHTML` assignment — and finds two more instances nobody had flagged, confirming the pattern-not-instance instinct was right.
+
+The systemic fix is a shared `renderUserMarkdown()` utility wrapping the sanitizer call, an ESLint rule banning the raw sinks outside that utility, and a regression test suite running a corpus of known XSS payloads against it in CI — so a future dependency upgrade that quietly regresses sanitization gets caught by a build, not by the next bounty report. The same discipline extends to the SSR state-serialization path (verifying `JSON.stringify`-based initial-state embedding escapes `<` so a bio can't prematurely close the `<script>` tag it's embedded in) and to every `postMessage` listener in the app (verifying each one checks `event.origin` before trusting the message) — different sinks, but the same trust-boundary blind spot this whole incident traces back to.
+
+> **Key takeaway:** fixing the code is necessary but not sufficient — the Lead-level response makes the same mistake structurally harder to make again (lint rules, shared sanitized-render utilities, CSP as a second layer), rather than relying on the next code review to catch it.
 
 ## 📊 Visual Architecture & Logic
 
