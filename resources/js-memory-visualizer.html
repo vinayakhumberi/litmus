@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JS Memory & Execution Visualizer — Stack, Heap, Closures, GC, Prototypes</title>
+<style>
+    :root {
+        --primary: #61dafb;
+        --dark: #20232a;
+        --text: #ffffff;
+        --gray: #282c34;
+        --accent: #f08d49;
+        --good: #4ade80;
+        --bad: #f87171;
+        --code-bg: #1e1e1e;
+        --stack-color: #3182ce;
+        --heap-color: #805ad5;
+        --timer-color: #dd6b20;
+    }
+    * { box-sizing: border-box; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        line-height: 1.5;
+        color: var(--text);
+        background-color: var(--dark);
+        margin: 0;
+        padding: 0;
+    }
+    header {
+        background-color: var(--gray);
+        padding: 2.5rem 2rem;
+        text-align: center;
+        border-bottom: 4px solid var(--primary);
+    }
+    header h1 { margin: 0 0 0.5rem; color: var(--primary); }
+    header p { margin: 0; color: #aaa; }
+    nav.tabs {
+        position: sticky;
+        top: 0;
+        background: var(--gray);
+        padding: 0.75rem 1rem;
+        z-index: 100;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+        border-bottom: 1px solid #444;
+    }
+    nav.tabs button {
+        background: #333;
+        color: #ccc;
+        border: 1px solid #444;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: bold;
+    }
+    nav.tabs button.active { background: var(--primary); color: var(--dark); border-color: var(--primary); }
+
+    main { max-width: 1200px; margin: 2rem auto; padding: 0 1rem 4rem; }
+
+    .intro { background: var(--gray); border-radius: 12px; padding: 1.5rem 2rem; margin-bottom: 2rem; }
+    .intro h2 { color: var(--primary); margin-top: 0; }
+    .legend { display: flex; gap: 1.5rem; flex-wrap: wrap; font-size: 0.85rem; margin-top: 1rem; }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-swatch { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+
+    .layout { display: grid; grid-template-columns: 340px 1fr; gap: 1.5rem; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+    .code-panel {
+        background: var(--code-bg);
+        border-radius: 10px;
+        padding: 1rem;
+        font-family: "Fira Code", "Courier New", monospace;
+        font-size: 0.85rem;
+        align-self: start;
+        position: sticky;
+        top: 70px;
+    }
+    .code-line { padding: 3px 8px; border-radius: 4px; white-space: pre; color: #ccc; }
+    .code-line.active { background: rgba(97, 218, 251, 0.18); color: #fff; border-left: 3px solid var(--primary); padding-left: 5px; }
+
+    .stage-wrap { background: var(--gray); border-radius: 12px; padding: 1.5rem; }
+
+    .stage {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        min-height: 340px;
+    }
+    .panel-title {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #999;
+        margin-bottom: 0.75rem;
+        font-weight: bold;
+    }
+    .stack-panel, .heap-panel {
+        background: rgba(0,0,0,0.25);
+        border-radius: 10px;
+        padding: 1rem;
+        min-height: 300px;
+    }
+    .stack-frame {
+        border: 1.5px solid var(--stack-color);
+        background: rgba(49, 130, 206, 0.12);
+        border-radius: 8px;
+        padding: 0.6rem 0.8rem;
+        margin-bottom: 0.6rem;
+        font-family: "Fira Code", monospace;
+        font-size: 0.8rem;
+    }
+    .stack-frame .frame-name { color: var(--stack-color); font-weight: bold; margin-bottom: 4px; }
+    .stack-frame .frame-phase { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: bold; padding: 1px 6px; border-radius: 3px; margin-left: 6px; }
+    .stack-frame .frame-phase.creation { background: rgba(248, 113, 113, 0.18); color: #fca5a5; }
+    .stack-frame .frame-phase.execution { background: rgba(74, 222, 128, 0.18); color: var(--good); }
+    .stack-frame .frame-var { color: #ddd; padding: 2px 0; }
+    .stack-frame .frame-var .var-name { color: #90cdf4; }
+    .stack-frame .frame-var.tdz { color: #fca5a5; font-style: italic; }
+
+    .heap-grid { display: flex; flex-direction: column; gap: 1.75rem; align-items: flex-start; margin-left: 34px; }
+    .heap-obj {
+        border: 1.5px solid var(--heap-color);
+        background: rgba(128, 90, 213, 0.14);
+        border-radius: 8px;
+        padding: 0.6rem 0.8rem;
+        font-family: "Fira Code", monospace;
+        font-size: 0.78rem;
+        min-width: 200px;
+        transition: opacity 0.4s ease, transform 0.4s ease, border-color 0.3s ease, background 0.3s ease;
+    }
+    .heap-obj .obj-label { color: var(--heap-color); font-weight: bold; margin-bottom: 4px; }
+    .heap-obj .obj-prop { color: #ddd; }
+    .heap-obj.marked { border-color: var(--good); background: rgba(74, 222, 128, 0.14); }
+    .heap-obj.marked .obj-label { color: var(--good); }
+    .heap-obj.unreachable { border-color: var(--bad); background: rgba(248, 113, 113, 0.1); opacity: 0.55; }
+    .heap-obj.swept { opacity: 0; transform: scale(0.7); }
+
+    .timer-panel {
+        margin-top: 1.5rem;
+        background: rgba(0,0,0,0.25);
+        border-radius: 10px;
+        padding: 1rem;
+    }
+    .timer-row { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .timer-chip {
+        border: 1.5px solid var(--timer-color);
+        background: rgba(221, 107, 32, 0.14);
+        color: #fbd38d;
+        border-radius: 6px;
+        padding: 0.4rem 0.7rem;
+        font-family: "Fira Code", monospace;
+        font-size: 0.78rem;
+    }
+    .timer-empty { color: #777; font-size: 0.8rem; font-style: italic; }
+
+    svg.arrows { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+    svg.arrows path { fill: none; stroke: var(--accent); stroke-width: 2; }
+    svg.arrows text { fill: var(--accent); font-size: 10px; font-family: "Fira Code", monospace; paint-order: stroke; stroke: #1a1d23; stroke-width: 5px; stroke-linejoin: round; }
+
+    .caption {
+        margin-top: 1.5rem;
+        background: rgba(97, 218, 251, 0.08);
+        border-left: 3px solid var(--primary);
+        border-radius: 6px;
+        padding: 1rem 1.25rem;
+        font-size: 0.95rem;
+        min-height: 3em;
+    }
+
+    .controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        background: var(--gray);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.5rem;
+        position: sticky;
+        top: 70px;
+        z-index: 90;
+    }
+    .controls button {
+        padding: 0.6rem 1.2rem;
+        background: var(--primary);
+        color: var(--dark);
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    .controls button.secondary { background: #444; color: #fff; }
+    .controls button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .step-counter { font-family: "Fira Code", monospace; font-size: 0.85rem; color: #aaa; }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>JS Memory &amp; Execution Visualizer 🧠</h1>
+    <p>Step through real execution — call stack, heap, closures, garbage collection, and the prototype chain, one step at a time</p>
+</header>
+
+<nav class="tabs" id="tabs"></nav>
+
+<main>
+    <div class="intro">
+        <h2 id="example-title">Example</h2>
+        <p id="example-desc"></p>
+        <div class="legend">
+            <div class="legend-item"><span class="legend-swatch" style="background: var(--stack-color);"></span> Call stack frame</div>
+            <div class="legend-item"><span class="legend-swatch" style="background: var(--heap-color);"></span> Heap object</div>
+            <div class="legend-item"><span class="legend-swatch" style="background: var(--timer-color);"></span> Pending timer (browser-owned, not the JS heap)</div>
+            <div class="legend-item"><span class="legend-swatch" style="background: var(--good);"></span> Marked reachable (GC)</div>
+            <div class="legend-item"><span class="legend-swatch" style="background: var(--bad);"></span> Unreachable (GC)</div>
+            <div class="legend-item"><span class="frame-phase creation" style="margin-left:0;">creation</span> Creation phase — bindings hoisted &amp; allocated, not yet assigned</div>
+            <div class="legend-item"><span class="frame-phase execution" style="margin-left:0;">execution</span> Execution phase — code runs line by line, values assigned</div>
+            <div class="legend-item"><span style="color:#fca5a5; font-style: italic;">&lt;TDZ&gt;</span> Temporal Dead Zone — let/const hoisted but not yet initialized</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="secondary" onclick="resetSteps()">⏮ Reset</button>
+        <button class="secondary" id="prev-btn" onclick="prevStep()">◀ Prev</button>
+        <button id="next-btn" onclick="nextStep()">Next ▶</button>
+        <button class="secondary" id="play-btn" onclick="togglePlay()">▶ Auto-play</button>
+        <span class="step-counter" id="step-counter"></span>
+    </div>
+
+    <div class="layout">
+        <div class="code-panel" id="code-panel"></div>
+
+        <div class="stage-wrap">
+            <div class="stage" id="stage">
+                <div class="stack-panel">
+                    <div class="panel-title">Call Stack</div>
+                    <div id="stack-container"></div>
+                </div>
+                <div class="heap-panel">
+                    <div class="panel-title">Heap</div>
+                    <div class="heap-grid" id="heap-container"></div>
+                </div>
+                <svg class="arrows" id="arrows-svg"></svg>
+            </div>
+
+            <div class="timer-panel">
+                <div class="panel-title">Timer Queue (browser-internal — not the JS heap)</div>
+                <div class="timer-row" id="timer-container"></div>
+            </div>
+
+            <div class="caption" id="caption"></div>
+        </div>
+    </div>
+</main>
+
+<script>
+/* ============================================================
+   EXAMPLE DEFINITIONS
+   Each example: { title, desc, code: [lines], steps: [ {...} ] }
+   Step shape:
+     activeLine: number
+     caption: string
+     stack: [ { id, name, vars: [{name, value}] } ]   -- top of array = top of stack
+     heap: [ { id, label, props: [{name,value}], state: 'normal'|'marked'|'unreachable'|'swept' } ]
+     timers: [ { id, label } ]
+     arrows: [ { from, to, label } ]  -- from/to are data-node-id values
+   ============================================================ */
+
+const EXAMPLES = {};
+
+/* ---------- Example 1: Stack vs Heap basics ---------- */
+EXAMPLES.basics = {
+    title: '1. The Basics — Stack vs Heap',
+    desc: 'Primitives live directly inside a stack frame. Objects are allocated on the heap, and the stack only ever holds a reference to them.',
+    code: [
+        'function process() {',
+        "  let count = 5;",
+        "  let user = { name: 'Kai' };",
+        '  count = count + 1;',
+        '  return user;',
+        '}',
+        'const result = process();',
+    ],
+    steps: [
+        { activeLine: 6, caption: "Global Creation Phase: before a single line runs, the engine scans the script. process (a function declaration) is fully hoisted — it's ready to call immediately. result (const) is hoisted too, but left uninitialized in the Temporal Dead Zone until its declaration line actually executes. Note: process is itself a heap-allocated object — every function in JS is. It's shown here as a compact ƒ() value directly in the frame, not a separate heap box, because there's no reference relationship worth drawing yet (no closure, nothing captured). Once that becomes relevant — see the Closures example next — functions get their own heap box so their links can be drawn.",
+          stack: [{ id: 'global', name: 'Global', phase: 'creation', vars: [{ name: 'process', value: 'ƒ()' }, { name: 'result', value: '<TDZ>' }] }], heap: [], timers: [], arrows: [] },
+        { activeLine: 0, caption: 'Global Execution Phase begins: creation phase is done, memory for these top-level bindings already exists — now the engine runs the code top to bottom.',
+          stack: [{ id: 'global', name: 'Global', phase: 'execution', vars: [{ name: 'process', value: 'ƒ()' }, { name: 'result', value: '<TDZ>' }] }], heap: [], timers: [], arrows: [] },
+        { activeLine: 6, caption: 'process() is called. This pushes a brand-new execution context on top of Global (still in its own execution phase) — and the new context immediately runs its OWN creation phase before any of its code executes. Each call gets a fresh creation phase; it is not the program "going backwards."',
+          stack: [{ id: 'process', name: 'process()', phase: 'creation', vars: [{ name: 'count', value: '<TDZ>' }, { name: 'user', value: '<TDZ>' }] }, { id: 'global', name: 'Global', phase: 'execution', vars: [{ name: 'process', value: 'ƒ()' }, { name: 'result', value: '<TDZ>' }] }], heap: [], timers: [], arrows: [] },
+        { activeLine: 1, caption: "process()'s creation phase: count and user (both let) are hoisted into this scope — memory is reserved for the bindings — but neither is initialized yet. Reading either right now would throw a ReferenceError.",
+          stack: [{ id: 'process', name: 'process()', phase: 'creation', vars: [{ name: 'count', value: '<TDZ>' }, { name: 'user', value: '<TDZ>' }] }, { id: 'global', name: 'Global', phase: 'execution', vars: [{ name: 'process', value: 'ƒ()' }, { name: 'result', value: '<TDZ>' }] }], heap: [], timers: [], arrows: [] },
+        { activeLine: 1, caption: "process()'s creation phase ends and its execution phase begins. Now, and only now, does the engine actually assign values as each line runs.",
+          stack: [{ id: 'process', name: 'process()', phase: 'execution', vars: [{ name: 'count', value: '<TDZ>' }, { name: 'user', value: '<TDZ>' }] }, { id: 'global', name: 'Global', phase: 'execution', vars: [{ name: 'process', value: 'ƒ()' }, { name: 'result', value: '<TDZ>' }] }], heap: [], timers: [], arrows: [] },
+        { activeLine: 1, caption: 'count leaves the TDZ and is initialized to 5. As a primitive, its value is stored directly inside the stack frame — not the heap.',
+          stack: [{ id: 'process', name: 'process()', phase: 'execution', vars: [{ name: 'count', value: '5' }, { name: 'user', value: '<TDZ>' }] }, { id: 'global', name: 'Global', phase: 'execution', vars: [{ name: 'process', value: 'ƒ()' }, { name: 'result', value: '<TDZ>' }] }], heap: [], timers: [], arrows: [] },
+        { activeLine: 2, caption: 'user leaves the TDZ. Being an object, it is allocated on the heap; the stack frame only stores a reference (a pointer) to it.',
+          stack: [{ id: 'process', name: 'process()', phase: 'execution', vars: [{ name: 'count', value: '5' }, { name: 'user', value: '→' }] }, { id: 'global', name: 'Global', phase: 'execution', vars: [{ name: 'process', value: 'ƒ()' }, { name: 'result', value: '<TDZ>' }] }],
+          heap: [{ id: 'obj_user', label: 'Object', props: [{ name: 'name', value: "'Kai'" }], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:user', to: 'obj_user' }] },
+        { activeLine: 3, caption: 'Reassigning a primitive just overwrites the value directly in the stack frame — no heap involved at all.',
+          stack: [{ id: 'process', name: 'process()', phase: 'execution', vars: [{ name: 'count', value: '6' }, { name: 'user', value: '→' }] }, { id: 'global', name: 'Global', phase: 'execution', vars: [{ name: 'process', value: 'ƒ()' }, { name: 'result', value: '<TDZ>' }] }],
+          heap: [{ id: 'obj_user', label: 'Object', props: [{ name: 'name', value: "'Kai'" }], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:user', to: 'obj_user' }] },
+        { activeLine: 4, caption: "process() returns user and its stack frame is popped — dropping back to Global, which was in execution phase the entire time and still is. The heap object survives because the global frame's result variable — leaving the TDZ right now — is assigned a reference to it.",
+          stack: [{ id: 'global', name: 'Global', phase: 'execution', vars: [{ name: 'process', value: 'ƒ()' }, { name: 'result', value: '→' }] }],
+          heap: [{ id: 'obj_user', label: 'Object', props: [{ name: 'name', value: "'Kai'" }], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:result', to: 'obj_user' }] },
+        { activeLine: 6, caption: 'This is the foundation for everything else on this page: creation phase allocates and hoists bindings first (leaving let/const in the TDZ), execution phase then assigns real values line by line. Each function call gets its own creation phase nested inside the caller\'s ongoing execution phase — phases never regress within a single frame, they only nest.',
+          stack: [{ id: 'global', name: 'Global', phase: 'execution', vars: [{ name: 'process', value: 'ƒ()' }, { name: 'result', value: '→' }] }],
+          heap: [{ id: 'obj_user', label: 'Object', props: [{ name: 'name', value: "'Kai'" }], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:result', to: 'obj_user' }] },
+    ],
+};
+
+/* ---------- Example 2: Closures ---------- */
+EXAMPLES.closures = {
+    title: '2. Closures',
+    desc: "A closure is a heap-allocated Lexical Environment that survives after its creating function's stack frame is gone, kept alive by a function that still references it.",
+    code: [
+        'function makeCounter() {',
+        '  let count = 0;',
+        '  function increment() {',
+        '    const offset = count * 2;',
+        '    count += (1 + offset);',
+        '    return count;',
+        '  }',
+        '  return increment;',
+        '}',
+        'const counter = makeCounter();',
+        'counter(); counter();',
+    ],
+    steps: [
+        { activeLine: 9, caption: "Global Creation Phase: makeCounter (a function declaration) is hoisted and ready immediately. counter (const) is hoisted but left in the TDZ.",
+          stack: [{ id: 'global', name: 'Global', phase: 'creation', vars: [{ name: 'makeCounter', value: 'ƒ()' }, { name: 'counter', value: '<TDZ>' }] }], heap: [], timers: [], arrows: [] },
+        { activeLine: 9, caption: 'Global Execution Phase begins.',
+          stack: [{ id: 'global', name: 'Global', phase: 'execution', vars: [{ name: 'makeCounter', value: 'ƒ()' }, { name: 'counter', value: '<TDZ>' }] }], heap: [], timers: [], arrows: [] },
+        { activeLine: 9, caption: "makeCounter() is called — a new stack frame is pushed on top of Global (still executing), and the new frame's OWN creation phase runs immediately. Every function call creates an environment for its local scope — process() in Example 1 had one too, it just never got its own heap box, because nothing could reference it after process() returned, so the engine kept it on the stack. Here, that's not safe: increment (below) will close over count and escape by being returned, so the engine must heap-allocate this environment from the start, before line 1 even runs. This one rule — heap-allocate only what can be referenced after its creating frame is gone — is why the two examples look different.",
+          stack: [{ id: 'makeCounter', name: 'makeCounter()', phase: 'creation', vars: [{ name: '(scope)', value: '→' }] }, { id: 'global', name: 'Global', phase: 'execution', vars: [{ name: 'makeCounter', value: 'ƒ()' }, { name: 'counter', value: '<TDZ>' }] }],
+          heap: [{ id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '<TDZ>' }], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:(scope)', to: 'le1' }] },
+        { activeLine: 2, caption: "Still makeCounter()'s creation phase: increment is a function DECLARATION, so — unlike count — it is fully instantiated right now, not left pending. Its [[Environment]] link is set immediately, pointing at makeCounter's in-progress Lexical Environment. The closure link exists before line 1 even runs.",
+          stack: [{ id: 'makeCounter', name: 'makeCounter()', phase: 'creation', vars: [{ name: '(scope)', value: '→' }] }, { id: 'global', name: 'Global', phase: 'execution', vars: [{ name: 'makeCounter', value: 'ƒ()' }, { name: 'counter', value: '<TDZ>' }] }],
+          heap: [{ id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '<TDZ>' }], state: 'normal' },
+                 { id: 'fn_increment', label: 'function increment', props: [], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:(scope)', to: 'le1' }, { from: 'fn_increment', to: 'le1', label: '[[Environment]]' }] },
+        { activeLine: 1, caption: "makeCounter()'s creation phase ends, its execution phase begins. Line 1 now actually runs: count leaves the TDZ and is initialized to 0 — still only inside the heap-allocated Lexical Environment, never copied into the stack frame.",
+          stack: [{ id: 'makeCounter', name: 'makeCounter()', phase: 'execution', vars: [{ name: '(scope)', value: '→' }] }, { id: 'global', name: 'Global', phase: 'execution', vars: [{ name: 'makeCounter', value: 'ƒ()' }, { name: 'counter', value: '<TDZ>' }] }],
+          heap: [{ id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '0' }], state: 'normal' },
+                 { id: 'fn_increment', label: 'function increment', props: [], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:(scope)', to: 'le1' }, { from: 'fn_increment', to: 'le1', label: '[[Environment]]' }] },
+        { activeLine: 7, caption: "makeCounter's stack frame is about to pop — but increment is being returned, so it will still be reachable.",
+          stack: [{ id: 'makeCounter', name: 'makeCounter()', phase: 'execution', vars: [{ name: '(scope)', value: '→' }] }, { id: 'global', name: 'Global', phase: 'execution', vars: [{ name: 'makeCounter', value: 'ƒ()' }, { name: 'counter', value: '<TDZ>' }] }],
+          heap: [{ id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '0' }], state: 'normal' },
+                 { id: 'fn_increment', label: 'function increment', props: [], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:(scope)', to: 'le1' }, { from: 'fn_increment', to: 'le1', label: '[[Environment]]' }] },
+        { activeLine: 9, caption: "makeCounter's stack frame is gone — dropping back to Global, which was in execution phase the entire time and still is. makeCounter's Lexical Environment survives on the heap though: increment (now stored in counter) still references it, and counter itself is reachable from the global frame.",
+          stack: [{ id: 'global', name: 'Global', phase: 'execution', vars: [{ name: 'makeCounter', value: 'ƒ()' }, { name: 'counter', value: '→' }] }],
+          heap: [{ id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '0' }], state: 'normal' },
+                 { id: 'fn_increment', label: 'function increment', props: [], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:counter', to: 'fn_increment' }, { from: 'fn_increment', to: 'le1', label: '[[Environment]]' }] },
+        { activeLine: 3, caption: "counter() is called — a new stack frame is pushed for this call. Line 3 runs: offset = count * 2. count is read through increment's retained [[Environment]] link — currently 0 — so offset = 0. offset itself is a plain primitive with nothing closing over it: it lives directly in this stack frame, exactly like count/user did in Example 1.",
+          stack: [{ id: 'increment1', name: 'increment()', vars: [{ name: 'offset', value: '0' }] }, { id: 'global', name: 'Global', vars: [{ name: 'counter', value: '→' }] }],
+          heap: [{ id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '0' }], state: 'normal' },
+                 { id: 'fn_increment', label: 'function increment', props: [], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:counter', to: 'fn_increment' }, { from: 'fn_increment', to: 'le1', label: '[[Environment]]' }, { from: 'increment1', to: 'le1' }] },
+        { activeLine: 4, caption: 'Line 4 runs: count += (1 + offset) → count becomes 0 + (1 + 0) = 1. This mutates the SAME heap-allocated Lexical Environment increment always points to — unlike offset, this change persists after the call returns.',
+          stack: [{ id: 'increment1', name: 'increment()', vars: [{ name: 'offset', value: '0' }] }, { id: 'global', name: 'Global', vars: [{ name: 'counter', value: '→' }] }],
+          heap: [{ id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '1' }], state: 'normal' },
+                 { id: 'fn_increment', label: 'function increment', props: [], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:counter', to: 'fn_increment' }, { from: 'fn_increment', to: 'le1', label: '[[Environment]]' }, { from: 'increment1', to: 'le1' }] },
+        { activeLine: 5, caption: 'increment() returns 1, and its stack frame — offset included — is discarded. offset never escaped this call, so the engine never needed to heap-allocate it. Only count survives, and only because it lives in the retained Lexical Environment, not in the frame that just disappeared.',
+          stack: [{ id: 'global', name: 'Global', vars: [{ name: 'counter', value: '→' }] }],
+          heap: [{ id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '1' }], state: 'normal' },
+                 { id: 'fn_increment', label: 'function increment', props: [], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:counter', to: 'fn_increment' }, { from: 'fn_increment', to: 'le1', label: '[[Environment]]' }] },
+        { activeLine: 3, caption: 'counter() is called again. A fresh increment() frame is pushed with its own fresh offset — offset = count * 2 = 1 * 2 = 2, computed from whatever count holds right now.',
+          stack: [{ id: 'increment1', name: 'increment()', vars: [{ name: 'offset', value: '2' }] }, { id: 'global', name: 'Global', vars: [{ name: 'counter', value: '→' }] }],
+          heap: [{ id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '1' }], state: 'normal' },
+                 { id: 'fn_increment', label: 'function increment', props: [], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:counter', to: 'fn_increment' }, { from: 'fn_increment', to: 'le1', label: '[[Environment]]' }, { from: 'increment1', to: 'le1' }] },
+        { activeLine: 4, caption: 'count += (1 + offset) → count becomes 1 + (1 + 2) = 4, mutated in place on the same shared environment.',
+          stack: [{ id: 'increment1', name: 'increment()', vars: [{ name: 'offset', value: '2' }] }, { id: 'global', name: 'Global', vars: [{ name: 'counter', value: '→' }] }],
+          heap: [{ id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '4' }], state: 'normal' },
+                 { id: 'fn_increment', label: 'function increment', props: [], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:counter', to: 'fn_increment' }, { from: 'fn_increment', to: 'le1', label: '[[Environment]]' }, { from: 'increment1', to: 'le1' }] },
+        { activeLine: 5, caption: 'increment() returns 4 and its frame — this call\'s offset included — disappears again. Every call computes a fresh, purely local offset that dies with its own frame; only count, held in the heap-allocated Lexical Environment, persists across calls.',
+          stack: [{ id: 'global', name: 'Global', vars: [{ name: 'counter', value: '→' }] }],
+          heap: [{ id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '4' }], state: 'normal' },
+                 { id: 'fn_increment', label: 'function increment', props: [], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:counter', to: 'fn_increment' }, { from: 'fn_increment', to: 'le1', label: '[[Environment]]' }] },
+        { activeLine: 10, caption: 'The heap-allocated Lexical Environment stays reachable — and therefore alive — for as long as increment itself is reachable. That is the entire mechanism behind closures: it is selective about what survives. offset was recomputed and discarded on every call; count is the only thing that needed to persist, so it is the only thing that got heap-allocated.',
+          stack: [{ id: 'global', name: 'Global', vars: [{ name: 'counter', value: '→' }] }],
+          heap: [{ id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '4' }], state: 'normal' },
+                 { id: 'fn_increment', label: 'function increment', props: [], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:counter', to: 'fn_increment' }, { from: 'fn_increment', to: 'le1', label: '[[Environment]]' }] },
+    ],
+};
+
+/* ---------- Example 3: var + setTimeout classic bug ---------- */
+EXAMPLES.varLoop = {
+    title: '3. The var + setTimeout Bug',
+    desc: 'var is function/global scoped, so the whole loop shares exactly ONE binding for i. All three timer closures end up pointing at the same environment.',
+    code: [
+        'for (var i = 0; i < 3; i++) {',
+        '  setTimeout(() => console.log(i), 100);',
+        '}',
+    ],
+    steps: [
+        { activeLine: 0, caption: 'Creation Phase: var i is hoisted all the way to the enclosing (global) scope before any code runs — memory for i is allocated right now, initialized to undefined. There will be exactly ONE binding for i, shared by every iteration.',
+          stack: [{ id: 'global', name: 'Global', phase: 'creation', vars: [{ name: '(scope)', value: '→' }] }],
+          heap: [{ id: 'le_shared', label: 'Lexical Environment (shared)', props: [{ name: 'i', value: 'undefined' }], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:(scope)', to: 'le_shared' }] },
+        { activeLine: 0, caption: 'Execution Phase begins. The loop actually starts running now — this is where values get assigned, not during creation.',
+          stack: [{ id: 'global', name: 'Global', phase: 'execution', vars: [{ name: '(scope)', value: '→' }] }],
+          heap: [{ id: 'le_shared', label: 'Lexical Environment (shared)', props: [{ name: 'i', value: 'undefined' }], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:(scope)', to: 'le_shared' }] },
+        { activeLine: 0, caption: 'Iteration 1: i = 0. A new closure is created for the setTimeout callback, and it points at the one shared environment.',
+          stack: [{ id: 'global', name: 'Global', phase: 'execution', vars: [{ name: '(scope)', value: '→' }] }],
+          heap: [{ id: 'le_shared', label: 'Lexical Environment (shared)', props: [{ name: 'i', value: '0' }], state: 'normal' },
+                 { id: 'cb1', label: 'closure #1', props: [], state: 'normal' }],
+          timers: [{ id: 't1', label: 'setTimeout #1' }],
+          arrows: [{ from: 'stackvar:(scope)', to: 'le_shared' }, { from: 'cb1', to: 'le_shared', label: '[[Env]]' }, { from: 'timer:t1', to: 'cb1' }] },
+        { activeLine: 0, caption: 'i++ runs. This mutates the SAME environment record that closure #1 already points to.',
+          stack: [{ id: 'global', name: 'Global', phase: 'execution', vars: [{ name: '(scope)', value: '→' }] }],
+          heap: [{ id: 'le_shared', label: 'Lexical Environment (shared)', props: [{ name: 'i', value: '1' }], state: 'normal' },
+                 { id: 'cb1', label: 'closure #1', props: [], state: 'normal' }],
+          timers: [{ id: 't1', label: 'setTimeout #1' }],
+          arrows: [{ from: 'stackvar:(scope)', to: 'le_shared' }, { from: 'cb1', to: 'le_shared', label: '[[Env]]' }, { from: 'timer:t1', to: 'cb1' }] },
+        { activeLine: 0, caption: 'Iteration 2: another closure created — also pointing at the exact same shared environment.',
+          stack: [{ id: 'global', name: 'Global', phase: 'execution', vars: [{ name: '(scope)', value: '→' }] }],
+          heap: [{ id: 'le_shared', label: 'Lexical Environment (shared)', props: [{ name: 'i', value: '1' }], state: 'normal' },
+                 { id: 'cb1', label: 'closure #1', props: [], state: 'normal' }, { id: 'cb2', label: 'closure #2', props: [], state: 'normal' }],
+          timers: [{ id: 't1', label: 'setTimeout #1' }, { id: 't2', label: 'setTimeout #2' }],
+          arrows: [{ from: 'stackvar:(scope)', to: 'le_shared' }, { from: 'cb1', to: 'le_shared', label: '[[Env]]' }, { from: 'cb2', to: 'le_shared', label: '[[Env]]' },
+                    { from: 'timer:t1', to: 'cb1' }, { from: 'timer:t2', to: 'cb2' }] },
+        { activeLine: 0, caption: 'i++ again. Same shared environment, now i = 2.',
+          stack: [{ id: 'global', name: 'Global', phase: 'execution', vars: [{ name: '(scope)', value: '→' }] }],
+          heap: [{ id: 'le_shared', label: 'Lexical Environment (shared)', props: [{ name: 'i', value: '2' }], state: 'normal' },
+                 { id: 'cb1', label: 'closure #1', props: [], state: 'normal' }, { id: 'cb2', label: 'closure #2', props: [], state: 'normal' }],
+          timers: [{ id: 't1', label: 'setTimeout #1' }, { id: 't2', label: 'setTimeout #2' }],
+          arrows: [{ from: 'stackvar:(scope)', to: 'le_shared' }, { from: 'cb1', to: 'le_shared', label: '[[Env]]' }, { from: 'cb2', to: 'le_shared', label: '[[Env]]' },
+                    { from: 'timer:t1', to: 'cb1' }, { from: 'timer:t2', to: 'cb2' }] },
+        { activeLine: 0, caption: 'Iteration 3: a third closure, same shared environment again.',
+          stack: [{ id: 'global', name: 'Global', phase: 'execution', vars: [{ name: '(scope)', value: '→' }] }],
+          heap: [{ id: 'le_shared', label: 'Lexical Environment (shared)', props: [{ name: 'i', value: '2' }], state: 'normal' },
+                 { id: 'cb1', label: 'closure #1', props: [], state: 'normal' }, { id: 'cb2', label: 'closure #2', props: [], state: 'normal' }, { id: 'cb3', label: 'closure #3', props: [], state: 'normal' }],
+          timers: [{ id: 't1', label: 'setTimeout #1' }, { id: 't2', label: 'setTimeout #2' }, { id: 't3', label: 'setTimeout #3' }],
+          arrows: [{ from: 'stackvar:(scope)', to: 'le_shared' }, { from: 'cb1', to: 'le_shared', label: '[[Env]]' }, { from: 'cb2', to: 'le_shared', label: '[[Env]]' }, { from: 'cb3', to: 'le_shared', label: '[[Env]]' },
+                    { from: 'timer:t1', to: 'cb1' }, { from: 'timer:t2', to: 'cb2' }, { from: 'timer:t3', to: 'cb3' }] },
+        { activeLine: 0, caption: 'i++ runs one last time: i = 3. The loop condition (3 < 3) now fails and the loop exits. All three pending timers still point at this one shared environment — none of them have fired yet.',
+          stack: [{ id: 'global', name: 'Global', phase: 'execution', vars: [{ name: '(scope)', value: '→' }] }],
+          heap: [{ id: 'le_shared', label: 'Lexical Environment (shared)', props: [{ name: 'i', value: '3' }], state: 'normal' },
+                 { id: 'cb1', label: 'closure #1', props: [], state: 'normal' }, { id: 'cb2', label: 'closure #2', props: [], state: 'normal' }, { id: 'cb3', label: 'closure #3', props: [], state: 'normal' }],
+          timers: [{ id: 't1', label: 'setTimeout #1' }, { id: 't2', label: 'setTimeout #2' }, { id: 't3', label: 'setTimeout #3' }],
+          arrows: [{ from: 'stackvar:(scope)', to: 'le_shared' }, { from: 'cb1', to: 'le_shared', label: '[[Env]]' }, { from: 'cb2', to: 'le_shared', label: '[[Env]]' }, { from: 'cb3', to: 'le_shared', label: '[[Env]]' },
+                    { from: 'timer:t1', to: 'cb1' }, { from: 'timer:t2', to: 'cb2' }, { from: 'timer:t3', to: 'cb3' }] },
+        { activeLine: 1, caption: '~100ms later, the first timer fires. Its closure resolves i through the shared environment — which now holds 3, because the loop already finished by the time this runs. It logs 3.',
+          stack: [{ id: 'cb1call', name: '(closure #1)', vars: [] }, { id: 'global', name: 'Global', phase: 'execution', vars: [{ name: '(scope)', value: '→' }] }],
+          heap: [{ id: 'le_shared', label: 'Lexical Environment (shared)', props: [{ name: 'i', value: '3' }], state: 'normal' },
+                 { id: 'cb2', label: 'closure #2', props: [], state: 'normal' }, { id: 'cb3', label: 'closure #3', props: [], state: 'normal' }],
+          timers: [{ id: 't2', label: 'setTimeout #2' }, { id: 't3', label: 'setTimeout #3' }],
+          arrows: [{ from: 'stackvar:(scope)', to: 'le_shared' }, { from: 'cb2', to: 'le_shared', label: '[[Env]]' }, { from: 'cb3', to: 'le_shared', label: '[[Env]]' },
+                    { from: 'timer:t2', to: 'cb2' }, { from: 'timer:t3', to: 'cb3' }, { from: 'cb1call', to: 'le_shared' }] },
+        { activeLine: 1, caption: 'The second and third timers fire the same way — same shared environment, same value. All three log 3.',
+          stack: [{ id: 'global', name: 'Global', phase: 'execution', vars: [{ name: '(scope)', value: '→' }] }],
+          heap: [{ id: 'le_shared', label: 'Lexical Environment (shared)', props: [{ name: 'i', value: '3' }], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:(scope)', to: 'le_shared' }] },
+        { activeLine: 1, caption: 'The bug in one sentence: all three logged 3 because they all shared ONE binding that had already reached its final value — not because of when they were created, but because of which environment record they were linked to.',
+          stack: [{ id: 'global', name: 'Global', phase: 'execution', vars: [{ name: '(scope)', value: '→' }] }],
+          heap: [{ id: 'le_shared', label: 'Lexical Environment (shared)', props: [{ name: 'i', value: '3' }], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:(scope)', to: 'le_shared' }] },
+    ],
+};
+
+/* ---------- Example 4: let fix ---------- */
+EXAMPLES.letLoop = {
+    title: '4. The let Fix',
+    desc: 'The spec mandates a NEW Lexical Environment per iteration for a for-loop using let — not one shared binding.',
+    code: [
+        'for (let i = 0; i < 3; i++) {',
+        '  setTimeout(() => console.log(i), 100);',
+        '}',
+    ],
+    steps: [
+        { activeLine: 0, caption: "Creation Phase contrast with var: let is block-scoped, not hoisted to the function/global scope at all — there's no shared top-level binding created up front here. Each iteration instead gets its own per-iteration environment, created and immediately initialized as that iteration begins, so there's effectively no observable TDZ exposure in this loop.",
+          stack: [{ id: 'global', name: 'Global', vars: [] }], heap: [], timers: [], arrows: [] },
+        { activeLine: 0, caption: 'Execution Phase: the loop runs. Iteration 1: a new environment (LE #1) is created holding i = 0. Its closure points ONLY at LE #1.',
+          stack: [{ id: 'global', name: 'Global', vars: [] }],
+          heap: [{ id: 'le1', label: 'Lexical Environment #1', props: [{ name: 'i', value: '0' }], state: 'normal' }, { id: 'cb1', label: 'closure #1', props: [], state: 'normal' }],
+          timers: [{ id: 't1', label: 'setTimeout #1' }],
+          arrows: [{ from: 'cb1', to: 'le1', label: '[[Env]]' }, { from: 'timer:t1', to: 'cb1' }] },
+        { activeLine: 0, caption: "Before iteration 2, the engine copies i's current value forward into a brand-new environment (LE #2) — a separate box from LE #1.",
+          stack: [{ id: 'global', name: 'Global', vars: [] }],
+          heap: [{ id: 'le1', label: 'Lexical Environment #1', props: [{ name: 'i', value: '0' }], state: 'normal' }, { id: 'cb1', label: 'closure #1', props: [], state: 'normal' },
+                 { id: 'le2', label: 'Lexical Environment #2', props: [{ name: 'i', value: '1' }], state: 'normal' }, { id: 'cb2', label: 'closure #2', props: [], state: 'normal' }],
+          timers: [{ id: 't1', label: 'setTimeout #1' }, { id: 't2', label: 'setTimeout #2' }],
+          arrows: [{ from: 'cb1', to: 'le1', label: '[[Env]]' }, { from: 'timer:t1', to: 'cb1' }, { from: 'cb2', to: 'le2', label: '[[Env]]' }, { from: 'timer:t2', to: 'cb2' }] },
+        { activeLine: 0, caption: 'Iteration 3: the same copy-forward happens again — LE #3, holding its own independent i = 2.',
+          stack: [{ id: 'global', name: 'Global', vars: [] }],
+          heap: [{ id: 'le1', label: 'Lexical Environment #1', props: [{ name: 'i', value: '0' }], state: 'normal' }, { id: 'cb1', label: 'closure #1', props: [], state: 'normal' },
+                 { id: 'le2', label: 'Lexical Environment #2', props: [{ name: 'i', value: '1' }], state: 'normal' }, { id: 'cb2', label: 'closure #2', props: [], state: 'normal' },
+                 { id: 'le3', label: 'Lexical Environment #3', props: [{ name: 'i', value: '2' }], state: 'normal' }, { id: 'cb3', label: 'closure #3', props: [], state: 'normal' }],
+          timers: [{ id: 't1', label: 'setTimeout #1' }, { id: 't2', label: 'setTimeout #2' }, { id: 't3', label: 'setTimeout #3' }],
+          arrows: [{ from: 'cb1', to: 'le1', label: '[[Env]]' }, { from: 'timer:t1', to: 'cb1' }, { from: 'cb2', to: 'le2', label: '[[Env]]' }, { from: 'timer:t2', to: 'cb2' },
+                    { from: 'cb3', to: 'le3', label: '[[Env]]' }, { from: 'timer:t3', to: 'cb3' }] },
+        { activeLine: 1, caption: 'The loop ends. Three separate environments exist in the heap, each referenced by exactly one closure. Now the timers fire: closure #1 resolves via LE #1 → logs 0.',
+          stack: [{ id: 'global', name: 'Global', vars: [] }],
+          heap: [{ id: 'le2', label: 'Lexical Environment #2', props: [{ name: 'i', value: '1' }], state: 'normal' }, { id: 'cb2', label: 'closure #2', props: [], state: 'normal' },
+                 { id: 'le3', label: 'Lexical Environment #3', props: [{ name: 'i', value: '2' }], state: 'normal' }, { id: 'cb3', label: 'closure #3', props: [], state: 'normal' }],
+          timers: [{ id: 't2', label: 'setTimeout #2' }, { id: 't3', label: 'setTimeout #3' }],
+          arrows: [{ from: 'cb2', to: 'le2', label: '[[Env]]' }, { from: 'timer:t2', to: 'cb2' }, { from: 'cb3', to: 'le3', label: '[[Env]]' }, { from: 'timer:t3', to: 'cb3' }] },
+        { activeLine: 1, caption: 'closure #2 resolves via LE #2 → logs 1. closure #3 resolves via LE #3 → logs 2.',
+          stack: [{ id: 'global', name: 'Global', vars: [] }], heap: [], timers: [], arrows: [] },
+        { activeLine: 1, caption: 'The fix in one sentence: three distinct environment records mean three distinct, independently preserved values — this is structural, not a coding convention.',
+          stack: [{ id: 'global', name: 'Global', vars: [] }], heap: [], timers: [], arrows: [] },
+    ],
+};
+
+/* ---------- Example 5: Mark & Sweep GC ---------- */
+EXAMPLES.gc = {
+    title: '5. Garbage Collection — Mark &amp; Sweep',
+    desc: 'GC never asks "is this used?" — it asks "is this reachable from a root?" Anything it cannot reach gets swept, no matter what it represents.',
+    code: [
+        '// Heap state after some earlier code ran:',
+        '// - counter references an increment closure',
+        '// - increment closure references its Lexical Environment',
+        '// - orphan was never referenced by anything reachable',
+        'runGarbageCollection();',
+    ],
+    steps: [
+        { activeLine: 4, caption: 'Starting heap state: increment and its Lexical Environment are reachable via the global counter variable. orphan is present in the heap but nothing reachable points to it.',
+          stack: [{ id: 'global', name: 'Global (a root)', vars: [{ name: 'counter', value: '→' }] }],
+          heap: [{ id: 'fn_increment', label: 'function increment', props: [], state: 'normal' },
+                 { id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '2' }], state: 'normal' },
+                 { id: 'orphan', label: 'Object (orphan)', props: [{ name: 'note', value: "'unused'" }], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:counter', to: 'fn_increment' }, { from: 'fn_increment', to: 'le1', label: '[[Environment]]' }] },
+        { activeLine: 4, caption: 'GC starts by identifying roots — the global object and anything currently on the call stack.',
+          stack: [{ id: 'global', name: 'Global (a root)', vars: [{ name: 'counter', value: '→' }] }],
+          heap: [{ id: 'fn_increment', label: 'function increment', props: [], state: 'normal' },
+                 { id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '2' }], state: 'normal' },
+                 { id: 'orphan', label: 'Object (orphan)', props: [{ name: 'note', value: "'unused'" }], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:counter', to: 'fn_increment' }, { from: 'fn_increment', to: 'le1', label: '[[Environment]]' }] },
+        { activeLine: 4, caption: 'Mark phase: walking from the root through counter reaches increment. It gets marked reachable.',
+          stack: [{ id: 'global', name: 'Global (a root)', vars: [{ name: 'counter', value: '→' }] }],
+          heap: [{ id: 'fn_increment', label: 'function increment', props: [], state: 'marked' },
+                 { id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '2' }], state: 'normal' },
+                 { id: 'orphan', label: 'Object (orphan)', props: [{ name: 'note', value: "'unused'" }], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:counter', to: 'fn_increment' }, { from: 'fn_increment', to: 'le1', label: '[[Environment]]' }] },
+        { activeLine: 4, caption: "Mark phase continues: from increment, the collector follows its [[Environment]] link and marks the Lexical Environment reachable too.",
+          stack: [{ id: 'global', name: 'Global (a root)', vars: [{ name: 'counter', value: '→' }] }],
+          heap: [{ id: 'fn_increment', label: 'function increment', props: [], state: 'marked' },
+                 { id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '2' }], state: 'marked' },
+                 { id: 'orphan', label: 'Object (orphan)', props: [{ name: 'note', value: "'unused'" }], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:counter', to: 'fn_increment' }, { from: 'fn_increment', to: 'le1', label: '[[Environment]]' }] },
+        { activeLine: 4, caption: 'Mark phase ends. orphan was never reached — no root, directly or indirectly, points to it. It stays unmarked.',
+          stack: [{ id: 'global', name: 'Global (a root)', vars: [{ name: 'counter', value: '→' }] }],
+          heap: [{ id: 'fn_increment', label: 'function increment', props: [], state: 'marked' },
+                 { id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '2' }], state: 'marked' },
+                 { id: 'orphan', label: 'Object (orphan)', props: [{ name: 'note', value: "'unused'" }], state: 'unreachable' }],
+          timers: [], arrows: [{ from: 'stackvar:counter', to: 'fn_increment' }, { from: 'fn_increment', to: 'le1', label: '[[Environment]]' }] },
+        { activeLine: 4, caption: 'Sweep phase: every unmarked object is freed. orphan is removed from the heap. Marked objects survive, and their mark is cleared for next cycle.',
+          stack: [{ id: 'global', name: 'Global (a root)', vars: [{ name: 'counter', value: '→' }] }],
+          heap: [{ id: 'fn_increment', label: 'function increment', props: [], state: 'normal' },
+                 { id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '2' }], state: 'normal' },
+                 { id: 'orphan', label: 'Object (orphan)', props: [{ name: 'note', value: "'unused'" }], state: 'swept' }],
+          timers: [], arrows: [{ from: 'stackvar:counter', to: 'fn_increment' }, { from: 'fn_increment', to: 'le1', label: '[[Environment]]' }] },
+        { activeLine: 4, caption: 'The cycle is complete. Notice the collector never asked whether orphan was "used" by your program logic — only whether it was reachable. That distinction is the entire mental model for this topic.',
+          stack: [{ id: 'global', name: 'Global (a root)', vars: [{ name: 'counter', value: '→' }] }],
+          heap: [{ id: 'fn_increment', label: 'function increment', props: [], state: 'normal' },
+                 { id: 'le1', label: "Lexical Environment (makeCounter's scope)", props: [{ name: 'count', value: '2' }], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:counter', to: 'fn_increment' }, { from: 'fn_increment', to: 'le1', label: '[[Environment]]' }] },
+    ],
+};
+
+/* ---------- Example 6: Prototype chain lookup ---------- */
+EXAMPLES.prototype = {
+    title: '6. Prototype Chain Lookup',
+    desc: 'class/new produce the exact same [[Prototype]] linking Object.create always has. Property lookup walks that chain live, at access time.',
+    code: [
+        'function Animal(name) { this.name = name; }',
+        "Animal.prototype.speak = function () {",
+        "  return this.name + ' makes a sound';",
+        '};',
+        "const dog = new Animal('Rex');",
+        'dog.speak();',
+    ],
+    steps: [
+        { activeLine: 1, caption: "Animal.prototype already exists in the heap, holding the speak method — shared by every instance that links to it.",
+          stack: [{ id: 'global', name: 'Global', vars: [] }],
+          heap: [{ id: 'animal_proto', label: 'Animal.prototype', props: [{ name: 'speak', value: 'ƒ()' }], state: 'normal' }],
+          timers: [], arrows: [] },
+        { activeLine: 4, caption: "new Animal('Rex') allocates a new object, sets its [[Prototype]] link to Animal.prototype, then runs the constructor with `this` bound to the new object — assigning name.",
+          stack: [{ id: 'global', name: 'Global', vars: [{ name: 'dog', value: '→' }] }],
+          heap: [{ id: 'animal_proto', label: 'Animal.prototype', props: [{ name: 'speak', value: 'ƒ()' }], state: 'normal' },
+                 { id: 'dog', label: 'dog', props: [{ name: 'name', value: "'Rex'" }], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:dog', to: 'dog' }, { from: 'dog', to: 'animal_proto', label: '[[Prototype]]' }] },
+        { activeLine: 5, caption: 'dog.speak() is called. The engine first checks dog\'s OWN properties for speak.',
+          stack: [{ id: 'global', name: 'Global', vars: [{ name: 'dog', value: '→' }] }],
+          heap: [{ id: 'animal_proto', label: 'Animal.prototype', props: [{ name: 'speak', value: 'ƒ()' }], state: 'normal' },
+                 { id: 'dog', label: 'dog (checking own props...)', props: [{ name: 'name', value: "'Rex'" }], state: 'marked' }],
+          timers: [], arrows: [{ from: 'stackvar:dog', to: 'dog' }, { from: 'dog', to: 'animal_proto', label: '[[Prototype]]' }] },
+        { activeLine: 5, caption: "Not found on dog's own properties. The engine walks dog.[[Prototype]] to Animal.prototype and checks there instead.",
+          stack: [{ id: 'global', name: 'Global', vars: [{ name: 'dog', value: '→' }] }],
+          heap: [{ id: 'animal_proto', label: 'Animal.prototype (checking...)', props: [{ name: 'speak', value: 'ƒ()' }], state: 'marked' },
+                 { id: 'dog', label: 'dog', props: [{ name: 'name', value: "'Rex'" }], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:dog', to: 'dog' }, { from: 'dog', to: 'animal_proto', label: '[[Prototype]]' }] },
+        { activeLine: 5, caption: "Found on Animal.prototype. The lookup stops here, and speak executes with `this` bound to dog — logging 'Rex makes a sound'.",
+          stack: [{ id: 'speak', name: 'speak()', vars: [] }, { id: 'global', name: 'Global', vars: [{ name: 'dog', value: '→' }] }],
+          heap: [{ id: 'animal_proto', label: 'Animal.prototype', props: [{ name: 'speak', value: 'ƒ()' }], state: 'marked' },
+                 { id: 'dog', label: 'dog', props: [{ name: 'name', value: "'Rex'" }], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:dog', to: 'dog' }, { from: 'dog', to: 'animal_proto', label: '[[Prototype]]' }] },
+        { activeLine: 5, caption: "This live, linked walk — not a copy made at creation time — is the entire mechanism behind 'inheritance' in JavaScript, whether written with class or not.",
+          stack: [{ id: 'global', name: 'Global', vars: [{ name: 'dog', value: '→' }] }],
+          heap: [{ id: 'animal_proto', label: 'Animal.prototype', props: [{ name: 'speak', value: 'ƒ()' }], state: 'normal' },
+                 { id: 'dog', label: 'dog', props: [{ name: 'name', value: "'Rex'" }], state: 'normal' }],
+          timers: [], arrows: [{ from: 'stackvar:dog', to: 'dog' }, { from: 'dog', to: 'animal_proto', label: '[[Prototype]]' }] },
+    ],
+};
+
+/* ============================================================
+   ENGINE
+   ============================================================ */
+const EXAMPLE_ORDER = ['basics', 'closures', 'varLoop', 'letLoop', 'gc', 'prototype'];
+let currentExample = 'basics';
+let currentStep = 0;
+let playTimer = null;
+
+function buildTabs() {
+    const tabs = document.getElementById('tabs');
+    tabs.innerHTML = '';
+    EXAMPLE_ORDER.forEach(key => {
+        const btn = document.createElement('button');
+        btn.textContent = EXAMPLES[key].title.replace(/^\d+\.\s*/, '');
+        btn.className = key === currentExample ? 'active' : '';
+        btn.onclick = () => selectExample(key);
+        tabs.appendChild(btn);
+    });
+}
+
+function selectExample(key) {
+    stopPlay();
+    currentExample = key;
+    currentStep = 0;
+    buildTabs();
+    renderCode();
+    render();
+}
+
+function renderCode() {
+    const ex = EXAMPLES[currentExample];
+    document.getElementById('example-title').textContent = ex.title.replace(/^\d+\.\s*/, ex.title.split('.')[0] + '. ');
+    document.getElementById('example-desc').textContent = ex.desc;
+    const codePanel = document.getElementById('code-panel');
+    codePanel.innerHTML = ex.code.map((line, i) =>
+        `<div class="code-line" data-line="${i}">${escapeHtml(line)}</div>`
+    ).join('');
+}
+
+function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function render() {
+    const ex = EXAMPLES[currentExample];
+    const step = ex.steps[currentStep];
+
+    document.querySelectorAll('.code-line').forEach(el => {
+        el.classList.toggle('active', Number(el.dataset.line) === step.activeLine);
+    });
+
+    const stackContainer = document.getElementById('stack-container');
+    stackContainer.innerHTML = step.stack.map(frame => `
+        <div class="stack-frame" data-node-id="${frame.id}">
+            <div class="frame-name">${escapeHtml(frame.name)}${frame.phase ? `<span class="frame-phase ${frame.phase}">${frame.phase}</span>` : ''}</div>
+            ${frame.vars.map(v => `<div class="frame-var${v.value === '<TDZ>' ? ' tdz' : ''}" data-node-id="stackvar:${v.name}"><span class="var-name">${escapeHtml(v.name)}</span>: ${escapeHtml(v.value)}</div>`).join('')}
+        </div>
+    `).join('') || '<div style="color:#666; font-size:0.85rem;">(empty)</div>';
+
+    const heapContainer = document.getElementById('heap-container');
+    heapContainer.innerHTML = step.heap.map(obj => `
+        <div class="heap-obj ${obj.state !== 'normal' ? obj.state : ''}" data-node-id="${obj.id}">
+            <div class="obj-label">${escapeHtml(obj.label)}</div>
+            ${obj.props.map(p => `<div class="obj-prop">${escapeHtml(p.name)}: ${escapeHtml(p.value)}</div>`).join('')}
+        </div>
+    `).join('') || '<div style="color:#666; font-size:0.85rem;">(empty)</div>';
+
+    const timerContainer = document.getElementById('timer-container');
+    timerContainer.innerHTML = step.timers.length
+        ? step.timers.map(t => `<div class="timer-chip" data-node-id="timer:${t.id}">${escapeHtml(t.label)}</div>`).join('')
+        : '<div class="timer-empty">— no pending timers —</div>';
+
+    document.getElementById('caption').textContent = step.caption;
+    document.getElementById('step-counter').textContent = `Step ${currentStep + 1} / ${ex.steps.length}`;
+    document.getElementById('prev-btn').disabled = currentStep === 0;
+    document.getElementById('next-btn').disabled = currentStep === ex.steps.length - 1;
+
+    // Draw arrows after layout has settled
+    requestAnimationFrame(() => drawArrows(step.arrows || []));
+}
+
+function drawArrows(arrows) {
+    const svg = document.getElementById('arrows-svg');
+    const stage = document.getElementById('stage');
+    const stageRect = stage.getBoundingClientRect();
+    svg.setAttribute('width', stageRect.width);
+    svg.setAttribute('height', stageRect.height);
+
+    let markup = `<defs><marker id="arrowhead" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#f08d49" /></marker></defs>`;
+
+    arrows.forEach(a => {
+        const fromEl = stage.querySelector(`[data-node-id="${cssEscape(a.from)}"]`);
+        const toEl = stage.querySelector(`[data-node-id="${cssEscape(a.to)}"]`);
+        if (!fromEl || !toEl) return;
+        const fr = fromEl.getBoundingClientRect();
+        const tr = toEl.getBoundingClientRect();
+
+        const fCenterX = fr.left + fr.width / 2 - stageRect.left;
+        const fCenterY = fr.top + fr.height / 2 - stageRect.top;
+        const tCenterX = tr.left + tr.width / 2 - stageRect.left;
+        const tCenterY = tr.top + tr.height / 2 - stageRect.top;
+        const dx = tCenterX - fCenterX;
+        const dy = tCenterY - fCenterY;
+
+        let x1, y1, x2, y2, midX, midY;
+        if (Math.abs(dx) >= Math.abs(dy)) {
+            // Predominantly horizontal: connect facing left/right edges
+            x1 = dx >= 0 ? fr.right - stageRect.left : fr.left - stageRect.left;
+            y1 = fCenterY;
+            x2 = dx >= 0 ? tr.left - stageRect.left : tr.right - stageRect.left;
+            y2 = tCenterY;
+            midX = (x1 + x2) / 2;
+            midY = (y1 + y2) / 2;
+            markup += `<path d="M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}" marker-end="url(#arrowhead)" />`;
+        } else {
+            // Predominantly vertical: route through the left gutter so the connector
+            // and its label never cross over box text, even when a third box sits between them.
+            const leftEdgeF = fr.left - stageRect.left;
+            const leftEdgeT = tr.left - stageRect.left;
+            const gutterX = Math.min(leftEdgeF, leftEdgeT) - 20;
+            x1 = leftEdgeF;
+            y1 = fCenterY;
+            x2 = leftEdgeT;
+            y2 = tCenterY;
+            midY = (y1 + y2) / 2;
+            markup += `<path d="M ${x1} ${y1} C ${gutterX} ${y1}, ${gutterX} ${y2}, ${x2} ${y2}" marker-end="url(#arrowhead)" />`;
+            midX = gutterX;
+        }
+        if (a.label) {
+            const lx = Math.abs(dx) >= Math.abs(dy) ? midX : midX;
+            const ly = Math.abs(dx) >= Math.abs(dy) ? midY - 6 : midY - 6;
+            markup += `<text x="${lx}" y="${ly}" text-anchor="middle">${escapeHtml(a.label)}</text>`;
+        }
+    });
+
+    svg.innerHTML = markup;
+}
+
+function cssEscape(s) {
+    return String(s).replace(/[^a-zA-Z0-9_-]/g, m => '\\' + m);
+}
+
+function nextStep() {
+    const ex = EXAMPLES[currentExample];
+    if (currentStep < ex.steps.length - 1) {
+        currentStep++;
+        render();
+    } else {
+        stopPlay();
+    }
+}
+
+function prevStep() {
+    if (currentStep > 0) {
+        currentStep--;
+        render();
+    }
+}
+
+function resetSteps() {
+    stopPlay();
+    currentStep = 0;
+    render();
+}
+
+function togglePlay() {
+    if (playTimer) {
+        stopPlay();
+    } else {
+        const btn = document.getElementById('play-btn');
+        btn.textContent = '⏸ Pause';
+        playTimer = setInterval(() => {
+            const ex = EXAMPLES[currentExample];
+            if (currentStep >= ex.steps.length - 1) { stopPlay(); return; }
+            nextStep();
+        }, 1800);
+    }
+}
+
+function stopPlay() {
+    if (playTimer) { clearInterval(playTimer); playTimer = null; }
+    const btn = document.getElementById('play-btn');
+    if (btn) btn.textContent = '▶ Auto-play';
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') nextStep();
+    if (e.key === 'ArrowLeft') prevStep();
+});
+
+window.addEventListener('resize', () => {
+    const ex = EXAMPLES[currentExample];
+    drawArrows(ex.steps[currentStep].arrows || []);
+});
+
+buildTabs();
+renderCode();
+render();
+</script>
+
+</body>
+</html>

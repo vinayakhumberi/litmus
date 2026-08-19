@@ -156,6 +156,8 @@ sequenceDiagram
     E->>C: "Return that object instead - the newly created one is discarded"
 ```
 
+**→ Visualize it:** [`resources/js-memory-visualizer.html`](resources/js-memory-visualizer.html) is a step-through visualizer covering the call stack, heap, and garbage collector, including a dedicated prototype-chain example — `new Animal()` linking `[[Prototype]]` to `Animal.prototype`, then a `dog.speak()` lookup walking the chain step by step: own properties checked first, then the walk up to the prototype, until the method is found.
+
 ## 🏢 Interview Context & FAANG Signals
 
 This topic surfaces in **coding rounds** ("what does `new` actually do, implement it yourself," "implement inheritance without `class`"), **system design rounds** discussing plugin or component-library extensibility (composition vs. inheritance for sharing behavior across unrelated types), and **architecture/behavioral rounds** explaining framework migrations (why a codebase moved from class components to hooks).

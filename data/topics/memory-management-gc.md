@@ -140,6 +140,24 @@ sequenceDiagram
     H-->>H: "Next GC cycle: node is collected"
 ```
 
+### Debugging walkthrough: the three-snapshot technique, precisely
+
+This is the one workflow worth being able to execute without hesitation in an interview or on the job — not just describe. Chrome DevTools' Memory panel:
+
+1. **Memory tab → Heap snapshot → Take snapshot.** This is the baseline, taken before performing any suspected-leaking action.
+2. **Perform the suspected action several times** — mount/unmount a component, open/close a modal, navigate between two views — enough repetitions that a real leak's growth is distinguishable from noise.
+3. **Force garbage collection** using the "Collect garbage" control in the Memory panel's toolbar, then **take a second snapshot.** Forcing GC here matters — without it, you can't distinguish "this is garbage waiting to be swept" from "this is genuinely still reachable."
+4. **Repeat the action again**, force GC again, **take a third snapshot.**
+5. **Select the third snapshot**, switch its view from **Summary** to **Comparison**, and set the comparison baseline to the **second** snapshot. This specifically isolates objects that grew across *both* intervals — filtering out normal, one-time retained state (initial data loads, mounted-and-staying-mounted components) that would otherwise show up as a false positive if compared only against the very first baseline.
+6. **Sort by Size Delta or `# New`**, and for detached-node leaks specifically, type `Detached` into the class filter — this surfaces detached DOM trees directly rather than requiring you to recognize them by class name.
+7. **Select a growing entry and inspect its Retainers panel** — the reference chain keeping it alive. This is usually the fastest path to the actual root cause (a specific listener, a specific closure, a specific cache), rather than guessing from the object type alone.
+
+> **Key takeaway:** step 5 is the part most people skip, comparing only against the very first snapshot — which conflates normal retained state with genuine leaks. Comparing snapshot 3 against snapshot 2, not snapshot 1, is what makes this technique reliable rather than noisy.
+
+**→ Try it hands-on:** [`resources/memory-leak-debugging.html`](resources/memory-leak-debugging.html) has three real, verifiable leaks matching the scenarios above — a forgotten `setInterval`, a detached DOM node from an uncleaned listener, and an unbounded `Map` cache versus a `WeakMap` fix — each with a toggle between buggy and fixed behavior, so you can run the exact workflow above against genuine leaking memory in your own browser's real DevTools instead of a static image of someone else's.
+
+**→ Visualize the mechanics:** [`resources/js-memory-visualizer.html`](resources/js-memory-visualizer.html) is a step-through visualizer of the call stack, heap, and garbage collector — not a leak to hunt, but the underlying machinery itself. It walks the creation-phase/execution-phase split, primitives-on-stack vs. objects-on-heap, exactly how a closure's Lexical Environment survives its creating function's stack frame, the classic `var`-in-a-loop-plus-`setTimeout` bug against its `let` fix, and a concrete mark-and-sweep pass over named objects (including one deliberately unreachable "orphan").
+
 ## 🏢 Interview Context & FAANG Signals
 
 This topic appears as a **debugging round** ("this SPA's memory grows over a long session, find and fix it"), a **coding round** ("implement a bounded cache" or "implement a DOM-metadata store that doesn't leak"), and a **behavioral round** ("tell me about a memory leak you found and fixed in production"). It occasionally surfaces in system design as a constraint on long-lived dashboard/admin-tool architecture.

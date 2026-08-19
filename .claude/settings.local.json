@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep -c '```mermaid' data/topics/web-apis-advanced.md)"
+      "Bash(grep -c '```mermaid' data/topics/web-apis-advanced.md)",
+      "Bash(python3 -c ' *)",
+      "Bash(node --check /tmp/leak_check.js)",
+      "Bash(grep -n \"id: 'global', name: 'Global', vars: \\\\[{ name: '\\(scope\\)', value: '→' }\\\\] }\" /Users/carollucas/Documents/jurassic/litmus/resources/js-memory-visualizer.html)",
+      "Bash(pkill -f \"http.server 9010\")",
+      "Bash(rm -rf /private/tmp/pptest_controls)"
     ]
   }
 }

@@ -146,6 +146,8 @@ With `var`, there is **one binding** for `i` across the entire loop — it's fun
 
 With `let`, the spec mandates that **each iteration of the loop gets a fresh Lexical Environment**, with `i` re-initialized by copying the value from the previous iteration's environment at the top of each pass. Each closure created inside the loop body captures a *different* Environment Record. This is not just "let is block scoped" — it's specifically "a `for` loop with `let` creates a new per-iteration binding," which is a slightly stronger and more specific guarantee than plain block scoping.
 
+**→ Visualize it:** [`resources/js-memory-visualizer.html`](resources/js-memory-visualizer.html) is a step-through visualizer of the call stack, heap, and garbage collector. It has dedicated examples for the creation-phase/execution-phase split, exactly how a closure's Lexical Environment survives its creating function's stack frame, this `var`-vs-`let` loop bug side by side (watch all three timer closures converge on one shared environment box, versus three separate boxes with the fix), and a mark-and-sweep GC pass.
+
 ### Closures as the reason `useState` works
 
 React's `useState` is closures in disguise, and this is a favorite Lead-level connective-tissue question:
