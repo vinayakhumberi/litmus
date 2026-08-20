@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sharing State Across Micro-Frontends — Event Bus, Shared Redux Store &amp; More</title>
+    <style>
+        :root {
+            --primary: #61dafb;
+            --dark: #20232a;
+            --text: #ffffff;
+            --gray: #282c34;
+            --accent: #f08d49;
+            --text-muted: #999;
+            --code-bg: #1e1e1e;
+            --good: #4ade80;
+            --bad: #f87171;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--dark);
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: var(--gray);
+            padding: 3rem 2rem;
+            text-align: center;
+            border-bottom: 4px solid var(--primary);
+        }
+        header p { color: var(--text-muted); max-width: 700px; margin: 0.75rem auto 0; }
+        main {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem 4rem;
+        }
+        section {
+            margin-bottom: 3.5rem;
+            padding: 2.25rem;
+            background: var(--gray);
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.35);
+        }
+        h1, h2, h3 { color: var(--primary); }
+        h2 { margin-top: 0; }
+        h3 { margin-top: 2rem; color: var(--accent); font-size: 1.05rem; }
+        p.lede { color: var(--text-muted); max-width: 760px; }
+        code {
+            background: var(--code-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-family: "Fira Code", "Courier New", monospace;
+            font-size: 0.9em;
+            color: var(--accent);
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 1rem 1.25rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            border-left: 3px solid var(--primary);
+            font-family: "Fira Code", "Courier New", monospace;
+            font-size: 0.82rem;
+            margin: 1rem 0;
+        }
+        pre code { background: none; padding: 0; color: #d4d4d4; }
+        .callout {
+            background: rgba(97, 218, 251, 0.08);
+            border-left: 3px solid var(--primary);
+            padding: 1rem 1.25rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            margin: 1.25rem 0;
+        }
+        .warning-callout {
+            background: rgba(248, 113, 113, 0.08);
+            border-left: 3px solid var(--bad);
+            padding: 1rem 1.25rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            margin: 1.25rem 0;
+        }
+        .pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.25rem 0; }
+        @media (max-width: 640px) { .pros-cons { grid-template-columns: 1fr; } }
+        .pros-cons div { padding: 1rem 1.25rem; border-radius: 8px; }
+        .pros { background: rgba(74, 222, 128, 0.08); border-left: 3px solid var(--good); }
+        .cons { background: rgba(248, 113, 113, 0.08); border-left: 3px solid var(--bad); }
+        .pros h4, .cons h4 { margin: 0 0 0.5rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .pros h4 { color: var(--good); }
+        .cons h4 { color: var(--bad); }
+        .pros ul, .cons ul { margin: 0; padding-left: 1.1rem; font-size: 0.9rem; }
+        .pros li, .cons li { margin-bottom: 0.4rem; }
+        .table-wrap { overflow-x: auto; margin-top: 1.5rem; border-radius: 8px; }
+        table {
+            width: 100%;
+            min-width: 700px;
+            border-collapse: collapse;
+            background: var(--code-bg);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 0.85rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #3a3f4b;
+            vertical-align: top;
+            font-size: 0.88rem;
+        }
+        th {
+            color: var(--primary);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: rgba(97, 218, 251, 0.06);
+        }
+        tr:last-child td { border-bottom: none; }
+        .related { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; }
+        .related a { color: var(--primary); text-decoration: none; }
+        .related a:hover { text-decoration: underline; }
+        .pitfall { margin-bottom: 1.25rem; }
+        .pitfall strong.title { color: var(--bad); }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Sharing State Across Micro-Frontends 🔗</h1>
+    <p>Once an app splits into independently-deployed micro-frontends, some state still has to flow between them — a cart, a logged-in user, a checkout session. This is a lookup-and-implementation reference for the mechanisms that actually get used: event bus, federated Redux store, and lighter-weight alternatives.</p>
+</header>
+
+<main>
+    <section id="scope">
+        <h2>1. Why this is a different problem</h2>
+        <p class="lede">The <a href="../topic-detail.html?id=state-management-scale">state taxonomy</a> (server/client/URL/form/persisted state) assumes one app. Splitting into micro-frontends adds a new axis entirely: <strong>does the piece of state that needs sharing even live in the same JS realm?</strong> That single question determines which of the options below are on the table at all.</p>
+        <div class="callout">
+            Module Federation and single-spa apps share one JS realm — a store instance created in one app is a real, live object another app can import and subscribe to. Iframes never share a realm, no matter how the state is structured — the only channel is <code>postMessage</code>. Get this wrong first and everything downstream (which pattern to reach for) follows automatically.
+        </div>
+        <p class="related">See also: <a href="../topic-detail.html?id=micro-frontend-architecture">Micro-frontend architecture</a> for how iframes, single-spa, and Module Federation isolate (or don't isolate) the JS realm in the first place.</p>
+    </section>
+
+    <section id="event-bus">
+        <h2>2. Event bus (pub-sub over <code>CustomEvent</code> / <code>postMessage</code>)</h2>
+        <p>The lowest-coupling option: apps publish and subscribe to named events on a shared target, instead of sharing a state object directly. Neither app needs to know anything about the other's internal store shape — only the event name and payload contract.</p>
+
+        <pre><code>// shared/eventBus.ts — a tiny typed wrapper around EventTarget
+const bus = new EventTarget();
+
+export function publish&lt;T&gt;(type: string, detail: T) {
+  bus.dispatchEvent(new CustomEvent(type, { detail }));
+}
+
+export function subscribe&lt;T&gt;(type: string, handler: (detail: T) =&gt; void) {
+  const listener = (e: Event) =&gt; handler((e as CustomEvent&lt;T&gt;).detail);
+  bus.addEventListener(type, listener);
+  return () =&gt; bus.removeEventListener(type, listener); // unsubscribe
+}
+
+// --- Cart MFE, after a successful add-to-cart ---
+publish('cart:updated', { itemCount: 3, total: 79.97 });
+
+// --- Checkout MFE, mounted independently ---
+const unsubscribe = subscribe&lt;{ itemCount: number; total: number }&gt;(
+  'cart:updated',
+  ({ itemCount, total }) =&gt; updateHeaderBadge(itemCount, total)
+);
+// call unsubscribe() on unmount to avoid a leaked listener</code></pre>
+
+        <p>Across an iframe boundary, swap <code>EventTarget</code>/<code>CustomEvent</code> for <code>postMessage</code> — same pub-sub shape, but the payload now goes through the structured clone algorithm (serializable data only, no functions or DOM references), and the receiving side must validate <code>event.origin</code>:</p>
+
+        <pre><code>// Host, sending into an iframe
+cartIframe.contentWindow.postMessage(
+  { type: 'cart:updated', itemCount: 3, total: 79.97 },
+  'https://cart.internal.example.com'
+);
+
+// Iframe, receiving
+window.addEventListener('message', (event) =&gt; {
+  if (event.origin !== 'https://trusted-host.example.com') return; // never skip this
+  if (event.data?.type === 'cart:updated') {
+    updateBadge(event.data.itemCount, event.data.total);
+  }
+});</code></pre>
+
+        <div class="pros-cons">
+            <div class="pros">
+                <h4>Pros</h4>
+                <ul>
+                    <li>Works across framework boundaries — an Angular MFE can talk to a React MFE</li>
+                    <li>Works across iframes via <code>postMessage</code>, the one pattern here that does</li>
+                    <li>Zero coupling to any specific state library or store shape</li>
+                    <li>Easy to add a new subscriber without touching the publisher</li>
+                </ul>
+            </div>
+            <div class="cons">
+                <h4>Cons</h4>
+                <ul>
+                    <li>No single source of truth — every listener reconstructs its own view</li>
+                    <li>Events fired before a listener mounts are simply missed, no replay by default</li>
+                    <li>Debugging means tracing event firings across apps, not inspecting one store</li>
+                    <li>Payload contract is enforced only by convention (or shared TypeScript types), not the compiler</li>
+                </ul>
+            </div>
+        </div>
+        <p class="related"><strong>Best fit:</strong> loosely-coupled apps that need occasional cross-app notifications — "the cart changed," "the user logged out" — not apps that need to read and mutate the exact same state.</p>
+    </section>
+
+    <section id="shared-redux">
+        <h2>3. Shared Redux store (federated singleton)</h2>
+        <p>For apps that already share a JS realm, the store itself can be shared the same way React is shared under Module Federation: instantiated once, exposed as a singleton dependency, and every consuming app imports the <em>same</em> live instance rather than creating its own.</p>
+
+        <pre><code>// shell/webpack.config.js — the store lives in the shell, exposed to remotes
+new ModuleFederationPlugin({
+  name: 'shell',
+  exposes: { './store': './src/store' },
+  shared: {
+    redux: { singleton: true },
+    'react-redux': { singleton: true },
+    react: { singleton: true },
+  },
+});
+
+// cart/webpack.config.js — consumes the shell's store instead of creating its own
+new ModuleFederationPlugin({
+  name: 'cart',
+  remotes: { shell: 'shell@https://cdn.example.com/shell/remoteEntry.js' },
+  shared: {
+    redux: { singleton: true },
+    'react-redux': { singleton: true },
+    react: { singleton: true },
+  },
+});</code></pre>
+
+        <pre><code>// shell/src/store.ts — the single store instance, exposed via Module Federation
+import { configureStore, createSlice } from '@reduxjs/toolkit';
+
+const cartSlice = createSlice({
+  name: 'cart',
+  initialState: { items: [] as CartItem[] },
+  reducers: {
+    addItem: (state, action) =&gt; { state.items.push(action.payload); },
+  },
+});
+
+export const { addItem } = cartSlice.actions;
+export const store = configureStore({ reducer: { cart: cartSlice.reducer } });
+
+// --- Cart MFE — dispatches into the shell's store, not a local copy ---
+import { useDispatch } from 'react-redux';
+import { addItem } from 'shell/store';
+
+const dispatch = useDispatch(); // still needs shell's &lt;Provider store={store}&gt; wrapping the tree
+dispatch(addItem({ sku: 'ABC123', qty: 1 }));
+
+// --- Checkout MFE — reads the same live state, no props/events needed ---
+import { useSelector } from 'react-redux';
+const items = useSelector((state) =&gt; state.cart.items);</code></pre>
+
+        <div class="warning-callout">
+            <strong>The real risk:</strong> this inherits Module Federation's singleton-governance problem, one layer up. If the shell bumps its Redux (or React) version and a remote's <code>requiredVersion</code> range stops overlapping, the shared scope can't satisfy the singleton and falls back to an eager duplicate load — the remote silently gets its <em>own</em> store instance instead of the shell's. Dispatches into that duplicate store never reach the shell's subscribers, and reads from it never see the shell's writes — the exact same failure shape as the classic "Invalid Hook Call" bug from a mismatched React version, just manifesting as state that silently stops syncing instead of a thrown error. The mitigation is identical too: contract tests in CI checking a remote's <code>shared</code> ranges against the currently-deployed shell, and pinning consumers to a known-compatible shell version rather than always resolving "latest."
+        </div>
+
+        <div class="pros-cons">
+            <div class="pros">
+                <h4>Pros</h4>
+                <ul>
+                    <li>Genuine single source of truth — one store, not N synchronized copies</li>
+                    <li>Redux DevTools time-travel debugging works across the whole composed app</li>
+                    <li>Standard Redux ecosystem (middleware, selectors, RTK Query) applies uniformly</li>
+                    <li>No missed-event problem — a late-mounting consumer just reads current state</li>
+                </ul>
+            </div>
+            <div class="cons">
+                <h4>Cons</h4>
+                <ul>
+                    <li>Requires a shared JS realm — never works across iframes</li>
+                    <li>Every consumer is coupled to the shell's exact Redux/React version</li>
+                    <li>A version mismatch fails silently (duplicate store), not loudly</li>
+                    <li>Reintroduces tight coupling between teams the micro-frontend split was meant to reduce</li>
+                </ul>
+            </div>
+        </div>
+        <p class="related"><strong>Best fit:</strong> tightly-integrated apps that genuinely need to read and write the same state in real time — Cart and Checkout sharing one checkout-session — where the coupling cost is worth paying.</p>
+    </section>
+
+    <section id="other-approaches">
+        <h2>4. Other popular approaches</h2>
+
+        <h3>Shared external store — Zustand or <code>useSyncExternalStore</code></h3>
+        <p>A lighter-weight singleton than Redux, exposed the same way via Module Federation's <code>shared</code> scope. Same realm-sharing requirement and the same version-governance risk as a shared Redux store, with a smaller API surface and less boilerplate.</p>
+        <pre><code>// shell/src/cartStore.ts — exposed via Module Federation, same as the Redux store above
+import { create } from 'zustand';
+
+export const useCartStore = create&lt;{ items: CartItem[]; addItem: (i: CartItem) =&gt; void }&gt;(
+  (set) =&gt; ({
+    items: [],
+    addItem: (item) =&gt; set((state) =&gt; ({ items: [...state.items, item] })),
+  })
+);
+
+// Any consuming MFE, sharing the exact same store instance:
+import { useCartStore } from 'shell/cartStore';
+const items = useCartStore((s) =&gt; s.items);</code></pre>
+
+        <h3><code>BroadcastChannel</code></h3>
+        <p>A browser API purpose-built for cross-context messaging. Unlike a shared store, it works across iframes and separate browsing contexts without needing a shared realm — good fit for infrequent, coarse-grained sync rather than high-frequency UI state.</p>
+        <pre><code>// Cart MFE
+const channel = new BroadcastChannel('cart-sync');
+channel.postMessage({ itemCount: 3, total: 79.97 });
+
+// Checkout MFE — even in a different tab or iframe
+const channel = new BroadcastChannel('cart-sync');
+channel.onmessage = (event) =&gt; updateHeaderBadge(event.data.itemCount, event.data.total);</code></pre>
+
+        <h3>URL or <code>localStorage</code> as the source of truth</h3>
+        <p>For state simple enough to serialize — a selected filter, an auth token — skip synchronization entirely. Each MFE reads and writes the same URL param or storage key directly, so there's no "sync" step to get wrong.</p>
+        <pre><code>// Any MFE — auth token as the shared source of truth, no messaging needed
+const token = localStorage.getItem('auth_token');
+
+// Every open tab is notified automatically when another tab changes it
+window.addEventListener('storage', (event) =&gt; {
+  if (event.key === 'auth_token' &amp;&amp; event.newValue === null) {
+    redirectToLogin(); // another tab logged out
+  }
+});</code></pre>
+    </section>
+
+    <section id="decision-table">
+        <h2>5. Decision table</h2>
+        <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Approach</th><th>Works across iframes?</th><th>Single source of truth?</th><th>Coupling cost</th><th>Best fit</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Event bus / pub-sub</td>
+                    <td>Yes, via <code>postMessage</code></td>
+                    <td>No — each app reconstructs its own view</td>
+                    <td>Low — just an event-name contract</td>
+                    <td>Loosely-coupled apps, occasional cross-app notifications</td>
+                </tr>
+                <tr>
+                    <td>Shared Redux store (federated singleton)</td>
+                    <td>No — needs a shared JS realm</td>
+                    <td>Yes</td>
+                    <td>High — every consumer must match store/version</td>
+                    <td>Tightly-integrated apps needing real shared state (e.g. Cart + Checkout)</td>
+                </tr>
+                <tr>
+                    <td>Shared external store (Zustand / <code>useSyncExternalStore</code>)</td>
+                    <td>No — needs a shared JS realm</td>
+                    <td>Yes</td>
+                    <td>Medium — smaller API, same realm requirement</td>
+                    <td>Same as above, when a lighter-weight store is preferred</td>
+                </tr>
+                <tr>
+                    <td><code>BroadcastChannel</code></td>
+                    <td>Yes</td>
+                    <td>No — each context keeps its own copy, synced via messages</td>
+                    <td>Low</td>
+                    <td>Cross-tab/cross-frame sync of infrequent, coarse-grained state</td>
+                </tr>
+                <tr>
+                    <td>URL / <code>localStorage</code> as source of truth</td>
+                    <td>Yes</td>
+                    <td>Yes (single flat store)</td>
+                    <td>Low</td>
+                    <td>Small, serializable state (filters, auth token, feature flags)</td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+    </section>
+
+    <section id="pitfalls">
+        <h2>6. Common pitfalls</h2>
+        <div class="pitfall">
+            <strong class="title">✕ Reaching for a shared Redux store by default</strong>
+            <p>It recreates Module Federation's singleton-governance problem for your state layer, not just your framework — every team now has to coordinate a version bump. Start with the event bus or <code>BroadcastChannel</code> unless the apps genuinely need to read and mutate the exact same state in real time.</p>
+        </div>
+        <div class="pitfall">
+            <strong class="title">✕ Assuming a shared store works across an iframe boundary</strong>
+            <p>It structurally can't — each iframe has its own JS realm, so "importing" a store from the host just creates a second, disconnected instance. If the isolation is an iframe, the only channel is <code>postMessage</code>, full stop.</p>
+        </div>
+        <div class="pitfall">
+            <strong class="title">✕ No unsubscribe path on the event bus</strong>
+            <p>A subscriber that never calls its unsubscribe function on unmount leaks a listener every time that MFE remounts — the same uncleaned-listener leak pattern that shows up in the <a href="memory-leak-debugging.html">memory leak debugging playground</a>, just at the cross-app boundary instead of within one component.</p>
+        </div>
+        <div class="pitfall">
+            <strong class="title">✕ Skipping <code>event.origin</code> validation on <code>postMessage</code></strong>
+            <p>Without it, any window that can obtain a reference to yours can forge state-sync messages. Always check <code>event.origin</code> against an explicit allow-list before trusting <code>event.data</code>.</p>
+        </div>
+    </section>
+</main>
+
+</body>
+</html>

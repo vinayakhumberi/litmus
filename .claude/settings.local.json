@@ -23,7 +23,9 @@
       "Bash(npm init *)",
       "Bash(node check.js)",
       "Bash(pkill -f \"http.server 9033\")",
-      "Bash(rm -rf /private/tmp/pptest_verify3)"
+      "Bash(rm -rf /private/tmp/pptest_verify3)",
+      "Bash(pkill -f \"http.server 9034\")",
+      "Bash(rm -rf /private/tmp/pptest_verify4)"
     ]
   }
 }

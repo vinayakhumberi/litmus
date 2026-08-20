@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Types &amp; Storage — Auth Tokens Quick Reference</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #61dafb;
+            --dark: #20232a;
+            --text: #ffffff;
+            --gray: #282c34;
+            --accent: #f08d49;
+            --good: #4ade80;
+            --bad: #f87171;
+            --text-muted: #999;
+            --code-bg: #1e1e1e;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--dark);
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: var(--gray);
+            padding: 3rem 2rem;
+            text-align: center;
+            border-bottom: 4px solid var(--primary);
+        }
+        nav {
+            position: sticky;
+            top: 0;
+            background: var(--gray);
+            padding: 1rem;
+            z-index: 100;
+            text-align: center;
+            border-bottom: 1px solid #444;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 4px;
+        }
+        nav a {
+            color: var(--primary);
+            margin: 0 12px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+        main {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem 4rem;
+        }
+        h1, h2, h3 { color: var(--primary); }
+        h2 {
+            margin-top: 3rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #444;
+        }
+        p.lede { color: var(--text-muted);  }
+        code {
+            background: var(--code-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-family: "Fira Code", "Courier New", monospace;
+            font-size: 0.9em;
+            color: var(--accent);
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 1rem;
+            overflow-x: auto;
+            border-left: 3px solid var(--primary);
+            border-radius: 4px;
+        }
+        pre code { background: none; padding: 0; color: #e6e6e6; }
+        .diagram {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+        .table-wrap { overflow-x: auto; margin-top: 1.5rem; border-radius: 8px; }
+        table {
+            width: 100%;
+            min-width: 900px;
+            border-collapse: collapse;
+            background: var(--gray);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 0.9rem 1.1rem;
+            text-align: left;
+            border-bottom: 1px solid #3a3f4b;
+            vertical-align: top;
+        }
+        th {
+            color: var(--primary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: rgba(97, 218, 251, 0.06);
+        }
+        tr:last-child td { border-bottom: none; }
+        td.notes { font-size: 0.85rem; color: #ddd; }
+        td.good { color: var(--good); font-weight: bold; }
+        td.bad { color: var(--bad); font-weight: bold; }
+        td.good ul, td.bad ul { margin: 0; padding-left: 1.1rem; font-weight: normal; }
+        td.good li, td.bad li { margin-bottom: 0.3rem; }
+        td.good li:last-child, td.bad li:last-child { margin-bottom: 0; }
+        .token-types th:first-child, .token-types td:first-child { width: 180px; white-space: normal; }
+        td.details { min-width: 260px; }
+        td.details p { margin: 0 0 0.7rem; font-size: 0.9rem; color: #ddd; }
+        td.details p:last-child { margin-bottom: 0; }
+        td.details .dl { display: block; color: var(--primary); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: bold; margin-bottom: 0.2rem; }
+        .card-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        .card {
+            background: var(--gray);
+            padding: 1.5rem;
+            border-left: 4px solid var(--primary);
+            border-radius: 4px;
+        }
+        .card.warn { border-left-color: var(--bad); }
+        .card h3 { margin-top: 0; }
+        .card ul { padding-left: 1.2rem; margin: 0.5rem 0 0; }
+        .card li { margin-bottom: 0.4rem; font-size: 0.92rem; }
+        .scenario {
+            background: rgba(255,255,255,0.05);
+            padding: 1.2rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .scenario strong.q { color: var(--accent); }
+        .scenario p { margin: 0.4rem 0 0; font-size: 0.92rem; }
+
+        .edgeLabel, .edgeLabel rect, .edgeLabel foreignObject, .edgeLabel foreignObject div, .edgeLabel foreignObject span, .edgeLabel p {
+            background-color: #000000 !important; fill: #000000 !important; color: #ffffff !important;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Token Types &amp; Storage 🔑</h1>
+    <p>What each kind of token is for, when to reach for it, and where it's actually safe to keep it</p>
+</header>
+
+<nav>
+    <a href="#types">Token Types</a>
+    <a href="#storage">Storage Options</a>
+    <a href="#flow">Token Flow</a>
+    <a href="#scenarios">Which One Do I Need?</a>
+    <a href="#security">Security Notes</a>
+</nav>
+
+<main>
+    <p class="lede">"Token" gets used loosely to mean a lot of different things — a session ID, a JWT, an API key, a CSRF nonce. They solve different problems and have different rules for where they can safely live. This page treats "type of token" and "storage location" as two separate decisions, because conflating them is where most auth bugs come from.</p>
+
+    <h2 id="types">1. Token Types</h2>
+    <div class="table-wrap">
+    <table class="token-types">
+        <thead>
+            <tr><th>Token</th><th>Details</th><th>Store in</th><th>Never store in</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Access Token</strong></td>
+                <td class="details">
+                    <p><span class="dl">Purpose</span>Proves to an API that the bearer is authorized to call it, scoped to specific permissions. What you attach to <code>Authorization: Bearer &lt;token&gt;</code> headers.</p>
+                    <p><span class="dl">Format</span>JWT (self-contained claims) or opaque (looked up server-side)</p>
+                    <p><span class="dl">Lifetime</span>Short — minutes to ~1 hour, by design</p>
+                </td>
+                <td class="good"><ul><li>In-memory (JS variable / module state)</li><li>OS Keychain/Keystore (mobile apps)</li></ul></td>
+                <td class="bad"><ul><li>localStorage</li><li>sessionStorage</li><li>URL query params</li></ul></td>
+            </tr>
+            <tr>
+                <td><strong>Refresh Token</strong></td>
+                <td class="details">
+                    <p><span class="dl">Purpose</span>Used only to obtain a new access token once the old one expires, without forcing the user to log in again. Never sent to resource APIs directly.</p>
+                    <p><span class="dl">Format</span>Opaque, usually rotated on each use</p>
+                    <p><span class="dl">Lifetime</span>Long — days to months</p>
+                </td>
+                <td class="good"><ul><li>httpOnly, Secure, SameSite cookie</li><li>OS Keychain/Keystore (mobile apps)</li></ul></td>
+                <td class="bad"><ul><li>localStorage</li><li>sessionStorage</li><li>In-memory only — lost on refresh, forces re-login</li></ul></td>
+            </tr>
+            <tr>
+                <td><strong>Session ID</strong></td>
+                <td class="details">
+                    <p><span class="dl">Purpose</span>Opaque reference to server-side session state (user id, permissions, cart, etc.). The server looks it up on every request; the client never sees the actual data.</p>
+                    <p><span class="dl">Format</span>Random opaque string, not a JWT</p>
+                    <p><span class="dl">Lifetime</span>Minutes to weeks, server-controlled — revocable instantly since the server owns the record</p>
+                </td>
+                <td class="good"><ul><li>httpOnly, Secure, SameSite cookie</li></ul></td>
+                <td class="bad"><ul><li>localStorage</li><li>sessionStorage</li></ul></td>
+            </tr>
+            <tr>
+                <td><strong>ID Token</strong> (OIDC)</td>
+                <td class="details">
+                    <p><span class="dl">Purpose</span>Proves <em>identity</em> ("who the user is") to the client app itself — not for calling APIs. Distinct from an access token, which proves <em>authorization</em> to a resource server.</p>
+                    <p><span class="dl">Format</span>Always a JWT, signed by the identity provider</p>
+                    <p><span class="dl">Lifetime</span>Short — consumed once at login, not reused per-request</p>
+                </td>
+                <td class="good"><ul><li>In-memory (JS variable / module state), just long enough to read claims and discard</li></ul></td>
+                <td class="bad"><ul><li>localStorage</li><li>sessionStorage</li><li>httpOnly, Secure, SameSite cookie — never send it as if it were an access token</li></ul></td>
+            </tr>
+            <tr>
+                <td><strong>OAuth Token</strong> (third-party)</td>
+                <td class="details">
+                    <p><span class="dl">Purpose</span>Lets <em>your backend</em> call a third-party provider's API (Google Calendar, GitHub, Slack) on the user's behalf, after they approve it on that provider's consent screen. Not the same thing as the access token your own auth server issues for your own API — this one belongs to the provider.</p>
+                    <p><span class="dl">Format</span>Opaque or JWT — shape is entirely the third-party provider's choice, not yours</p>
+                    <p><span class="dl">Lifetime</span>Provider-defined, often short-lived with its own provider-issued refresh token</p>
+                </td>
+                <td class="good"><ul><li>Server-side only, attached to the user's account record, encrypted at rest</li></ul></td>
+                <td class="bad"><ul><li>httpOnly, Secure, SameSite cookie</li><li>In-memory (JS variable / module state)</li><li>localStorage</li><li>sessionStorage</li></ul></td>
+            </tr>
+            <tr>
+                <td><strong>CSRF Token</strong></td>
+                <td class="details">
+                    <p><span class="dl">Purpose</span>Proves a state-changing request originated from your own page, not a cross-site form/script riding on the user's cookies. Only matters when auth relies on cookies sent automatically by the browser.</p>
+                    <p><span class="dl">Format</span>Random nonce, echoed from a cookie/meta tag into a request header or hidden form field</p>
+                    <p><span class="dl">Lifetime</span>Per-session or per-form</p>
+                </td>
+                <td class="good"><ul><li>Cookie, but without <code>httpOnly</code> — JS must be able to read it to echo it back</li></ul></td>
+                <td class="bad"><ul><li>httpOnly, Secure, SameSite cookie — JS couldn't read it back to echo it</li><li>localStorage/sessionStorage as the only defense, without pairing it to <code>SameSite</code></li></ul></td>
+            </tr>
+            <tr>
+                <td><strong>API Key</strong></td>
+                <td class="details">
+                    <p><span class="dl">Purpose</span>Identifies the calling <em>application or project</em>, not an end user — server-to-server or third-party integrations (Stripe, Google Maps).</p>
+                    <p><span class="dl">Format</span>Static opaque string</p>
+                    <p><span class="dl">Lifetime</span>Long-lived until manually rotated/revoked</p>
+                </td>
+                <td class="good"><ul><li>Server-side secrets manager or environment variable</li></ul></td>
+                <td class="bad"><ul><li>localStorage</li><li>sessionStorage</li><li>Client-side bundle/source code, or committed to git</li></ul></td>
+            </tr>
+            <tr>
+                <td><strong>Personal Access Token (PAT)</strong></td>
+                <td class="details">
+                    <p><span class="dl">Purpose</span>A long-lived, manually-issued token a user generates to authenticate scripts/CLIs as themselves, bypassing the interactive login flow (GitHub, GitLab tokens).</p>
+                    <p><span class="dl">Format</span>Static opaque string, usually scoped to specific permissions</p>
+                    <p><span class="dl">Lifetime</span>Long-lived, user-revocable</p>
+                </td>
+                <td class="good"><ul><li>OS keychain / credential manager</li><li>gitignored local config file</li></ul></td>
+                <td class="bad"><ul><li>localStorage</li><li>sessionStorage</li><li>Hardcoded in source, or committed to git</li></ul></td>
+            </tr>
+            <tr>
+                <td><strong>One-Time Token</strong></td>
+                <td class="details">
+                    <p><span class="dl">Purpose</span>Single-use token for email verification, password reset, or magic-link login. Invalid the moment it's used, or after a short expiry.</p>
+                    <p><span class="dl">Format</span>Random opaque string, usually embedded in a URL</p>
+                    <p><span class="dl">Lifetime</span>Minutes, single-use</p>
+                </td>
+                <td class="good"><ul><li>Nowhere client-side by design — consumed in a single request and invalidated server-side immediately after</li></ul></td>
+                <td class="bad"><ul><li>localStorage</li><li>sessionStorage</li><li>Any persistent client storage that would let it be reused</li></ul></td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+    <p class="lede">"OAuth token" isn't really a separate category from Access/Refresh Token above — OAuth is the delegation <em>framework</em>, and it issues access + refresh tokens using the exact same mechanics. The distinction that matters is <em>who issued it</em>: your own auth server (your Access/Refresh Token rows — safe to hand to the client, per the storage rules above) vs. an external provider like Google or GitHub (the OAuth Token row — stays server-side, full stop, since the client has no business holding another company's credential for your app).</p>
+
+    <h2 id="storage">2. Where to Store Them</h2>
+    <p class="lede">The four realistic options on the client, ranked by what they actually protect against. There's no single "correct" answer — it's a trade-off between XSS exposure and CSRF exposure, and which one your app is more able to defend against.</p>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr><th>Location</th><th>Survives refresh?</th><th>Exposed to XSS?</th><th>Sent automatically (CSRF risk)?</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>httpOnly, Secure, SameSite cookie</strong></td>
+                <td>Yes (until expiry)</td>
+                <td class="good">No — JS can't read it at all</td>
+                <td class="bad">Yes — browser attaches it to every matching request</td>
+                <td class="notes">The standard recommendation for session IDs and refresh tokens. Needs a CSRF token alongside it for state-changing requests, unless <code>SameSite=Strict/Lax</code> covers your case.</td>
+            </tr>
+            <tr>
+                <td><strong>In-memory (JS variable / module state)</strong></td>
+                <td class="bad">No — lost on tab refresh or close</td>
+                <td class="bad">Yes, if an XSS payload runs while it's held — but nothing persists for an attacker to steal later</td>
+                <td class="good">No — you attach it explicitly</td>
+                <td class="notes">Best option for short-lived access tokens in an SPA: pair with a refresh flow (silent refresh via httpOnly cookie) so losing it on refresh is invisible to the user.</td>
+            </tr>
+            <tr>
+                <td><strong>localStorage</strong></td>
+                <td>Yes (until manually cleared)</td>
+                <td class="bad">Yes — any injected script can read it, and it persists for future reuse</td>
+                <td class="good">No — you attach it explicitly</td>
+                <td class="notes">Common in practice, but the persistence is exactly what makes an XSS hit worse — a stolen token stays valid and readable long after the payload ran.</td>
+            </tr>
+            <tr>
+                <td><strong>sessionStorage</strong></td>
+                <td>Only within the same tab</td>
+                <td class="bad">Yes — same exposure as localStorage while the tab is open</td>
+                <td class="good">No — you attach it explicitly</td>
+                <td class="notes">Slightly smaller blast radius than localStorage (cleared on tab close, not shared across tabs) but the same fundamental XSS exposure.</td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+    <div class="card-grid">
+        <div class="card">
+            <h3>Prefer httpOnly cookies for:</h3>
+            <ul>
+                <li>Session IDs</li>
+                <li>Refresh tokens</li>
+                <li>Anything long-lived, where an XSS-stolen token would do lasting damage</li>
+            </ul>
+        </div>
+        <div class="card warn">
+            <h3>Avoid localStorage/sessionStorage for:</h3>
+            <ul>
+                <li>Refresh tokens (long-lived + readable by any injected script = worst combination)</li>
+                <li>Anything that grants broad account access on its own</li>
+            </ul>
+        </div>
+    </div>
+
+    <h2 id="flow">3. Access Token + Refresh Token Flow</h2>
+    <div class="diagram">
+        <pre class="mermaid">
+        sequenceDiagram
+            participant U as Browser (SPA)
+            participant A as Auth Server
+            participant R as Resource API
+
+            U->>A: Login (credentials)
+            A-->>U: Access token (short-lived, in memory) + Refresh token (httpOnly cookie)
+            U->>R: API call with Authorization: Bearer access_token
+            R-->>U: 200 OK
+            Note over U,R: ...time passes, access token expires...
+            U->>R: API call with expired access token
+            R-->>U: 401 Unauthorized
+            U->>A: POST /refresh (refresh token sent automatically via cookie)
+            A-->>U: New access token (+ rotated refresh token)
+            U->>R: Retry API call with new access token
+            R-->>U: 200 OK
+        </pre>
+    </div>
+    <p class="lede">The access token never touches disk on the client. The refresh token never gets attached to resource-API calls directly — it only ever talks to the auth server, and only over an httpOnly cookie the page's own JS can't read.</p>
+
+    <h2 id="scenarios">4. Which One Do I Need?</h2>
+    <div class="scenario">
+        <strong class="q">SPA calling your own backend</strong>
+        <p>Short-lived access token held in memory + httpOnly refresh cookie for silent renewal. Add a CSRF token if the refresh endpoint is cookie-authenticated.</p>
+    </div>
+    <div class="scenario">
+        <strong class="q">Server-rendered app (traditional MVC)</strong>
+        <p>Just a session cookie — httpOnly, Secure, SameSite=Lax. No access/refresh split needed since there's no separate client-side JS holding credentials.</p>
+    </div>
+    <div class="scenario">
+        <strong class="q">Mobile app calling an API</strong>
+        <p>Access + refresh token pair, both stored in the OS-level secure storage (Keychain/Keystore) — cookies don't apply the same way outside a browser, and the platform's secure storage already solves the "readable by other apps" problem.</p>
+    </div>
+    <div class="scenario">
+        <strong class="q">Server-to-server / machine-to-machine</strong>
+        <p>API key or a client-credentials-flow access token — there's no end user, so session/ID tokens don't apply. Store in a secrets manager or environment variable, never in source control.</p>
+    </div>
+    <div class="scenario">
+        <strong class="q">CLI or script authenticating as a specific user</strong>
+        <p>Personal Access Token, scoped as narrowly as the task allows, stored in an OS keychain or a gitignored config file — never hardcoded.</p>
+    </div>
+
+    <h2 id="security">5. Security Notes</h2>
+    <div class="card-grid">
+        <div class="card">
+            <h3>Why access tokens are short-lived</h3>
+            <p style="font-size:0.92rem; margin:0.5rem 0 0;">A short expiry limits the damage window if one leaks — an attacker gets minutes, not months. The refresh token (which never leaves the httpOnly cookie jar) is what makes that survivable for the user, since they don't have to re-login every few minutes.</p>
+        </div>
+        <div class="card">
+            <h3>Rotate refresh tokens on use</h3>
+            <p style="font-size:0.92rem; margin:0.5rem 0 0;">Issuing a new refresh token every time one is redeemed, and invalidating the old one, means a stolen-but-unused refresh token becomes detectable — if both the attacker and the real user try to use it, the second use fails and the server can revoke the whole chain.</p>
+        </div>
+        <div class="card warn">
+            <h3>JWT ≠ automatically secure</h3>
+            <p style="font-size:0.92rem; margin:0.5rem 0 0;">A JWT is just a signed, base64-encoded payload — anyone can decode and read the claims (never put secrets in one). Signing proves it wasn't tampered with; it does nothing to keep it confidential or revocable before its expiry, unless you maintain a server-side denylist.</p>
+        </div>
+        <div class="card warn">
+            <h3>CSRF tokens only matter with cookie auth</h3>
+            <p style="font-size:0.92rem; margin:0.5rem 0 0;">If your API only accepts a bearer token you attach manually in JS, there's no CSRF exposure — a cross-site request can't make your JS run to attach it. CSRF only becomes relevant the moment auth rides on a cookie the browser sends automatically.</p>
+        </div>
+    </div>
+</main>
+
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+</script>
+
+</body>
+</html>
