@@ -8,13 +8,9 @@ This is a must-know topic because the interview bar has shifted: it's no longer 
 
 ## 🧠 Core Technical Deep Dive
 
-This is easiest to build up as one story — Meridian's team going from "we shipped a chatbot" to "we shipped an agent," and discovering exactly what that distinction demands from the UI at every step.
+### 1. The vocabulary: LLM, AI feature, agent, agentic AI
 
-### Act 1 — The vocabulary problem that shows up in a hiring debrief
-
-A candidate interview debrief stalls on one question: "have we actually built an agent?" Half the team says yes — Meridian Copilot calls a function to look up an order. The other half says no — it does exactly one lookup and stops; there's no loop, no autonomy, no multi-step plan. Both are right, because the team has been using "AI," "LLM," "agent," and "agentic AI" as interchangeable marketing words, and the interview question just exposed that nobody had actually defined them.
-
-Sorting it out becomes the first real deliverable:
+These four terms get used interchangeably in practice, but they describe genuinely different levels of autonomy, and the distinction determines whether there's even a loop to design a UI for:
 
 | Term | What it actually means | Autonomy |
 |---|---|---|
@@ -23,13 +19,13 @@ Sorting it out becomes the first real deliverable:
 | **Agent** | An LLM given tools it can call, whose output (an observation) feeds back into another LLM call, repeating until the model decides it's done. | Decides *which* tool to call and *when* to stop, within a defined toolset |
 | **Agentic AI / multi-agent system** | Multiple such loops coordinating — one agent planning, others executing specialized sub-tasks, potentially negotiating or handing off work between them. | Decides *how* to decompose a goal into sub-tasks, sometimes across multiple models |
 
-Meridian Copilot's single order-lookup call is the second row, not the third — a real agent would look up the order, *decide from the result* whether it needs to also check a refund policy tool, *decide* whether a human needs to approve what it found, and only then produce a final answer. That distinction isn't pedantic — it's the entire reason the rest of this story exists, because a chatbot has no loop to visualize and a real agent has almost nothing *but* the loop to visualize.
+A single function call that looks up an order given a fixed prompt is the second row, not the third — a real agent would look up the order, *decide from the result* whether it needs to also check a refund policy tool, *decide* whether a human needs to approve what it found, and only then produce a final answer. That distinction isn't pedantic: a chatbot has no loop to visualize, and a real agent has almost nothing *but* the loop to visualize.
 
 > **Key takeaway:** "agent" specifically means a model that can choose actions and observe their results across more than one step — if there's no loop, there's no agent, no matter how good the single answer is.
 
-### Act 2 — Building the actual loop, because you can't design its UI without one
+### 2. Building the loop: the ReAct pattern
 
-Before touching the UI, the team builds the smallest real version of the mechanism, because the interview-relevant skill isn't "describe an agent," it's "have actually built the loop." The shape is the ReAct pattern — **Reason, Act, Observe**, repeated — and it's genuinely small:
+You can't design the UI for a loop you haven't built. The shape is the ReAct pattern — **Reason, Act, Observe**, repeated — and it's genuinely small:
 
 ```typescript
 async function runAgentLoop(userGoal: string, tools: ToolDefinition[]) {
@@ -60,7 +56,7 @@ Every line of that loop maps directly to something the UI has to represent. The 
 
 > **Key takeaway:** the loop is small enough to build and understand completely, and every one of its four moments — reason, act, observe, repeat-or-stop — is a UI decision waiting to be designed, not an implementation detail to abstract away.
 
-### Act 3 — What actually has to render at each turn of the loop
+### 3. What actually has to render at each turn of the loop
 
 Shipping the UI on top of that loop is where "agentic UI" stops being an abstract phrase. The naive version shows a spinner until `runAgentLoop` resolves and then reveals the final answer — which throws away everything interesting and leaves the user staring at a black box for however many tool calls it takes to finish.
 
@@ -76,9 +72,9 @@ The real UI needs a distinct visual state for each loop phase: a "thinking" indi
 
 > **Key takeaway:** rendering only the final answer is the single most common agentic-UI mistake — the loop's intermediate states are not implementation noise, they're the entire trust and debuggability story for both the end user and the engineer who has to fix it later.
 
-### Act 4 — The incident that makes human-in-the-loop non-negotiable
+### 4. Why human-in-the-loop is non-negotiable
 
-Weeks later, a near-miss: during testing, the agent correctly diagnoses that a customer is owed a refund, correctly calls the refund tool — and would have executed a real $240 refund with no human ever seeing the amount, had the tool not been pointed at a sandbox account. The loop worked exactly as designed. That's precisely the problem: "worked as designed" and "safe to run unsupervised" are different bars, and nothing in Act 2's loop distinguishes a read-only lookup from an irreversible financial action.
+Consider a near-miss during testing: an agent correctly diagnoses that a customer is owed a refund, correctly calls the refund tool — and would have executed a real $240 refund with no human ever seeing the amount, had the tool not been pointed at a sandbox account. The loop worked exactly as designed. That's precisely the problem: "worked as designed" and "safe to run unsupervised" are different bars, and nothing in the loop above distinguishes a read-only lookup from an irreversible financial action.
 
 The fix is a human-in-the-loop (HITL) gate inserted between "tool call proposed" and "tool executes," for any tool flagged as high-stakes: the UI shows the proposed action with its *editable* arguments — not just a "confirm?" button, but the actual amount, order id, and recipient, changeable before approval — and the tool only executes after explicit approval. A rejection doesn't just cancel silently; it feeds back into the loop as an observation ("user declined this action"), so the model can adapt — try a different amount, ask a clarifying question, or stop.
 
@@ -102,13 +98,13 @@ Timeouts matter too: if nobody responds, the safe default is the action doesn't 
 
 > **Key takeaway:** human-in-the-loop isn't a generic "add a confirm dialog" pattern — it's specifically gating irreversible or high-stakes tool calls behind a review step where the human can see and edit the real arguments, with rejection routed back into the loop rather than just discarded.
 
-### Act 5 — Where this connects to what's actually your job, and what isn't
+### 5. RAG's UI implications, and where the honest scope boundary sits
 
 Two more pieces round out the picture, and both are worth being precise about scope on. Retrieval-Augmented Generation (RAG) means fetching relevant documents before generation, so the model answers grounded in real content instead of only its training data. It shows up here specifically as a UI problem: whatever gets retrieved should be shown as a citation or source, not silently blended into the answer as if the model "just knew" it.
 
 That citation requirement is partly about trust, but it's also a security boundary — a retrieved document is untrusted input that can carry a prompt-injection payload aimed at the agent's next tool call. The same defense-in-depth thinking from output-rendering security applies here, just one step earlier in the loop.
 
-And the honest scope boundary: building the retrieval pipeline itself (chunking, embeddings, ranking) and the production agent orchestration platform is typically owned by ML/backend/platform teams, not a Frontend Lead's day-to-day. What *is* legitimately yours, and what credibly answers "have you built an agent" in an interview, is exactly Act 2's loop plus Acts 3 and 4's UI.
+And the honest scope boundary: building the retrieval pipeline itself (chunking, embeddings, ranking) and the production agent orchestration platform is typically owned by ML/backend/platform teams, not a Frontend Lead's day-to-day. What *is* legitimately yours, and what credibly answers "have you built an agent" in an interview, is exactly the loop plus the UI and human-in-the-loop patterns above.
 
 A small, real, end-to-end prototype demonstrating the reasoning/tool-call/observation cycle with proper HITL gating is a genuine, honest portfolio piece. Claiming ownership of a production multi-tenant agent platform you didn't build is not — a good interviewer will find the gap in the first follow-up question.
 
@@ -265,7 +261,7 @@ Design the progress UI for an agent performing a "research and summarize" task t
 
 Render a checklist-style task list established as early as possible — even an estimated or partially-known plan ("Searching for sources… Reading top 3 results… Synthesizing summary…") gives the user something concrete to track instead of an undifferentiated spinner for half a minute, which reads as broken well before 30 seconds elapses. Update each step's status (pending → in progress → done) as the loop's observations come back, rather than only revealing the plan retroactively once everything's finished.
 
-If the model's exact sequence of steps isn't knowable in advance (a genuinely dynamic plan), show generic progress framed around what's happening now rather than a fixed checklist that would be misleading — "Currently: reading source 2 of 4" communicates real progress without falsely promising a fixed number of remaining steps. Either way, avoid a single top-level spinner as the sole UI for anything past a few seconds — it's the multi-step equivalent of hiding every intermediate render state from Act 3.
+If the model's exact sequence of steps isn't knowable in advance (a genuinely dynamic plan), show generic progress framed around what's happening now rather than a fixed checklist that would be misleading — "Currently: reading source 2 of 4" communicates real progress without falsely promising a fixed number of remaining steps. Either way, avoid a single top-level spinner as the sole UI for anything past a few seconds — it's the multi-step equivalent of hiding every intermediate render state described above.
 
 </details>
 
@@ -291,7 +287,7 @@ A RAG-retrieved document used to ground the agent's answer contains hidden text 
 
 Treat every retrieved document as untrusted input the moment it enters the context — the same category as any other externally-sourced content — rather than implicitly trusted because it came from "our own" retrieval pipeline. Structurally separate retrieved content from instructions in the prompt (clearly delimited, explicitly labeled as reference material, not directives) so the model has a better chance of not treating embedded text as a command, though this alone isn't a complete defense against a sufficiently crafted payload.
 
-The structural backstop is the same human-in-the-loop gate from Act 4: any tool call the model attempts as a result of processing retrieved content still goes through the same confirmation step as any other proposed action, especially for anything irreversible — so even if the injection successfully manipulates the model's reasoning, it can't successfully execute a high-stakes action without a human seeing and approving the specific action first. Log and alert on this pattern specifically (a tool call immediately following ingestion of new retrieved content, especially one outside the tools normally relevant to the user's actual question) as a detection signal worth building, not just a one-off incident response.
+The structural backstop is the same human-in-the-loop gate described above: any tool call the model attempts as a result of processing retrieved content still goes through the same confirmation step as any other proposed action, especially for anything irreversible — so even if the injection successfully manipulates the model's reasoning, it can't successfully execute a high-stakes action without a human seeing and approving the specific action first. Log and alert on this pattern specifically (a tool call immediately following ingestion of new retrieved content, especially one outside the tools normally relevant to the user's actual question) as a detection signal worth building, not just a one-off incident response.
 
 </details>
 
@@ -302,7 +298,7 @@ An interviewer asks you to "walk me through an agent you've built," and your day
 <details>
 <summary>Staff-Level Solution</summary>
 
-Lead with something small, real, and honestly scoped rather than either overclaiming ownership of a production system or deflecting to "that's not really my area." A self-built prototype — the reason/act/observe loop from Act 2, wired to two or three real tools, with a working human-in-the-loop confirmation step for the risky one — is a completely legitimate answer, and describing it precisely (what the loop does, why the max-step limit exists, why one tool needed confirmation and the others didn't) demonstrates real understanding in a way that vague familiarity with a production system you didn't build never will.
+Lead with something small, real, and honestly scoped rather than either overclaiming ownership of a production system or deflecting to "that's not really my area." A self-built prototype — the reason/act/observe loop described above, wired to two or three real tools, with a working human-in-the-loop confirmation step for the risky one — is a completely legitimate answer, and describing it precisely (what the loop does, why the max-step limit exists, why one tool needed confirmation and the others didn't) demonstrates real understanding in a way that vague familiarity with a production system you didn't build never will.
 
 Pair that with an honest statement of scope: production retrieval pipelines and agent orchestration platforms are typically owned by ML/backend/platform teams, and the credible claim is depth on the UI/UX and human-in-the-loop safety layer — which is a genuine, high-value specialization, not a lesser answer than claiming broader ownership you can't actually back up under follow-up questions. Interviewers testing for this signal are listening for exactly that kind of calibrated, specific honesty over an impressively vague generality.
 

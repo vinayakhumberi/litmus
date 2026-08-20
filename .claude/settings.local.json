@@ -21,7 +21,9 @@
       "Bash(mkdir -p /private/tmp/pptest_verify2)",
       "Read(//private/tmp/**)",
       "Bash(npm init *)",
-      "Bash(node check.js)"
+      "Bash(node check.js)",
+      "Bash(pkill -f \"http.server 9033\")",
+      "Bash(rm -rf /private/tmp/pptest_verify3)"
     ]
   }
 }

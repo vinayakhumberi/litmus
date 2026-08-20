@@ -8,39 +8,35 @@ This is a must-know topic for a Lead because it's the newest concrete interview 
 
 ## 🧠 Core Technical Deep Dive
 
-The mechanics click into place fastest as one story — a fictional team, Meridian, shipping an AI copilot for their support reps, hitting each of these problems in the order a real team actually would.
+**Why this matters at all:** the naive implementation — `fetch` the prompt, `await response.json()`, render the full answer — works, but it's the wrong experience. Users stare at a blank spinner for three to eight seconds per question, because that's how long the model actually takes to finish generating a full answer, with no way to show progress before then.
 
-### Act 1 — Why the first version feels broken even though it works
+The fix isn't a network optimization, it's recognizing what's actually happening on the server: the model is autoregressive, generating token by token, each conditioned on every token before it. The server has the *first* token available almost immediately — typically a few hundred milliseconds, the "time to first token" (TTFT) — but the naive implementation buffers the entire response server-side and only sends it once generation finishes. Streaming means sending each token the moment the model produces it, so the UI can start rendering while generation is still running.
 
-The first version of Meridian Copilot does the obvious thing: `fetch` the prompt, `await response.json()`, render the full answer. It works, and it's the wrong experience — reps stare at a blank spinner for three to eight seconds per question, because that's how long the model actually takes to finish generating a full answer. The UI has no way to show any progress before then.
+> **Key takeaway:** streaming isn't primarily a network-efficiency technique — it's closing the gap between when the server *has* data and when the client *shows* it, which is nearly the entire generation time in the naive version.
 
-The fix isn't a network optimization, it's recognizing what's actually happening on the server: the model is autoregressive, generating token by token, each conditioned on every token before it. The server has the *first* token available almost immediately — typically a few hundred milliseconds, the "time to first token" — but the naive implementation buffers the entire response server-side and only sends it once generation finishes. Streaming means sending each token the moment the model produces it, so the UI can start rendering while generation is still running instead of waiting for it to finish.
+### 1. Choosing a transport
 
-> **Key takeaway:** streaming isn't primarily a network-efficiency technique here — it's closing the gap between when the server *has* data and when the client *shows* it, which is nearly the entire generation time in the naive version.
-
-### Act 2 — Picking a transport, and why EventSource doesn't survive contact with a real prompt
-
-Three transports are actually on the table, and the team writes up the comparison before building anything:
+Three transports are actually on the table:
 
 | Transport | Direction | Reconnection | Custom headers / POST body | Best fit |
 |---|---|---|---|---|
 | **`EventSource` (SSE)** | Server → client only | Automatic, built into the browser, with `Last-Event-ID` resumption | No — `EventSource` only supports GET, no custom headers | Simple server-push where auth is cookie-based and payload fits in a URL |
-| **`fetch` + `ReadableStream`** | Server → client only | Manual — the team has to build it | Yes — full control of method, headers, and body | Anything needing `POST`, bearer-token auth, or a large request payload |
+| **`fetch` + `ReadableStream`** | Server → client only | Manual — has to be built | Yes — full control of method, headers, and body | Anything needing `POST`, bearer-token auth, or a large request payload |
 | **WebSocket** | Full duplex | Manual | Yes | True bidirectional push (live cursors, multiplayer) — not this problem |
 
-`EventSource` looks like the obvious fit for "the server pushes tokens" until the actual requirements land: the prompt payload is too large and structured for a GET query string, and auth is a bearer token in an `Authorization` header, which `EventSource` has no way to set. That single constraint rules it out — not a performance concern, a hard API limitation.
+`EventSource` looks like the obvious fit for "the server pushes tokens" until the actual requirements land: a prompt payload is usually too large and structured for a GET query string, and auth is typically a bearer token in an `Authorization` header, which `EventSource` has no way to set. That single constraint rules it out — not a performance concern, a hard API limitation.
 
 WebSockets are ruled out for the opposite reason: the interaction is fundamentally one request producing one streamed response, never client-initiated mid-stream messages. A persistent full-duplex connection buys nothing here, and adds real infrastructure cost (sticky sessions, connection-state management) for a capability nobody uses.
 
-Meridian settles on `fetch` with a `POST` body and a `ReadableStream` response, and accepts the trade-off going in: they get full control over headers and method, but automatic reconnection and resumption — which `EventSource` gives for free — now has to be built by hand.
+That leaves `fetch` with a `POST` body and a `ReadableStream` response as the practical default — full control over headers and method, at the cost of having to build reconnection and resumption by hand, which `EventSource` gives for free.
 
-> **Key takeaway:** the transport choice here is driven by auth and payload shape, not by streaming semantics — `EventSource` is genuinely simpler, but it's disqualified the moment the request needs a header `EventSource` can't set.
+> **Key takeaway:** the transport choice is driven by auth and payload shape, not by streaming semantics — `EventSource` is genuinely simpler, but it's disqualified the moment the request needs a header `EventSource` can't set.
 
-### Act 3 — What the read loop actually has to handle
+### 2. The read loop: three boundary-alignment problems
 
-Implementing the stream reveals three problems the happy-path tutorial code never mentions, all discovered because Meridian's QA process throws real, messy network conditions at it instead of a local loopback connection.
+Implementing the stream reveals three problems the happy-path tutorial code never mentions — all of which only show up under real, messy network conditions, not a local loopback connection.
 
-The first is byte-boundary corruption. Decoding each chunk with a fresh `TextDecoder` per chunk occasionally produces garbled characters — because a multi-byte UTF-8 character (an emoji, an accented character in a customer's name) can be split exactly at a chunk boundary, and decoding each half independently corrupts it. The fix is a single, reused `TextDecoder` instance called with `{ stream: true }`, which holds any incomplete trailing bytes and prepends them to the next chunk instead of decoding a broken half-character.
+**Byte-boundary corruption.** Decoding each chunk with a fresh `TextDecoder` per chunk occasionally produces garbled characters, because a multi-byte UTF-8 character (an emoji, an accented character) can be split exactly at a chunk boundary, and decoding each half independently corrupts it. The fix is a single, reused `TextDecoder` instance called with `{ stream: true }`, which holds any incomplete trailing bytes and prepends them to the next chunk.
 
 ```typescript
 const decoder = new TextDecoder();
@@ -58,19 +54,17 @@ while (true) {
 }
 ```
 
-The second is event-boundary corruption, the same problem one layer up: a network chunk has no obligation to align with an SSE event boundary, so a single `read()` call might deliver half an event, three and a half events, or nothing parseable at all. The fix is the same shape as the byte-level one — accumulate into a string buffer, only extract and parse complete events (delimited by the double-newline SSE convention), and carry any trailing partial event forward to the next read.
+**Event-boundary corruption**, the same problem one layer up: a network chunk has no obligation to align with an SSE event boundary, so a single `read()` call might deliver half an event, three and a half events, or nothing parseable at all. The fix is the same shape as the byte-level one — accumulate into a string buffer, only extract and parse complete events (delimited by the double-newline SSE convention), and carry any trailing partial event forward to the next read.
 
-The third is rendering. Naively calling `setState` (or re-rendering) on every single token works fine at a slow trickle, but a fast stream can deliver tokens faster than 60fps allows a render to complete. Repeatedly re-parsing accumulated markdown from scratch on every token compounds this — it's O(n) work per token, O(n²) over a long response. Meridian batches renders with `requestAnimationFrame`, accumulating incoming tokens and rendering at most once per frame rather than once per token.
-
-Markdown parsing needs its own care on top of that. An unclosed code fence mid-stream, parsed naively, produces visibly broken or flashing HTML — so the renderer either buffers until a fence closes, or uses a parser designed to tolerate incomplete input.
+**Render-boundary misalignment.** Naively calling `setState` (or re-rendering) on every single token works fine at a slow trickle, but a fast stream can deliver tokens faster than 60fps allows a render to complete. Repeatedly re-parsing accumulated markdown from scratch on every token compounds this — it's O(n) work per token, O(n²) over a long response. The fix is batching renders with `requestAnimationFrame`, accumulating incoming tokens and rendering at most once per frame. Markdown parsing needs its own care on top of that: an unclosed code fence mid-stream, parsed naively, produces visibly broken or flashing HTML, so the renderer either buffers until a fence closes or uses a parser designed to tolerate incomplete input.
 
 > **Key takeaway:** the network layer, the parsing layer, and the render layer each have their own boundary-alignment problem — chunk boundaries don't align with UTF-8 character boundaries, don't align with SSE event boundaries, and full-speed token arrival doesn't align with the 60fps render budget. Each needs its own buffering strategy.
 
-### Act 4 — Backpressure and the cancellation click that doesn't actually save any money
+### 3. Backpressure and cancellation
 
-Backpressure sounds like it should be a client-overload problem, but a `ReadableStream` is pull-based, which changes the shape of the problem entirely: the underlying network source only delivers more data when the consumer calls `reader.read()` again. If Meridian's render loop is slow to loop back around and call `read()`, the browser itself throttles how fast it pulls further bytes off the connection — the slow consumer naturally propagates backpressure all the way back through the stream, with no unbounded buffer required on the client. This is the pull-based model doing exactly what it's designed to do; the risk case is a *hand-rolled* buffering layer sitting in front of it that queues unboundedly instead of respecting that signal.
+**Backpressure** sounds like it should be a client-overload problem, but a `ReadableStream` is pull-based, which changes the shape of the problem entirely: the underlying network source only delivers more data when the consumer calls `reader.read()` again. If the render loop is slow to loop back around and call `read()`, the browser itself throttles how fast it pulls further bytes off the connection — the slow consumer naturally propagates backpressure all the way back through the stream, with no unbounded buffer required on the client. The risk case is a *hand-rolled* buffering layer sitting in front of it that queues unboundedly instead of respecting that signal.
 
-Cancellation is where the story gets a real cost angle, and it's the detail that separates a working demo from a production feature. A rep clicks "Stop generating" mid-response; the UI calls `abortController.abort()`, the `fetch` promise rejects, and the connection closes from the client's side. That's necessary, but it's not sufficient — the LLM provider on the other end of Meridian's backend proxy has no idea the client walked away unless the *backend* explicitly detects the client disconnect and forwards a cancellation to the provider's own API. Without that second hop, generation — and billing for every token generated — continues on a response nobody will ever see.
+**Cancellation** is the detail that separates a working demo from a production feature, because it has a real cost angle. A user clicks "Stop generating" mid-response; the UI calls `abortController.abort()`, the `fetch` promise rejects, and the connection closes from the client's side. That's necessary, but not sufficient — the LLM provider on the other end of a backend proxy has no idea the client walked away unless the *backend* explicitly detects the disconnect and forwards a cancellation to the provider's own API. Without that second hop, generation — and billing for every token generated — continues on a response nobody will ever see.
 
 ```typescript
 // Backend proxy: propagate client disconnect to the LLM provider
@@ -91,17 +85,17 @@ app.post('/api/copilot/stream', async (req, res) => {
 });
 ```
 
-There's a second race worth naming: a rep cancels one question and immediately asks another. If the first stream's read loop hasn't actually finished tearing down before the second one starts, both can interleave into the same message state. The fix is a generation-id guard — each new request gets an incrementing id, and a chunk is only applied to the UI if its generation id still matches the latest one the user actually asked for, discarding anything from a superseded stream.
+A second race worth naming: a user cancels one question and immediately asks another. If the first stream's read loop hasn't actually finished tearing down before the second one starts, both can interleave into the same message state. The fix is a generation-id guard — each new request gets an incrementing id, and a chunk is only applied to the UI if its generation id still matches the latest one the user actually asked for.
 
 > **Key takeaway:** `AbortController.abort()` stops the client from listening — it does not, by itself, stop the server from generating or the provider from billing. Real cancellation requires the backend to detect the disconnect and forward it, and that hop is exactly the part most implementations skip.
 
-### Act 5 — What changes once this ships to every rep, not just a demo
+### 4. Production concerns: resumption, accessibility, observability
 
-At production scale, three more problems surface that a demo never hits. Network drops mid-stream happen constantly across a large rep population on inconsistent office and home networks — without a resumption strategy, a dropped connection means either a visibly truncated answer or a full retry that doubles the inference cost for that question. A resumable design keys each generation with an id the backend can look up and continue serving from, mirroring what `EventSource`'s `Last-Event-ID` gives for free — one more cost `fetch` + `ReadableStream` pays for the header/POST control it bought in Act 2.
+**Resumption.** Network drops mid-stream happen constantly across a real user population on inconsistent networks — without a resumption strategy, a dropped connection means either a visibly truncated answer or a full retry that doubles the inference cost for that question. A resumable design keys each generation with an id the backend can look up and continue serving from, mirroring what `EventSource`'s `Last-Event-ID` gives for free — one more cost `fetch` + `ReadableStream` pays for the header/POST control it bought earlier.
 
-Accessibility is the second gap, and it's easy to ship something that technically works and is completely unusable: piping streamed tokens directly into an `aria-live="polite"` region causes screen readers to announce every incoming word individually, which is noise, not speech. The fix is debouncing live-region updates — announce in sentence-sized chunks, or hold `aria-live` off during active streaming and offer an explicit "read full response" action once the message completes, giving screen reader users control instead of a firehose.
+**Accessibility.** Piping streamed tokens directly into an `aria-live="polite"` region causes screen readers to announce every incoming word individually, which is noise, not speech. The fix is debouncing live-region updates — announce in sentence-sized chunks, or hold `aria-live` off during active streaming and offer an explicit "read full response" action once the message completes.
 
-The third is observability, and it needs its own metrics vocabulary: HTTP 200 is not the same signal as "the stream actually completed successfully," since a connection can return 200 and still truncate mid-generation. Meridian tracks time-to-first-token (the actual perceived-latency number, not total request time), tokens-per-second once streaming starts, and stream-completion-rate as a metric distinct from HTTP success rate — without that distinction, a real-world failure mode (streams silently truncating for a subset of reps on a specific network) is invisible to standard request monitoring.
+**Observability** needs its own metrics vocabulary: HTTP 200 is not the same signal as "the stream actually completed successfully," since a connection can return 200 and still truncate mid-generation. Track time-to-first-token (the actual perceived-latency number, not total request time), tokens-per-second once streaming starts, and stream-completion-rate as a metric distinct from HTTP success rate — without that distinction, a real failure mode (streams silently truncating for a subset of users on a specific network) is invisible to standard request monitoring.
 
 > **Key takeaway:** the things that don't show up in a demo — resumption after a drop, screen-reader usability, and a monitoring signal that isn't just HTTP status — are exactly the things a Lead is expected to have already thought about before this ships past a prototype.
 
@@ -141,7 +135,7 @@ graph TD
 sequenceDiagram
     participant Rep as "Support Rep"
     participant UI as "Copilot UI"
-    participant Proxy as "Meridian API Proxy"
+    participant Proxy as "Backend API Proxy"
     participant LLM as "LLM Provider"
 
     Rep->>UI: "Clicks 'Stop generating'"
@@ -272,7 +266,7 @@ A rep's connection drops partway through a streamed response. Design what the UI
 
 At minimum, the UI must not silently discard the partial content already rendered — treat the stream's failure as a distinct state from both "still streaming" and "complete," showing the partial answer with an inline "connection lost" affordance and a retry action, rather than replacing visible content with a generic error screen.
 
-A full resumption strategy requires the backend to key each generation with a stable id and retain enough state (or replay capability against the provider) to continue serving from where the client left off, mirroring what `EventSource`'s `Last-Event-ID` mechanism provides automatically — this is exactly the capability traded away in Act 2 for `fetch`'s header/POST control, and building it is the fair cost of that choice. Absent that investment, the fallback is an explicit retry that regenerates the full response, which the UI should clearly communicate doubles the wait (and the inference cost) rather than silently retrying and confusing the user about why it's slower the second time.
+A full resumption strategy requires the backend to key each generation with a stable id and retain enough state (or replay capability against the provider) to continue serving from where the client left off, mirroring what `EventSource`'s `Last-Event-ID` mechanism provides automatically — this is exactly the capability traded away for `fetch`'s header/POST control, and building it is the fair cost of that choice. Absent that investment, the fallback is an explicit retry that regenerates the full response, which the UI should clearly communicate doubles the wait (and the inference cost) rather than silently retrying and confusing the user about why it's slower the second time.
 
 </details>
 
@@ -298,6 +292,6 @@ An interviewer asks: "When would you deliberately not stream an AI-generated res
 
 A short, low-latency, deterministic-feeling response — a one-word classification, a yes/no moderation decision, a single extracted field — gains nothing from token-by-token rendering, because there's no meaningful generation time for streaming to mask, and the added transport complexity (chunk buffering, boundary handling, cancellation propagation) is pure cost with no corresponding UX benefit. Rendering the whole result at once, the moment it's ready, is simpler to build, simpler to test, and indistinguishable in perceived speed from a streamed version when the total response time is already near-instant.
 
-The judgment call mirrors Act 1's original motivation in reverse: stream when generation time is long enough that time-to-first-token meaningfully improves perceived latency over waiting for the full response. When it isn't — because the response is short, or because a deterministic backend call (not an LLM) can produce the full answer in one round trip anyway — reaching for streaming by default adds engineering surface area without a matching improvement in the experience it's meant to protect.
+The judgment call mirrors the original streaming motivation in reverse: stream when generation time is long enough that time-to-first-token meaningfully improves perceived latency over waiting for the full response. When it isn't — because the response is short, or because a deterministic backend call (not an LLM) can produce the full answer in one round trip anyway — reaching for streaming by default adds engineering surface area without a matching improvement in the experience it's meant to protect.
 
 </details>
