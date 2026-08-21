@@ -340,10 +340,16 @@
     color: var(--badge-blue); 
     border-color: var(--badge-blue-border); 
   }
-  .status-select.badge-completed { 
-    background-color: var(--badge-green-bg); 
-    color: var(--badge-green); 
-    border-color: var(--badge-green-border); 
+  .status-select.badge-completed {
+    background-color: var(--badge-green-bg);
+    color: var(--badge-green);
+    border-color: var(--badge-green-border);
+  }
+
+  .status-select.up-next-marked {
+    background-color: var(--accent-dim);
+    color: var(--accent);
+    border-color: var(--accent);
   }
 
   .sort-select {
@@ -806,6 +812,7 @@
     <button class="filter-btn active" data-status="all">All</button>
     <button class="filter-btn" data-status="not-started">Not Started</button>
     <button class="filter-btn" data-status="in-progress">In Progress</button>
+    <button class="filter-btn" data-status="up-next">📌 Up Next</button>
     <button class="filter-btn" data-status="completed">Completed</button>
   </div>
   <div class="filter-group" id="priority-filters">
@@ -927,9 +934,9 @@ Use professional technical language. Use \`\`\`javascript or \`\`\`typescript fo
 let allTopics = [];
 let planData = null;
 let scheduleData = null;
-let statusFilter = 'all';
-let priorityFilter = 'all';
-let selectedWeeks = new Set(); 
+let selectedStatuses = new Set();
+let selectedPriorities = new Set();
+let selectedWeeks = new Set();
 let searchQuery = '';
 let sortMode = 'default';
 
@@ -1038,7 +1045,7 @@ function updateTopicStatus(topicId, newStatus) {
     if (!overrides[topicId]) overrides[topicId] = {};
     overrides[topicId].status = newStatus;
     localStorage.setItem('topic_overrides', JSON.stringify(overrides));
-    renderAll(); 
+    renderAll();
   }
 }
 
@@ -1054,11 +1061,11 @@ function buildTopicList() {
         );
         if (weekMatch) weekNum = weekMatch.weekNumber;
       }
-      allTopics.push({ 
-        ...t, 
-        categoryName: cat.name, 
+      allTopics.push({
+        ...t,
+        categoryName: cat.name,
         categoryId: cat.id,
-        actualWeek: weekNum 
+        actualWeek: weekNum
       });
     });
   });
@@ -1155,8 +1162,8 @@ function getFilteredTopics() {
     );
   }
 
-  if (statusFilter !== 'all') list = list.filter(t => t.status === statusFilter);
-  if (priorityFilter !== 'all') list = list.filter(t => t.priority === priorityFilter);
+  if (selectedStatuses.size > 0) list = list.filter(t => selectedStatuses.has(t.status));
+  if (selectedPriorities.size > 0) list = list.filter(t => selectedPriorities.has(t.priority));
   
   if (selectedWeeks.size > 0) {
     list = list.filter(t => t.actualWeek && selectedWeeks.has(t.actualWeek));
@@ -1215,12 +1222,13 @@ function renderTable() {
 }
 
 function renderTopicRow(t) {
-  const statusClass = { 'not-started': 'badge-not-started', 'in-progress': 'badge-in-progress', 'completed': 'badge-completed' }[t.status] || 'badge-not-started';
-  
+  const statusClass = { 'not-started': 'badge-not-started', 'in-progress': 'badge-in-progress', 'up-next': 'up-next-marked', 'completed': 'badge-completed' }[t.status] || 'badge-not-started';
+
   const statusSelect = `
     <select class="status-select ${statusClass}" onchange="updateTopicStatus('${escAttr(t.id)}', this.value)">
       <option value="not-started" ${t.status === 'not-started' ? 'selected' : ''}>Not Started</option>
       <option value="in-progress" ${t.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+      <option value="up-next" ${t.status === 'up-next' ? 'selected' : ''}>📌 Up Next</option>
       <option value="completed" ${t.status === 'completed' ? 'selected' : ''}>Completed</option>
     </select>
   `;
@@ -1314,16 +1322,36 @@ document.getElementById('search').addEventListener('input', e => {
 document.getElementById('status-filters').addEventListener('click', e => {
   const btn = e.target.closest('[data-status]');
   if (!btn) return;
-  statusFilter = btn.dataset.status;
-  document.querySelectorAll('[data-status]').forEach(b => b.classList.toggle('active', b === btn));
+  const status = btn.dataset.status;
+  if (status === 'all') {
+    selectedStatuses.clear();
+  } else if (selectedStatuses.has(status)) {
+    selectedStatuses.delete(status);
+  } else {
+    selectedStatuses.add(status);
+  }
+  document.querySelectorAll('#status-filters [data-status]').forEach(b => {
+    const isActive = b.dataset.status === 'all' ? selectedStatuses.size === 0 : selectedStatuses.has(b.dataset.status);
+    b.classList.toggle('active', isActive);
+  });
   renderTable();
 });
 
 document.getElementById('priority-filters').addEventListener('click', e => {
   const btn = e.target.closest('[data-priority]');
   if (!btn) return;
-  priorityFilter = btn.dataset.priority;
-  document.querySelectorAll('[data-priority]').forEach(b => b.classList.toggle('active', b === btn));
+  const priority = btn.dataset.priority;
+  if (priority === 'all') {
+    selectedPriorities.clear();
+  } else if (selectedPriorities.has(priority)) {
+    selectedPriorities.delete(priority);
+  } else {
+    selectedPriorities.add(priority);
+  }
+  document.querySelectorAll('#priority-filters [data-priority]').forEach(b => {
+    const isActive = b.dataset.priority === 'all' ? selectedPriorities.size === 0 : selectedPriorities.has(b.dataset.priority);
+    b.classList.toggle('active', isActive);
+  });
   renderTable();
 });
 
