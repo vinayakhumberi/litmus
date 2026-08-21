@@ -25,7 +25,13 @@
       "Bash(pkill -f \"http.server 9033\")",
       "Bash(rm -rf /private/tmp/pptest_verify3)",
       "Bash(pkill -f \"http.server 9034\")",
-      "Bash(rm -rf /private/tmp/pptest_verify4)"
+      "Bash(rm -rf /private/tmp/pptest_verify4)",
+      "Bash(pkill -f \"http.server 9036\")",
+      "Bash(rm -rf /private/tmp/pptest_proto)",
+      "Bash(python3 -m http.server 9037)",
+      "Bash(mkdir -p /private/tmp/pptest_adoption)",
+      "Bash(python3 *)",
+      "Bash(node check2.js)"
     ]
   }
 }

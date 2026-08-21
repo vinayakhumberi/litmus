@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prototypal Inheritance — How the [[Prototype]] Chain Actually Works</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #61dafb;
+            --dark: #20232a;
+            --text: #ffffff;
+            --gray: #282c34;
+            --accent: #f08d49;
+            --good: #4ade80;
+            --bad: #f87171;
+            --text-muted: #999;
+            --code-bg: #1e1e1e;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--dark);
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: var(--gray);
+            padding: 3rem 2rem;
+            text-align: center;
+            border-bottom: 4px solid var(--primary);
+        }
+        header a.back {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-decoration: none;
+        }
+        header a.back:hover { color: var(--primary); }
+        nav {
+            position: sticky;
+            top: 0;
+            background: var(--gray);
+            padding: 1rem;
+            z-index: 100;
+            text-align: center;
+            border-bottom: 1px solid #444;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 4px;
+        }
+        nav a {
+            color: var(--primary);
+            margin: 0 12px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+        main {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        section {
+            margin-bottom: 4rem;
+            padding: 2.5rem;
+            background: var(--gray);
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+        }
+        h1, h2, h3, h4 { color: var(--primary); }
+        pre, code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: "Fira Code", "Courier New", monospace;
+        }
+        pre {
+            padding: 1rem;
+            overflow-x: auto;
+            border-left: 3px solid var(--primary);
+        }
+        pre code { background: none; padding: 0; color: #e6e6e6; }
+        .diagram {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+        }
+        .playground {
+            border: 2px dashed var(--accent);
+            padding: 2rem;
+            margin: 2rem 0;
+            border-radius: 12px;
+            background: rgba(240, 141, 73, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
+        button {
+            padding: 0.7rem 1.3rem;
+            background: var(--primary);
+            color: var(--dark);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        button.secondary { background: #444; color: var(--text); }
+        .stat-row { display: flex; gap: 16px; flex-wrap: wrap; }
+        .stat-badge {
+            background: rgba(0,0,0,0.3);
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            font-family: "Fira Code", monospace;
+            font-size: 0.9rem;
+            border: 1px solid #444;
+        }
+        .stat-badge span { color: var(--primary); font-weight: bold; }
+        .log-panel {
+            background: var(--code-bg);
+            border-radius: 6px;
+            padding: 0.8rem 1rem;
+            max-height: 220px;
+            overflow-y: auto;
+            font-family: "Fira Code", monospace;
+            font-size: 0.8rem;
+            color: #9adcff;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .log-panel div { border-bottom: 1px solid #2a2a2a; padding-bottom: 4px; }
+        .log-panel div.err { color: var(--bad); }
+        .log-panel div.ok { color: var(--good); }
+        .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        .card {
+            background: rgba(255,255,255,0.05);
+            padding: 1.5rem;
+            border-left: 4px solid var(--primary);
+            border-radius: 4px;
+        }
+        .card.warn { border-left-color: var(--bad); }
+        .card h3, .card h4 { margin-top: 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 0.9rem 1rem; text-align: left; border-bottom: 1px solid #444; vertical-align: top; font-size: 0.92rem; }
+        th { color: var(--primary); }
+
+        /* Prototype chain visualizer */
+        .chain-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            padding: 1rem 0;
+        }
+        .chain-box {
+            background: #333;
+            border: 2px solid #444;
+            border-radius: 8px;
+            padding: 0.8rem 1rem;
+            min-width: 130px;
+            transition: background 0.2s, border-color 0.2s, transform 0.2s;
+        }
+        .chain-box .chain-title { font-weight: bold; color: var(--primary); font-size: 0.85rem; }
+        .chain-box .chain-props { font-size: 0.75rem; color: #bbb; margin-top: 4px; }
+        .chain-box.checking { border-color: var(--accent); background: rgba(240,141,73,0.15); transform: scale(1.05); }
+        .chain-box.found { border-color: var(--good); background: rgba(74,222,128,0.15); }
+        .chain-box.exhausted { border-color: var(--bad); background: rgba(248,113,113,0.1); }
+        .chain-arrow { color: #666; font-size: 1.3rem; }
+
+        .edgeLabel, .edgeLabel rect, .edgeLabel foreignObject, .edgeLabel foreignObject div, .edgeLabel foreignObject span, .edgeLabel p {
+            background-color: #000000 !important; fill: #000000 !important; color: #ffffff !important;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Prototypal Inheritance 🔗</h1>
+    <p>How JavaScript's one and only inheritance mechanism actually works — seen, not just read</p>
+    <a class="back" href="../topic-detail.html?id=prototypal-inheritance">← Full deep-dive notes for this topic</a>
+</header>
+
+<nav>
+    <a href="#model">Mental Model</a>
+    <a href="#chain-demo">Chain Walker</a>
+    <a href="#class-vs-function">class vs Function</a>
+    <a href="#new-internals">new Internals</a>
+    <a href="#shapes">Object Shapes</a>
+    <a href="#composition">Composition</a>
+    <a href="#this-binding">this Binding</a>
+    <a href="#pitfalls">Pitfalls</a>
+</nav>
+
+<main>
+    <section id="model">
+        <h2>1. The Mental Model, Before Any Spec Terms</h2>
+        <p>Every object in JavaScript can have exactly one other object marked as "ask this one if you can't find what you're looking for." When you read <code>obj.prop</code> and <code>obj</code> doesn't have <code>prop</code> itself, the engine doesn't fail immediately — it asks that linked object. If <em>that</em> object doesn't have it either, it asks whatever <em>it's</em> linked to, and so on, until either something answers or there's nothing left to ask.</p>
+        <p>That's the entire mechanism — a chain of objects, each one delegating a lookup to the next when it comes up empty. Nothing is copied; the chain is walked fresh <strong>at the moment you access the property</strong>, not decided in advance.</p>
+
+        <div class="diagram">
+            <pre class="mermaid">
+            graph TD
+                A["obj.prop is accessed"] --> B{"Does obj have an<br>own property 'prop'?"}
+                B -- "Yes" --> C["Return obj's own value<br>Lookup complete"]
+                B -- "No" --> D{"Does obj have a<br>[[Prototype]] link?"}
+                D -- "No - reached null" --> E["Return undefined<br>Property does not exist"]
+                D -- "Yes" --> F["Move to obj.[[Prototype]]"]
+                F --> G{"Does this object have<br>an own property 'prop'?"}
+                G -- "Yes" --> H["Return this value<br>Lookup complete"]
+                G -- "No" --> I{"Does this object have<br>a further [[Prototype]] link?"}
+                I -- "Yes" --> F
+                I -- "No - reached the end" --> E
+
+                classDef found fill:#2f855a,stroke:#9ae6b4,color:#fff
+                classDef notfound fill:#c53030,stroke:#feb2b2,color:#fff
+                classDef decision fill:#805ad5,stroke:#d6bcfa,color:#fff
+                classDef walk fill:#2b6cb0,stroke:#90cdf4,color:#fff
+
+                class C,H found
+                class E notfound
+                class B,D,G,I decision
+                class F walk
+            </pre>
+        </div>
+
+        <p>A concrete trace — nothing here is ever copied, only linked:</p>
+        <pre><code>const base = { greet() { return 'hi'; } };
+const derived = Object.create(base); // derived.[[Prototype]] is now base
+
+derived.greet();
+// 1. Does derived have its own 'greet'? No.
+// 2. Follow derived.[[Prototype]] to base. Does base have 'greet'? Yes.
+// 3. Call it, with `this` still bound to derived — returns 'hi'.
+
+base.greet = function () { return 'hello'; }; // mutate base AFTER the link already exists
+derived.greet(); // 'hello' — the link is just followed again, nothing was "baked in" earlier</code></pre>
+    </section>
+
+    <section id="chain-demo">
+        <h2>2. Chain Walker — Look Up a Property Live</h2>
+        <p>This mirrors <a href="#" style="color:var(--primary);" onclick="return false;">Scenario 4</a> from the deep-dive: <code>rex</code> is linked to <code>Dog</code>, which is linked to <code>Animal</code>, which is linked to <code>Object.prototype</code>. Pick a property below and watch the engine walk the chain one link at a time.</p>
+
+        <div class="playground">
+            <div class="chain-row" id="chain-row"><!-- boxes injected by JS --></div>
+
+            <div class="btn-row">
+                <button onclick="runLookup('name')">Look up rex.name</button>
+                <button onclick="runLookup('speak')">Look up rex.speak</button>
+                <button onclick="runLookup('init')">Look up rex.init</button>
+                <button onclick="runLookup('toString')">Look up rex.toString</button>
+                <button onclick="runLookup('fly')">Look up rex.fly</button>
+                <button class="secondary" onclick="resetChain()">Reset</button>
+            </div>
+
+            <div class="log-panel" id="chain-log"></div>
+        </div>
+
+        <pre><code>const Animal = {
+  init(name) { this.name = name; return this; },
+  speak() { return `${this.name} makes a sound`; },
+};
+const Dog = Object.create(Animal);              // Dog.[[Prototype]] is Animal
+Dog.speak = function () { return `${this.name} barks`; }; // override, shadows Animal's speak
+
+const rex = Object.create(Dog).init('Rex');     // rex.[[Prototype]] is Dog</code></pre>
+    </section>
+
+    <section id="class-vs-function">
+        <h2>3. <code>class</code> Is Sugar — But Not <em>Only</em> Sugar</h2>
+        <p><code>class Foo {}</code> still creates a function with a <code>.prototype</code> object, and <code>new Foo()</code> performs the exact same <code>[[Prototype]]</code> linking traced above — there is no second "class engine." But it does change real, spec-mandated behavior:</p>
+
+        <table>
+            <thead><tr><th>Behavior</th><th>Constructor function</th><th><code>class</code> syntax</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Hoisting</strong></td><td>Fully hoisted, immediately callable</td><td>Hoisted into a Temporal Dead Zone — throws <code>ReferenceError</code> if referenced early</td></tr>
+                <tr><td><strong>Calling without <code>new</code></strong></td><td>Runs anyway, <code>this</code> is the global object or <code>undefined</code></td><td>Throws <code>TypeError</code> — structurally impossible to misuse</td></tr>
+                <tr><td><strong>Method enumerability</strong></td><td><code>Foo.prototype.bar = fn</code> is enumerable</td><td>Methods are non-enumerable by default</td></tr>
+                <tr><td><strong><code>super</code> calls</strong></td><td>Manual chaining, fragile if extracted</td><td>Resolves via <code>[[HomeObject]]</code>, correct even if extracted</td></tr>
+            </tbody>
+        </table>
+
+        <div class="playground">
+            <h3>Run it and see the actual errors</h3>
+            <div class="btn-row">
+                <button onclick="testCallWithoutNew('class')">Call ClassFoo() without new</button>
+                <button onclick="testCallWithoutNew('function')">Call FnFoo() without new (strict)</button>
+                <button onclick="testEnumerability()">Compare for...in enumerability</button>
+                <button class="secondary" onclick="clearLog('classfn-log')">Clear log</button>
+            </div>
+            <div class="log-panel" id="classfn-log"></div>
+        </div>
+    </section>
+
+    <section id="new-internals">
+        <h2>4. What <code>new Foo()</code> Actually Does</h2>
+        <div class="diagram">
+            <pre class="mermaid">
+            sequenceDiagram
+                participant C as "Caller"
+                participant E as "JS Engine"
+                participant O as "New Object"
+                participant F as "Foo constructor"
+
+                C->>E: "new Foo(42)"
+                E->>O: "Create a new empty object"
+                E->>O: "Set [[Prototype]] to Foo.prototype"
+                E->>F: "Call Foo with this bound to the new object"
+                F->>O: "this.value = 42 (assigns a property)"
+                F-->>E: "Constructor returns - implicitly undefined"
+                E->>C: "Return the new object - constructor did not explicitly return an object"
+
+                Note over F,E: "Edge case: if the constructor explicitly returns an object..."
+                F-->>E: "return { custom: true }"
+                E->>C: "Return that object instead - the newly created one is discarded"
+            </pre>
+        </div>
+
+        <p>Implementing it directly makes the four steps concrete:</p>
+        <pre><code>function myNew(Constructor, ...args) {
+  const instance = Object.create(Constructor.prototype); // link [[Prototype]]
+  const result = Constructor.apply(instance, args);       // run constructor, this = instance
+  return (typeof result === 'object' && result !== null) ? result : instance;
+  // typeof null === 'object' is why the null check is required, not just typeof
+}</code></pre>
+
+        <div class="playground">
+            <div class="btn-row">
+                <button onclick="runMyNew()">Run myNew() against both code paths</button>
+                <button class="secondary" onclick="clearLog('mynew-log')">Clear log</button>
+            </div>
+            <div class="log-panel" id="mynew-log"></div>
+        </div>
+    </section>
+
+    <section id="shapes">
+        <h2>5. Why the Engine Cares About Object "Shape"</h2>
+        <p>Walking a chain of links on every property access would be slow if engines actually did it fresh every time. In practice, V8 optimizes around one observation: objects created the same way usually end up with the same properties in the same order — a repeated layout called a <strong>hidden class</strong> ("shape"). Once seen before, the engine skips straight to the right memory offset via an <strong>inline cache</strong> instead of re-walking the chain.</p>
+        <p>Code that reliably hits this fast path is <strong>monomorphic</strong>; code where the same call site keeps seeing different shapes degrades toward <strong>megamorphic</strong> — the slow end.</p>
+
+        <div class="playground">
+            <h3>Feel the difference (illustrative, not a rigorous benchmark)</h3>
+            <p style="font-size:0.85rem;color:#aaa;">Modern JITs are unpredictable over short, isolated runs like this — treat the numbers as directional, not a guarantee. The point is the <em>pattern</em> in the code, not the exact milliseconds.</p>
+            <div class="btn-row">
+                <button onclick="runShapeTest(true)">Run: consistent shape</button>
+                <button onclick="runShapeTest(false)">Run: shape diverges per-object</button>
+            </div>
+            <div class="stat-row">
+                <div class="stat-badge">Consistent shape: <span id="shape-consistent-time">—</span></div>
+                <div class="stat-badge">Diverging shape: <span id="shape-mixed-time">—</span></div>
+            </div>
+        </div>
+
+        <pre><code>// Consistent shape: every instance gets the same properties, same order
+function ShapeGood(type) { this.type = type; this.radius = 0; this.width = 0; this.height = 0; }
+
+// Diverging shape: some instances get properties added conditionally, after construction
+function ShapeBad(type) {
+  this.type = type;
+  if (type === 'circle') this.radius = 0; // sometimes present, sometimes not — and added post-hoc below
+}</code></pre>
+    </section>
+
+    <section id="composition">
+        <h2>6. Composition Over Inheritance: React's Own Proof</h2>
+        <p>Deep class hierarchies create the <strong>fragile base class problem</strong> — a change to a base class can silently break distant subclasses depending on undocumented assumptions, because the dependency is implicit in the inheritance chain rather than an explicit interface. Composition flattens that dependency graph into explicit, individually-testable pieces.</p>
+        <p>React's own migration is the clearest shipped-at-scale proof: class components coupled state, lifecycle, and rendering into one hierarchy, so sharing behavior across unrelated components needed workarounds (HOCs, render props) specifically to route around single inheritance. Hooks replaced this with plain-function composition — no hierarchy at all.</p>
+
+        <div class="comparison-grid">
+            <div class="card">
+                <h4>Inheritance-based sharing</h4>
+                <pre><code>class WithSubscription extends React.Component {
+  // HOC wraps a component to inject
+  // a shared behavior — workaround for
+  // single inheritance, not composition
+}</code></pre>
+            </div>
+            <div class="card">
+                <h4>Composition-based sharing</h4>
+                <pre><code>function useDataSubscription(source) {
+  // a plain function — composes freely
+  // with any other hook, no hierarchy
+  const [data, setData] = useState(null);
+  useEffect(() => { /* subscribe */ }, [source]);
+  return data;
+}</code></pre>
+            </div>
+        </div>
+        <p style="margin-top:1.5rem;">This isn't "inheritance is bad" — shallow, well-understood hierarchies are fine. Inheritance depth should track how stable the shared behavior actually is; composition is the safer default when extension points aren't fully known in advance.</p>
+    </section>
+
+    <section id="this-binding">
+        <h2>7. <code>this</code>: Dynamic Dispatch vs. Lexical Capture</h2>
+        <p><code>this</code> inside a method isn't decided by where the method was <em>defined</em> — it's decided by <em>how it's called</em>. Extract a method from its instance (<code>const fn = obj.method; fn()</code>) and you're calling it a completely different way, so it gets a completely different <code>this</code>.</p>
+
+        <pre><code>class Button {
+  label = 'Click';
+  handleClick = () => { return `Lexical: ${this.label}`; };  // arrow field — safe to extract
+  handleHover() { return `Dynamic: ${this.label}`; }          // normal method — unsafe to extract
+}</code></pre>
+
+        <div class="playground">
+            <div class="btn-row">
+                <button onclick="runThisDemo()">Extract both methods, then call them standalone</button>
+                <button class="secondary" onclick="clearLog('this-log')">Clear log</button>
+            </div>
+            <div class="log-panel" id="this-log"></div>
+        </div>
+    </section>
+
+    <section id="pitfalls">
+        <h2>⚠️ Common Pitfalls</h2>
+        <div class="comparison-grid">
+            <div class="card warn">
+                <h4>✕ "class is a different inheritance mechanism"</h4>
+                <p style="font-size:0.9rem;">There's no separate class engine — it's the same prototype chain. Know the specific behavioral additions (TDZ, <code>new</code> enforcement, non-enumerable methods, <code>super</code> binding) instead of treating it as "the same, but nicer."</p>
+            </div>
+            <div class="card warn">
+                <h4>✕ Deep class hierarchies (3+ levels) for reuse</h4>
+                <p style="font-size:0.9rem;">Each level is an implicit dependency on the base class's undocumented assumptions. Default to composition past one or two levels.</p>
+            </div>
+            <div class="card warn">
+                <h4>✕ Extracting a method without handling <code>this</code></h4>
+                <p style="font-size:0.9rem;"><code>const handler = instance.method; handler()</code> silently loses the dynamic binding — a frequent source of "cannot read property of undefined" bugs in callbacks.</p>
+            </div>
+            <div class="card warn">
+                <h4>✕ Ignoring shape consistency in hot paths</h4>
+                <p style="font-size:0.9rem;">Properties added conditionally, in varying order, cause hidden-class transitions — real cost in render loops and large data transforms, not a premature optimization.</p>
+            </div>
+            <div class="card warn">
+                <h4>✕ Composing mixins without handling name collisions</h4>
+                <p style="font-size:0.9rem;"><code>Object.assign(target, mixinA, mixinB)</code> silently lets a later mixin overwrite an earlier same-named method, with no warning.</p>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+    function logLine(containerId, text, cls) {
+        const container = document.getElementById(containerId);
+        const div = document.createElement('div');
+        if (cls) div.className = cls;
+        div.textContent = text;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+    }
+    function clearLog(id) { document.getElementById(id).innerHTML = ''; }
+    function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+    /* ---------- Chain Walker demo ---------- */
+    const CHAIN = [
+        { id: 'rex', title: 'rex', props: ['name'] },
+        { id: 'dog', title: 'Dog', props: ['speak (override)'] },
+        { id: 'animal', title: 'Animal', props: ['init', 'speak'] },
+        { id: 'objproto', title: 'Object.prototype', props: ['toString', 'hasOwnProperty', '...'] },
+        { id: 'nullend', title: 'null', props: [] },
+    ];
+    const OWNERS = { name: 'rex', speak: 'dog', init: 'animal', toString: 'objproto' };
+
+    function renderChain() {
+        const row = document.getElementById('chain-row');
+        row.innerHTML = CHAIN.map((node, i) => {
+            const box = `<div class="chain-box" id="box-${node.id}"><div class="chain-title">${node.title}</div><div class="chain-props">${node.props.length ? 'own: ' + node.props.join(', ') : '(end of chain)'}</div></div>`;
+            return i < CHAIN.length - 1 ? box + '<span class="chain-arrow">→</span>' : box;
+        }).join('');
+    }
+    renderChain();
+
+    function resetChain() {
+        CHAIN.forEach(n => {
+            const el = document.getElementById(`box-${n.id}`);
+            el.classList.remove('checking', 'found', 'exhausted');
+        });
+        clearLog('chain-log');
+    }
+
+    let chainRunning = false;
+    async function runLookup(prop) {
+        if (chainRunning) return;
+        chainRunning = true;
+        resetChain();
+        logLine('chain-log', `Looking up rex.${prop} ...`);
+
+        for (const node of CHAIN) {
+            if (node.id === 'nullend') {
+                const el = document.getElementById(`box-${node.id}`);
+                el.classList.add('exhausted');
+                logLine('chain-log', `Reached null — end of chain. rex.${prop} is undefined.`, 'err');
+                break;
+            }
+            const el = document.getElementById(`box-${node.id}`);
+            el.classList.add('checking');
+            logLine('chain-log', `Checking ${node.title}'s own properties for '${prop}'...`);
+            await delay(500);
+            el.classList.remove('checking');
+
+            if (OWNERS[prop] === node.id) {
+                el.classList.add('found');
+                logLine('chain-log', `Found on ${node.title}. Lookup stops here.`, 'ok');
+                break;
+            }
+        }
+        chainRunning = false;
+    }
+
+    /* ---------- class vs function demo ---------- */
+    class ClassFoo { constructor(x) { this.x = x; } bar() {} }
+    function FnFoo(x) { 'use strict'; this.x = x; }
+    FnFoo.prototype.bar = function () {};
+
+    function testCallWithoutNew(kind) {
+        if (kind === 'class') {
+            try {
+                ClassFoo(1);
+                logLine('classfn-log', 'ClassFoo(1) ran without error (unexpected).');
+            } catch (e) {
+                logLine('classfn-log', `ClassFoo(1) threw: ${e.constructor.name}: ${e.message}`, 'err');
+            }
+        } else {
+            try {
+                FnFoo(1);
+                logLine('classfn-log', 'FnFoo(1) ran without error (unexpected).');
+            } catch (e) {
+                logLine('classfn-log', `FnFoo(1) threw: ${e.constructor.name}: ${e.message}`, 'err');
+            }
+        }
+    }
+
+    function testEnumerability() {
+        const classKeys = [];
+        for (const k in new ClassFoo(1)) classKeys.push(k);
+        const fnKeys = [];
+        for (const k in new FnFoo(1)) fnKeys.push(k);
+        logLine('classfn-log', `for...in over new ClassFoo(1): [${classKeys.join(', ')}]  (bar is non-enumerable, hidden)`);
+        logLine('classfn-log', `for...in over new FnFoo(1): [${fnKeys.join(', ')}]  (bar shows up — enumerable)`, 'ok');
+    }
+
+    /* ---------- myNew demo ---------- */
+    function myNew(Constructor, ...args) {
+        const instance = Object.create(Constructor.prototype);
+        const result = Constructor.apply(instance, args);
+        return (typeof result === 'object' && result !== null) ? result : instance;
+    }
+
+    function runMyNew() {
+        function Normal(x) { this.x = x; }
+        function ReturnsObject(x) { this.x = x; return { custom: true, x }; }
+
+        const a = myNew(Normal, 42);
+        logLine('mynew-log', `myNew(Normal, 42) -> instanceof Normal: ${a instanceof Normal}, x: ${a.x}`, 'ok');
+
+        const b = myNew(ReturnsObject, 42);
+        logLine('mynew-log', `myNew(ReturnsObject, 42) -> instanceof ReturnsObject: ${b instanceof ReturnsObject} (false — the explicitly returned object wins), value: ${JSON.stringify(b)}`, 'ok');
+    }
+
+    /* ---------- shape demo ---------- */
+    function runShapeTest(consistent) {
+        const N = 300000;
+        const objs = [];
+        const start = performance.now();
+        if (consistent) {
+            for (let i = 0; i < N; i++) {
+                const o = { type: 'circle', radius: 0, width: 0, height: 0 };
+                objs.push(o);
+            }
+        } else {
+            for (let i = 0; i < N; i++) {
+                const o = { type: i % 2 === 0 ? 'circle' : 'rect' };
+                if (o.type === 'circle') o.radius = 0; else o.width = 0;
+                if (i % 3 === 0) o.height = i; // adds a property post-hoc, in varying order
+                objs.push(o);
+            }
+        }
+        let sum = 0;
+        for (let i = 0; i < objs.length; i++) sum += (objs[i].radius || 0) + (objs[i].width || 0) + (objs[i].height || 0);
+        const elapsed = (performance.now() - start).toFixed(1);
+        document.getElementById(consistent ? 'shape-consistent-time' : 'shape-mixed-time').textContent = `${elapsed}ms`;
+    }
+
+    /* ---------- this-binding demo ---------- */
+    class DemoButton {
+        label = 'Click';
+        handleClick = () => `Lexical: ${this.label}`;
+        handleHover() { return `Dynamic: ${this.label}`; }
+    }
+
+    function runThisDemo() {
+        const instance = new DemoButton();
+        const { handleClick, handleHover } = instance;
+
+        try {
+            logLine('this-log', `Extracted handleClick() -> "${handleClick()}"`, 'ok');
+        } catch (e) {
+            logLine('this-log', `Extracted handleClick() threw: ${e.message}`, 'err');
+        }
+
+        try {
+            logLine('this-log', `Extracted handleHover() -> "${handleHover()}"`);
+        } catch (e) {
+            logLine('this-log', `Extracted handleHover() threw: ${e.constructor.name}: ${e.message} — lost 'this' on extraction`, 'err');
+        }
+    }
+</script>
+
+</body>
+</html>

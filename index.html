@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FAANG Frontend Lead — Prep Tracker</title>
+<title>Frontend Knowledgebase</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -118,6 +118,40 @@
     font-size: 11px;
     color: var(--text-muted);
     margin-top: 2px;
+  }
+
+  .target-date-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .target-date-input {
+    background: none;
+    border: none;
+    border-bottom: 1px dashed var(--border-active);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 1px 2px;
+    cursor: pointer;
+    outline: none;
+  }
+
+  .target-date-input:hover,
+  .target-date-input:focus {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .target-date-input::-webkit-calendar-picker-indicator {
+    filter: invert(0.7);
+    cursor: pointer;
+    opacity: 0.7;
+  }
+
+  body.light-theme .target-date-input::-webkit-calendar-picker-indicator {
+    filter: none;
   }
 
   .header-right {
@@ -507,61 +541,7 @@
   .badge-in-progress { background: var(--badge-blue-bg); color: var(--badge-blue); border-color: var(--badge-blue-border); }
   .badge-completed { background: var(--badge-green-bg); color: var(--badge-green); border-color: var(--badge-green-border); }
 
-  /* Score */
-  .score-cell {
-    font-family: var(--font-display);
-    font-size: 14px;
-    font-weight: 700;
-    min-width: 60px;
-  }
-
-  .score-cell .bar {
-    height: 2px;
-    background: var(--border);
-    margin-top: 4px;
-    border-radius: 1px;
-    overflow: hidden;
-  }
-
-  .score-cell .bar-fill {
-    height: 100%;
-    border-radius: 1px;
-    transition: width 0.4s ease;
-  }
-
-  .score-none { color: var(--text-dim); }
-  .score-low .bar-fill { background: var(--red); }
-  .score-mid .bar-fill { background: var(--orange); }
-  .score-good .bar-fill { background: var(--amber); }
-  .score-high .bar-fill { background: var(--green); }
-
-  .score-low { color: var(--red); }
-  .score-mid { color: var(--orange); }
-  .score-good { color: var(--amber); }
-  .score-high { color: var(--green); }
-
-  /* Readiness */
-  .readiness {
-    font-size: 10px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    white-space: nowrap;
-  }
-
-  .readiness-dot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  .r-ready .readiness-dot { background: var(--green); }
-  .r-review .readiness-dot { background: var(--amber); }
-  .r-not .readiness-dot { background: var(--text-dim); }
-  .r-ready { color: var(--green); }
-  .r-review { color: var(--amber); }
-  .r-not { color: var(--text-dim); }
+  .avail-icon { font-size: 14px; cursor: default; }
 
   /* Action icons */
   .actions {
@@ -593,7 +573,6 @@
   }
 
   .action-btn.dive:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-dim); }
-  .action-btn.test:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
 
   /* Tooltip */
   .action-btn[data-tip]:hover::after {
@@ -767,8 +746,11 @@
 
 <div class="header">
   <div class="header-left">
-    <h1>Frontend Lead Prep</h1>
-    <p>FAANG Interview Tracker — Target: July 10, 2026</p>
+    <h1>Frontend Knowledgebase</h1>
+    <p class="target-date-row">
+      Target date:
+      <input type="date" id="target-date-input" class="target-date-input">
+    </p>
   </div>
   <div class="header-right">
     <a href="resources.html" class="filter-btn" style="text-decoration:none; display:flex; align-items:center; gap:8px;">
@@ -805,11 +787,11 @@
     <div class="lbl">Not Started</div>
   </div>
   <div class="stat-cell" style="flex:1; display:flex; align-items:center; gap:0;">
-    <div class="val amber" id="stat-avg" style="white-space:nowrap; margin-right:16px;">—</div>
+    <div class="val amber" id="stat-completion" style="white-space:nowrap; margin-right:16px;">—</div>
     <div style="flex:1">
-      <div class="lbl" style="margin-bottom:6px;">Avg Score</div>
+      <div class="lbl" style="margin-bottom:6px;">Courses Completed</div>
       <div class="progress-track" style="margin:0; min-width:40px;">
-        <div class="progress-fill" id="avg-bar" style="width:0%"></div>
+        <div class="progress-fill" id="completion-bar" style="width:0%"></div>
       </div>
     </div>
   </div>
@@ -836,15 +818,9 @@
     <select class="sort-select" id="sort-select">
       <option value="default">Sort: Default</option>
       <option value="name">Sort: Name</option>
-      <option value="score-desc">Sort: Score ↓</option>
-      <option value="score-asc">Sort: Score ↑</option>
       <option value="priority">Sort: Priority</option>
       <option value="difficulty">Sort: Difficulty</option>
     </select>
-    <button onclick="document.getElementById('result-upload').click()" class="filter-btn" style="background: var(--surface-2); border-color: var(--accent); color: var(--accent); font-weight: bold;">
-      ↑ Upload Result
-    </button>
-    <input type="file" id="result-upload" style="display:none;" accept=".json" onchange="handleResultUpload(event)">
   </div>
 </div>
 
@@ -857,18 +833,17 @@
   <table>
     <thead>
       <tr>
-        <th style="width:38%">Topic</th>
+        <th style="width:34%">Topic</th>
         <th>Status</th>
         <th>Difficulty</th>
         <th>Priority</th>
-        <th>Score</th>
-        <th>Readiness</th>
+        <th style="text-align:center;">Availability</th>
         <th>Week</th>
         <th>Actions</th>
       </tr>
     </thead>
     <tbody id="topic-table-body">
-      <tr><td colspan="8" class="no-results">Loading plan.json…</td></tr>
+      <tr><td colspan="7" class="no-results">Loading plan.json…</td></tr>
     </tbody>
   </table>
 </div>
@@ -948,43 +923,6 @@ Readability requirements for this section (depth and scannability are not in ten
 
 Use professional technical language. Use \`\`\`javascript or \`\`\`typescript for all code blocks. Return ONLY the markdown content. No conversational preamble.`;
 
-const TEST_PROMPT_TEMPLATE = (topicName) => `You are my FAANG Frontend Lead interview coach. I am preparing for interviews at Meta, Google, Amazon, Microsoft.
-
-Generate a comprehensive test for the topic: ${topicName}
-
-Requirements:
-- 10 questions total
-- Mix: 4 multiple-choice, 3 short-answer, 3 code-scenario
-- Difficulty: 3 easy, 4 medium, 3 hard
-- Standard: FAANG Frontend Lead level
-- Each question worth 10 points (total: 100)
-- Passing score: 70/100
-
-Format your output as structured JSON matching this schema:
-{
-  "test": {
-    "topicId": "[topic-id-kebab-case]",
-    "topicName": "${topicName}",
-    "totalQuestions": 10,
-    "totalPoints": 100,
-    "passingScore": 70,
-    "questions": [
-      {
-        "id": 1,
-        "type": "multiple-choice | short-answer | code-scenario",
-        "difficulty": "easy | medium | hard",
-        "question": "...",
-        "options": ["A) ...", "B) ...", "C) ...", "D) ..."],
-        "correctAnswer": "...",
-        "explanation": "...",
-        "points": 10
-      }
-    ]
-  }
-}
-
-Return ONLY valid JSON. No preamble, no markdown fences.`;
-
 // ─── State ───────────────────────────────────────────────────────────────────
 let allTopics = [];
 let planData = null;
@@ -1023,19 +961,20 @@ async function loadData() {
     
     buildTopicList(); // Flatten categories to allTopics
 
-    // 3. AUTO-SYNC: Check for result files for every topic
-    await syncResultFiles();
+    // 3. AUTO-SYNC: Check for result files and prepared study notes for every topic
+    await Promise.all([syncResultFiles(), syncTopicAvailability()]);
 
     // 4. Merge local overrides (highest priority)
     mergeLocalOverrides();
 
     renderWeekFilters(); // Restored: Generate week checkboxes
-    updateHeaderInfo();
+    initTargetDateControl();
     renderAll();
   } catch (err) {
     console.warn('Load Error:', err.message);
     planData = getSamplePlan();
     buildTopicList();
+    initTargetDateControl();
     renderAll();
   }
 }
@@ -1067,6 +1006,19 @@ async function syncResultFiles() {
   });
 
   await Promise.allSettled(syncs);
+}
+
+async function syncTopicAvailability() {
+  // Marks whether data/topics/{id}.md has actually been written yet
+  const checks = allTopics.map(async (topic) => {
+    try {
+      const res = await fetch(`data/topics/${topic.id}.md`, { method: 'HEAD' });
+      topic.hasNotes = res.ok;
+    } catch (e) {
+      topic.hasNotes = false;
+    }
+  });
+  await Promise.allSettled(checks);
 }
 
 function mergeLocalOverrides() {
@@ -1150,35 +1102,40 @@ function toggleWeekFilter(num, isChecked) {
   renderTable();
 }
 
-function updateHeaderInfo() {
-  if (!scheduleData) return;
-  const targetDateStr = scheduleData.schedule.targetDate;
-  const dateObj = new Date(targetDateStr);
-  const subtitle = document.querySelector('.header-left p');
-  if (subtitle) {
-    subtitle.textContent = `FAANG Interview Tracker — Target: ${dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
-  }
+function getTargetDate() {
+  return localStorage.getItem('target_date') || scheduleData?.schedule?.targetDate || '2026-07-10';
+}
+
+function initTargetDateControl() {
+  const input = document.getElementById('target-date-input');
+  if (!input) return;
+  input.value = getTargetDate();
+  input.addEventListener('change', () => {
+    if (!input.value) return;
+    localStorage.setItem('target_date', input.value);
+    renderCountdown();
+  });
 }
 
 // ─── Stats ────────────────────────────────────────────────────────────────────
-function renderStats() {
-  const total = allTopics.length;
-  const completed = allTopics.filter(t => t.status === 'completed').length;
-  const inProgress = allTopics.filter(t => t.status === 'in-progress').length;
-  const notStarted = allTopics.filter(t => t.status === 'not-started').length;
-  const scored = allTopics.filter(t => t.score > 0);
-  const avg = scored.length ? Math.round(scored.reduce((s, t) => s + t.score, 0) / scored.length) : 0;
+function renderStats(list) {
+  const topics = list || allTopics;
+  const total = topics.length;
+  const completed = topics.filter(t => t.status === 'completed').length;
+  const inProgress = topics.filter(t => t.status === 'in-progress').length;
+  const notStarted = topics.filter(t => t.status === 'not-started').length;
+  const completionPct = total ? Math.round((completed / total) * 100) : 0;
 
   document.getElementById('stat-total').textContent = total;
   document.getElementById('stat-completed').textContent = completed;
   document.getElementById('stat-in-progress').textContent = inProgress;
   document.getElementById('stat-not-started').textContent = notStarted;
-  document.getElementById('stat-avg').textContent = avg ? avg + '%' : '—';
-  document.getElementById('avg-bar').style.width = avg + '%';
+  document.getElementById('stat-completion').textContent = completionPct + '%';
+  document.getElementById('completion-bar').style.width = completionPct + '%';
 }
 
 function renderCountdown() {
-  const targetDateStr = scheduleData?.schedule?.targetDate || '2026-07-10';
+  const targetDateStr = getTargetDate();
   const target = new Date(targetDateStr);
   const now = new Date();
   const diff = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
@@ -1210,8 +1167,6 @@ function getFilteredTopics() {
 
   switch (sortMode) {
     case 'name': list.sort((a, b) => a.name.localeCompare(b.name)); break;
-    case 'score-desc': list.sort((a, b) => b.score - a.score); break;
-    case 'score-asc': list.sort((a, b) => a.score - b.score); break;
     case 'priority': list.sort((a, b) => (priorityOrder[a.priority] ?? 9) - (priorityOrder[b.priority] ?? 9)); break;
     case 'difficulty': list.sort((a, b) => (difficultyOrder[a.difficulty] ?? 9) - (difficultyOrder[b.difficulty] ?? 9)); break;
     default: break;
@@ -1222,17 +1177,17 @@ function getFilteredTopics() {
 
 // ─── Render ───────────────────────────────────────────────────────────────────
 function renderAll() {
-  renderStats();
   renderCountdown();
   renderTable();
 }
 
 function renderTable() {
   const filtered = getFilteredTopics();
+  renderStats(filtered);
   const tbody = document.getElementById('topic-table-body');
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="no-results">No topics match your filters.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="no-results">No topics match your filters.</td></tr>`;
     return;
   }
 
@@ -1249,7 +1204,7 @@ function renderTable() {
     catOrder.forEach(catId => {
       const cat = grouped[catId];
       const completedInCat = cat.topics.filter(t => t.status === 'completed').length;
-      html += `<tr class="cat-row"><td colspan="8"><span class="cat-label">${escHtml(cat.name)} <span class="cat-count">${completedInCat}/${cat.topics.length} done</span></span></td></tr>`;
+      html += `<tr class="cat-row"><td colspan="7"><span class="cat-label">${escHtml(cat.name)} <span class="cat-count">${completedInCat}/${cat.topics.length} done</span></span></td></tr>`;
       cat.topics.forEach(t => { html += renderTopicRow(t); });
     });
   } else {
@@ -1273,16 +1228,9 @@ function renderTopicRow(t) {
   const diffClass = { Easy: 'badge-easy', Medium: 'badge-medium', Hard: 'badge-hard' }[t.difficulty] || 'badge-medium';
   const prioClass = { High: 'badge-high', Medium: 'badge-medium-p', Low: 'badge-low' }[t.priority] || 'badge-low';
 
-  let scoreHtml = `<div class="score-cell score-none">—</div>`;
-  if (t.score > 0) {
-    let sc = t.score >= 90 ? 'score-high' : t.score >= 70 ? 'score-good' : t.score >= 50 ? 'score-mid' : 'score-low';
-    scoreHtml = `<div class="score-cell ${sc}">${t.score}%<div class="bar"><div class="bar-fill" style="width:${t.score}%"></div></div></div>`;
-  }
-
-  let readiness;
-  if (t.score >= 70) readiness = `<div class="readiness r-ready"><div class="readiness-dot"></div>Ready</div>`;
-  else if (t.score > 0) readiness = `<div class="readiness r-review"><div class="readiness-dot"></div>Review</div>`;
-  else readiness = `<div class="readiness r-not"><div class="readiness-dot"></div>Untested</div>`;
+  const availabilityHtml = t.hasNotes
+    ? `<span class="avail-icon" title="Study notes available">✅</span>`
+    : `<span class="avail-icon" title="Needs to be built">🚧</span>`;
 
   const weekLabel = t.actualWeek === 'deferred' ? 'Deferred' : (t.actualWeek ? `Week ${t.actualWeek}` : '—');
   const tagsHtml = (t.tags || []).map(tag => `<span class="tag">${escHtml(tag)}</span>`).join('');
@@ -1298,62 +1246,23 @@ function renderTopicRow(t) {
     <td>${statusSelect}</td>
     <td><span class="badge ${diffClass}">${escHtml(t.difficulty || 'Medium')}</span></td>
     <td><span class="badge ${prioClass}">${escHtml(t.priority || 'Medium')}</span></td>
-    <td>${scoreHtml}</td>
-    <td>${readiness}</td>
+    <td style="text-align:center;">${availabilityHtml}</td>
     <td><span class="week-badge${t.actualWeek === 'deferred' ? ' week-badge-deferred' : ''}">${escHtml(weekLabel)}</span></td>
     <td>
       <div class="actions">
         <a class="action-btn dive" data-tip="Study Course" href="topic-detail.html?id=${topicId}" target="_blank" style="text-decoration:none">
           📖
         </a>
-        <button class="action-btn dive" data-tip="Course Prompt" onclick="openModal('dive','${topicId}','${topicNameAttr}')">
+        <button class="action-btn dive" data-tip="Course Prompt" onclick="openModal('${topicId}','${topicNameAttr}')">
           💬
         </button>
-        <button class="action-btn test" data-tip="Generate Test" onclick="openModal('test','${topicId}','${topicNameAttr}')">
-          🧪
-        </button>
-        <a class="action-btn test" data-tip="Take Test" href="test-portal.html?id=${topicId}" target="_blank" style="text-decoration:none">
-          ✏
-        </a>
       </div>
     </td>
   </tr>`;
 }
 
-function handleResultUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      const data = JSON.parse(e.target.result);
-      if (!data.result || !data.result.topicId) {
-        alert("Invalid result format. Please upload a JSON exported from the Test Portal.");
-        return;
-      }
-
-      const { topicId, score, passed } = data.result;
-      
-      const overrides = JSON.parse(localStorage.getItem('topic_overrides') || '{}');
-      overrides[topicId] = {
-        ...(overrides[topicId] || {}),
-        score: score,
-        status: passed ? 'completed' : 'in-progress'
-      };
-      localStorage.setItem('topic_overrides', JSON.stringify(overrides));
-
-      loadData();
-      alert(`Success! Updated tracker with score: ${score}%`);
-    } catch (err) {
-      alert("Error parsing JSON file.");
-    }
-  };
-  reader.readAsText(file);
-}
-
 // ─── Modal ────────────────────────────────────────────────────────────────────
-function openModal(type, topicId, topicName) {
+function openModal(topicId, topicName) {
   const backdrop = document.getElementById('modal-backdrop');
   const title = document.getElementById('modal-title');
   const typeLabel = document.getElementById('modal-type-label');
@@ -1361,19 +1270,10 @@ function openModal(type, topicId, topicName) {
   const promptBox = document.getElementById('modal-prompt-text');
   const copyBtn = document.getElementById('copy-btn');
 
-  const decodedName = topicName;
-
-  if (type === 'dive') {
-    title.textContent = topicName;
-    typeLabel.textContent = '📖 Deep Dive — Study Prompt';
-    instruction.textContent = 'Copy this prompt and paste it into a new Claude conversation. Claude will generate structured study materials including core concepts, interview patterns, Lead vs Senior answer comparisons, and a mini-test.';
-    promptBox.textContent = STUDY_PROMPT_TEMPLATE(decodedName);
-  } else {
-    title.textContent = topicName;
-    typeLabel.textContent = '✏ Test Prompt';
-    instruction.textContent = 'Copy this prompt and paste it into a new Claude conversation. Claude will generate a 10-question FAANG-level test. Save the output JSON to data/tests/' + topicId + '-test.json for later evaluation.';
-    promptBox.textContent = TEST_PROMPT_TEMPLATE(decodedName);
-  }
+  title.textContent = topicName;
+  typeLabel.textContent = '📖 Deep Dive — Study Prompt';
+  instruction.textContent = 'Copy this prompt and paste it into a new Claude conversation. Claude will generate structured study materials including core concepts, interview patterns, Lead vs Senior answer comparisons, and a mini-test.';
+  promptBox.textContent = STUDY_PROMPT_TEMPLATE(topicName);
 
   copyBtn.textContent = 'Copy Prompt';
   copyBtn.classList.remove('copied');
