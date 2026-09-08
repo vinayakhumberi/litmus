@@ -43,7 +43,10 @@
       "Bash(lsof -ti:9207)",
       "Bash(xargs kill)",
       "Bash(rm -rf /private/tmp/pptest_apidesign)",
-      "Bash(node test.js)"
+      "Bash(node test.js)",
+      "Bash(lsof -ti:9201)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:9209/topic-detail.html?id=websockets-sse-polling\")",
+      "Bash(mkdir -p /private/tmp/pptest_wssse2)"
     ]
   }
 }

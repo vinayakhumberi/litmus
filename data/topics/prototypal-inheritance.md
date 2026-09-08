@@ -2,49 +2,58 @@
 
 ## 🎯 Executive Summary
 
-JavaScript has exactly one inheritance mechanism: a live, linked chain of objects connected via an internal `[[Prototype]]` slot. `class` syntax does not add a second mechanism — it's a specific, opinionated syntax layered on top of the same prototype chain that `Object.create()` and constructor functions have always used. A Lead is expected to know precisely which parts of `class` are pure syntax sugar and which parts genuinely change runtime behavior (hoisting semantics, method enumerability, `super` binding, constructor enforcement) — conflating "sugar" with "identical behavior" is a real, testable gap.
+Ask most engineers how `class extends` works in JavaScript, and you'll get some version of "it's basically like Java, right?" It isn't — and the gap between that assumption and what's actually happening under the hood is exactly the kind of gap a Staff-level interview is designed to find. JavaScript has exactly one inheritance mechanism: a live, linked chain of objects connected via an internal `[[Prototype]]` slot. `class` doesn't replace that mechanism — it puts a familiar face on it. A Lead is expected to know precisely which parts of `class` are pure syntax sugar and which parts genuinely change runtime behavior (hoisting semantics, method enumerability, `super` binding, constructor enforcement); conflating "sugar" with "identical behavior" is a real, testable gap, and it's the single most common way this topic goes wrong out loud.
 
-This is a must-know topic because it's a proxy for whether a candidate understands JavaScript's object model at the engine level or has only memorized `class` syntax as if it were Java. The deeper signal interviewers are after is the composition-over-inheritance judgment call — knowing when a prototype chain is the right tool and when it's the source of a fragile, over-coupled hierarchy, illustrated concretely by React's own move from class components to hooks.
+This is a must-know topic because it's a proxy for whether a candidate understands JavaScript's object model at the engine level, or has only ever memorized `class` syntax well enough to use it without asking what it's syntax *for*. The deeper signal interviewers are after is the composition-over-inheritance judgment call — knowing when a prototype chain is the right tool and when it quietly becomes the source of a fragile, over-coupled hierarchy — illustrated concretely, and rather famously, by React's own move from class components to hooks.
 
 ## 🧠 Core Technical Deep Dive
 
-### 1. The mental model, before any spec terms
-
-Forget syntax for a moment. Every object in JavaScript can have exactly one other object marked as "ask this one if you can't find what you're looking for." When you read `obj.prop` and `obj` doesn't have `prop` itself, the engine doesn't fail immediately — it goes and asks that linked object. If *that* object doesn't have it either, it asks whatever *it's* linked to, and so on, until either something answers or there's nothing left to ask.
-
-That's the entire mechanism. Not a metaphor for it — that literally is prototypal inheritance. There's no compiler step that "expands" one object into another, no copying of methods into each instance. It's a chain of objects, each one delegating a lookup to the next when it comes up empty.
-
-Two things fall out of that immediately, and they're the two facts almost everything else in this topic builds on:
-
-- **The chain is walked at the moment you access the property**, not decided in advance. So if the object you'd be asking changes *after* the chain was set up, the next lookup sees the change — nothing was "baked in" earlier.
-- **Nothing is ever copied.** Every object further down the chain still only has what it actually owns; everything else is a live pointer to somewhere else.
-
-### 2. Naming the mechanism: `[[Prototype]]`, and tracing a real lookup
-
-The spec's name for that "ask this one instead" link is the internal `[[Prototype]]` slot — every object has one, pointing to another object or to `null` (meaning "nobody left to ask"). Accessing `obj.prop` checks `obj`'s own properties first; if it's not there, the engine walks `obj.[[Prototype]] → obj.[[Prototype]].[[Prototype]] → ...` until the property turns up or the chain ends at `null`.
-
-Trace it through a real example, step by step:
+### 1. Forget everything you think you know about inheritance — start here
 
 ```javascript
 const base = { greet() { return 'hi'; } };
-const derived = Object.create(base); // derived.[[Prototype]] is now base
+const derived = Object.create(base);
 
-derived.greet();
-// 1. Does `derived` have its own `greet` property? No.
-// 2. Follow derived.[[Prototype]] to `base`. Does `base` have `greet`? Yes.
-// 3. Call it, with `this` still bound to `derived` — returns 'hi'.
+base.greet = function () { return 'hello'; };
 
-base.greet = function () { return 'hello'; }; // mutate base AFTER the link already exists
-derived.greet(); // 'hello' — derived was never "copied from" base, the link is just followed again
+derived.greet(); // what does this log?
 ```
 
-Nothing about `derived` changed between the two calls to `derived.greet()`. What changed was what's sitting at the other end of the link — and because the lookup happens fresh on every access, that change is visible immediately, with no separate "sync" step.
+Take a second before you read on. If your instinct says `'hi'` — because `derived` was set up before `base.greet` got reassigned, so surely it kept whatever version it had at creation — you're in good company. Almost everyone's first guess here is wrong, and the reason it's wrong turns out to *be* the entire topic.
+
+It logs `'hello'`. Not because of some special-case rule bolted on for this scenario, but because `derived` never had its own `greet` in the first place. Every single time you call `derived.greet()`, JavaScript asks `base`, fresh, right now, for whatever `base.greet` happens to be at that exact moment. Nothing about `derived` was ever holding a copy — there was never anything to go stale.
+
+That's the whole mechanism, and once you see it stated plainly, it stops being surprising: every object in JavaScript can have exactly one other object marked as "ask this one if you can't find what you're looking for." When you read `obj.prop` and `obj` doesn't have `prop` itself, the engine doesn't fail — it goes and asks that linked object. If *that* object doesn't have it either, it asks whatever *it's* linked to, and so on, until either something answers or there's nothing left to ask.
+
+This isn't a simplified metaphor for prototypal inheritance. It literally *is* prototypal inheritance. There's no compiler step that "expands" one object into another, no copying of methods into each instance — just a chain of objects, each one delegating a lookup to the next when it comes up empty, checked fresh, every single time.
+
+Two things fall out of that, and they're the two facts almost everything else in this topic builds on:
+
+- **The chain is walked at the moment you access the property**, not decided in advance. That's exactly why the puzzle above resolves to `'hello'` — nothing was ever "baked in" when `derived` was created.
+- **Nothing is ever copied.** Every object further down the chain still only has what it actually owns; everything else is a live pointer to somewhere else.
+
+### 2. Giving the mechanism its real name — and watching it work
+
+The spec's name for that "ask this one instead" link is the internal `[[Prototype]]` slot — every object has one, pointing to another object or to `null` (meaning "nobody left to ask"). Accessing `obj.prop` checks `obj`'s own properties first; if it's not there, the engine walks `obj.[[Prototype]] → obj.[[Prototype]].[[Prototype]] → ...` until the property turns up or the chain ends at `null`.
+
+Here's the puzzle from Section 1, traced through that formal language, one step at a time:
+
+```javascript
+derived.greet();
+// 1. Does `derived` have its own `greet` property? No.
+// 2. Follow derived.[[Prototype]] to `base`. Does `base` have `greet`? Yes — whatever it currently is.
+// 3. Call it, with `this` still bound to `derived` — returns 'hello', because that's what base.greet is *right now*.
+```
+
+Nothing about `derived` changed between the "before" and "after" of that puzzle. What changed was what's sitting at the other end of the link — and because the lookup happens fresh on every access, that change is visible immediately, with no separate "sync" step required.
 
 > **Key takeaway:** the prototype chain is a runtime lookup path, not a compile-time or construction-time copy. Anything that changes this fact (like `Object.freeze`-ing a prototype, or breaking the link with `Object.setPrototypeOf`) is a deliberate, observable architectural decision, not a performance detail to ignore.
 
 ### 3. `class` is sugar over the same mechanism — but not *only* sugar
 
-Everything in sections 1 and 2 is true whether or not you ever type the word `class`. `class Foo {}` still creates a function `Foo` with a `.prototype` object, and `new Foo()` still performs the exact same `[[Prototype]]` linking traced above — there is no second, separate "class engine" running underneath. But `class` syntax genuinely changes several behaviors beyond cosmetics — conflating these with "just nicer syntax" is the most common gap at this topic.
+Everything in sections 1 and 2 is true whether or not you ever type the word `class`. Sit with that for a second: `class Foo {}` still creates a function `Foo` with a `.prototype` object, and `new Foo()` still performs the exact same `[[Prototype]]` linking traced above. There is no second, parallel "class engine" quietly running underneath — it's the same mechanism, wearing a more familiar outfit.
+
+But "it's just sugar" is the trap. Say that in an interview and stop there, and you've told the interviewer you haven't actually looked closely — because `class` syntax genuinely changes several behaviors beyond cosmetics, and conflating "sugar" with "behaviorally identical" is the most common way this topic goes sideways.
 
 | Behavior | Pre-ES6 constructor function | `class` syntax |
 |---|---|---|
@@ -55,9 +64,9 @@ Everything in sections 1 and 2 is true whether or not you ever type the word `cl
 
 > **Key takeaway:** `class` doesn't introduce a new inheritance mechanism, but it does introduce real, spec-mandated behavioral guarantees the old pattern never had — the correct framing in an interview is "sugar with teeth," not "just sugar."
 
-### 4. Constructing the prototype chain without `class` at all
+### 4. Classes were never mandatory — here's the proof
 
-Because `class` is optional syntax over a more general mechanism, inheritance-like structures can be built with `Object.create()` directly — worth knowing precisely because it reveals that classes were never a requirement, only a convention.
+If `class` is optional syntax layered over a more general mechanism, then nothing about inheritance actually *requires* it. You can build the exact same delegation chain with `Object.create()` directly, no constructor ceremony at all — and seeing that once is usually what turns "class is just syntax" from an abstract claim into something you've actually verified yourself.
 
 ```javascript
 const animalProto = {
@@ -83,11 +92,13 @@ dog.speak(); // 'Rex makes a sound' — no class, no `new`, same underlying mech
 
 > **Key takeaway:** reaching for `class` by default is fine for typical application code, but knowing `Object.create()` exists as a direct, lower-level tool is what signals you understand the mechanism underneath the syntax, not just the syntax itself.
 
-### 5. Performance: why the engine cares about object "shape"
+### 5. Why the engine quietly punishes what you just did
 
-Walking a chain of links on every single property access, exactly as described above, would be slow if the engine actually did it that way every time. In practice it doesn't — it optimizes around one observation: most of the time, objects created from the same place (the same constructor, the same factory function) end up with the same properties, added in the same order. The engine calls that repeated layout a **hidden class** ("shape" in some engine literature), and once it's seen a given shape before, it can skip straight to the right memory offset instead of re-walking the chain — that fast path is called an **inline cache**.
+Walking a chain of links on every single property access — exactly as described in Section 1 — sounds like it should be slow. If the engine actually did that, naively, on every access, it would be. It doesn't, and knowing *why* it doesn't is worth having precisely, because the moment you accidentally undo the optimization, your code gets measurably slower without a single line of it looking wrong.
 
-That optimization breaks the moment two objects that *should* share a shape don't. If some instances get a property added later, or in a different order, the engine can't reuse the same fast path for both — it has to fall back toward a slower, more general lookup. Code that reliably hits the fast path is called **monomorphic**; code where the engine keeps seeing different shapes at the same call site degrades toward **megamorphic**, the slow end.
+The engine optimizes around one observation: most of the time, objects created from the same place (the same constructor, the same factory function) end up with the same properties, added in the same order. It calls that repeated layout a **hidden class** ("shape" in some engine literature), and once it's seen a given shape before, it can skip straight to the right memory offset instead of re-walking the chain — that fast path is called an **inline cache**.
+
+Here's the part that punishes you: that optimization breaks the moment two objects that *should* share a shape don't. If some instances get a property added later, or in a different order, the engine can't reuse the same fast path for both — it has to fall back toward a slower, more general lookup. Code that reliably hits the fast path is called **monomorphic**; code where the engine keeps seeing different shapes at the same call site degrades toward **megamorphic**, the slow end. Nothing throws, nothing warns you — the code just quietly gets slower.
 
 Prototype chain *depth* compounds this at call sites that receive objects with genuinely different shapes or prototype chains — a single fast-path cache entry can't serve all of them. This is a real, measurable cost in hot loops (rendering engines, hit-testing, data-transform pipelines), not a theoretical concern reserved for engine authors.
 
@@ -103,7 +114,9 @@ b.z = 5; // shape diverges from `a` here, even though both came from the same co
 
 > **Key takeaway:** constructing objects with a consistent property shape isn't a micro-optimization — it's what keeps the engine's inline caches monomorphic. This becomes concretely relevant in any hot path processing many similarly-shaped objects.
 
-### 6. Composition over inheritance: the actual Staff-level debate
+### 6. Composition over inheritance: the debate that actually separates Senior from Staff
+
+Everything so far has been "here's precisely how inheritance works." This section is different — it's "here's when you shouldn't reach for it," and it's a much better interview answer than reciting the mechanism perfectly and never questioning whether it was the right tool.
 
 Deep class hierarchies create the **fragile base class problem**: a change to a base class's behavior can silently break distant subclasses that depend on assumptions the base class author never documented, because the dependency is implicit in the inheritance chain rather than an explicit interface. Composition — building behavior by combining independent functions or objects rather than extending a shared ancestor — avoids this by flattening the dependency graph into explicit, individually-testable pieces.
 
@@ -111,11 +124,11 @@ The clearest real-world proof of this trade-off is React's own evolution: class 
 
 > **Key takeaway:** this isn't "inheritance is bad" — shallow, well-defined hierarchies are fine. It's that inheritance depth should track how well-understood and stable the shared behavior actually is; composition is the safer default when extension points aren't fully known in advance.
 
-### 7. `this` binding: dynamic dispatch vs. lexical capture
+### 7. One more piece of dynamic behavior worth flagging: `this`
 
-One more piece of the mental model from section 1 matters here: `this` inside a method is not decided by where the method was *defined* — it's decided by *how it's called*. That's what "dynamic dispatch" means. `obj.method()` binds `this` to `obj` at the moment of that call; but if you extract the method (`const fn = obj.method; fn()`), you're calling it a completely different way, so it gets a completely different `this` — the function itself never remembered what object it was attached to in the first place.
+Prototype methods don't just delegate lookups dynamically — the `this` inside them resolves dynamically too, decided by *how* a method is called, never by where it was defined. That's a big enough topic to deserve its own complete treatment: see [The `this` keyword](/topic-detail.html?id=this-binding) for the full rule set — the four binding rules in precedence order, `call`/`apply`/`bind` mechanics, and exactly why arrow functions are exempt from all of it.
 
-Arrow-function class fields (`handleClick = () => {...}`) intentionally trade this dynamic dispatch away for lexical `this` capture — the arrow function closes over the instance's `this` at construction time, the same closure mechanism covered in scope/closures fundamentals, applied here specifically to solve method-extraction bugs (passing `this.handleClick` as a callback without `.bind()`).
+The one fact worth carrying specifically into *this* topic: arrow-function class fields (`handleClick = () => {...}`) trade prototype-based dynamic dispatch for closures-based lexical capture, deliberately — specifically to survive being extracted and handed off as a callback, which is exactly what `this.handleClick` passed to `<button onClick={...}>` does.
 
 ```javascript
 class Button {

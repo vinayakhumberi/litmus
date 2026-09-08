@@ -50,6 +50,19 @@
             "tags": ["javascript", "oop", "prototype", "classes"]
           },
           {
+            "id": "this-binding",
+            "name": "The `this` keyword: binding rules, call/apply/bind, and common gotchas",
+            "category": "JavaScript & Browser Internals",
+            "difficulty": "Medium",
+            "estimatedHours": 1.5,
+            "priority": "Medium",
+            "status": "not-started",
+            "score": 0,
+            "passingScore": 70,
+            "recommendedWeek": "Week 1-2",
+            "tags": ["javascript", "this", "call-apply-bind", "arrow-functions"]
+          },
+          {
             "id": "memory-management-gc",
             "name": "Memory management, garbage collection, and leak detection/prevention",
             "category": "JavaScript & Browser Internals",
