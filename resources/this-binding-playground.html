@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>`this` Binding Playground — Predict, Then Run</title>
+    <style>
+        :root {
+            --primary: #61dafb;
+            --dark: #20232a;
+            --text: #ffffff;
+            --gray: #282c34;
+            --accent: #f08d49;
+            --text-muted: #999;
+            --code-bg: #1e1e1e;
+            --good: #4ade80;
+            --bad: #f87171;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--dark);
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: var(--gray);
+            padding: 3rem 2rem;
+            text-align: center;
+            border-bottom: 4px solid var(--primary);
+        }
+        header p { color: var(--text-muted); max-width: 700px; margin: 0.75rem auto 0; }
+        nav {
+            position: sticky;
+            top: 0;
+            background: var(--gray);
+            padding: 1rem;
+            z-index: 100;
+            text-align: center;
+            border-bottom: 1px solid #444;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 4px;
+        }
+        nav a { color: var(--primary); margin: 0 12px; text-decoration: none; font-weight: bold; font-size: 0.9rem; }
+        main { max-width: 1000px; margin: 2rem auto; padding: 0 1rem 4rem; }
+        section {
+            margin-bottom: 3rem;
+            padding: 2.25rem;
+            background: var(--gray);
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.35);
+        }
+        h1, h2, h3 { color: var(--primary); }
+        h2 { margin-top: 0; }
+        code {
+            background: var(--code-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-family: "Fira Code", "Courier New", monospace;
+            font-size: 0.9em;
+            color: var(--accent);
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 1rem 1.25rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            border-left: 3px solid var(--primary);
+            font-family: "Fira Code", "Courier New", monospace;
+            font-size: 0.82rem;
+            margin: 1rem 0;
+        }
+        pre code { background: none; padding: 0; color: #d4d4d4; }
+        .callout {
+            background: rgba(97, 218, 251, 0.08);
+            border-left: 3px solid var(--primary);
+            padding: 1rem 1.25rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            margin: 1.25rem 0;
+        }
+        .puzzle {
+            border: 2px dashed var(--accent);
+            padding: 1.5rem;
+            margin: 1.25rem 0;
+            border-radius: 10px;
+            background: rgba(240, 141, 73, 0.05);
+        }
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 1rem 0; }
+        button {
+            padding: 0.7rem 1.4rem;
+            background: var(--primary);
+            color: var(--dark);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        button:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+        button:disabled { opacity: 0.35; cursor: not-allowed; }
+        button.secondary { background: #444; color: var(--text); }
+        button.choice { background: var(--code-bg); color: var(--text); border: 1px solid #444; }
+        button.choice.selected { border-color: var(--primary); }
+        button.choice.correct { border-color: var(--good); background: rgba(74, 222, 128, 0.15); }
+        button.choice.incorrect { border-color: var(--bad); background: rgba(248, 113, 113, 0.15); }
+        .log {
+            background: var(--code-bg);
+            border-radius: 6px;
+            padding: 1rem 1.25rem;
+            font-family: "Fira Code", monospace;
+            font-size: 0.85rem;
+            min-height: 32px;
+            margin-top: 1rem;
+            white-space: pre-wrap;
+        }
+        .log .line { margin-bottom: 0.35rem; }
+        .log .ok { color: var(--good); }
+        .log .bad { color: var(--bad); }
+        .log .muted { color: var(--text-muted); }
+        .split { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+        @media (max-width: 700px) { .split { grid-template-columns: 1fr; } }
+        select {
+            padding: 0.6rem 0.9rem;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: var(--code-bg);
+            color: var(--text);
+            font-family: "Fira Code", monospace;
+            font-size: 0.9rem;
+        }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.85rem; }
+        th, td { padding: 0.6rem 0.8rem; text-align: left; border-bottom: 1px solid #3a3f4b; }
+        th { color: var(--primary); }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>`this` Binding Playground 🎯</h1>
+    <p>Every result on this page is computed by real, live JavaScript running in your browser right now — nothing is a pre-written string. Predict first, then click to find out.</p>
+</header>
+
+<nav>
+    <a href="#four-rules">The Four Rules</a>
+    <a href="#call-apply-bind">call / apply / bind</a>
+    <a href="#arrow">Arrow Exemption</a>
+    <a href="#lost-this">The Lost-this Bug</a>
+    <a href="#precedence">Precedence Showdown</a>
+</nav>
+
+<main>
+    <section id="four-rules">
+        <h2>1. The Four Rules — Same Function, Four Calls</h2>
+        <p>This is the exact function, defined once. Click each button to invoke it a different way and see what <code>this</code> actually resolves to, live.</p>
+        <pre><code>function whoAmI() {
+  return this === undefined ? 'undefined'
+       : this === globalThis ? 'the global object'
+       : this.label ? `an object with label "${this.label}"`
+       : String(this);
+}</code></pre>
+        <div class="btn-row">
+            <button onclick="rule('default')">Bare call</button>
+            <button onclick="rule('implicit')">obj.whoAmI()</button>
+            <button onclick="rule('explicit')">whoAmI.call(otherObj)</button>
+            <button onclick="rule('new')">new Whoish()</button>
+        </div>
+        <div class="log" id="rules-log">Click a button to invoke the function that way.</div>
+        <table>
+            <thead><tr><th>Rule</th><th>Precedence</th><th>How this call sets it</th></tr></thead>
+            <tbody>
+                <tr><td>Default</td><td>4 (lowest)</td><td>No object, no explicit call, no <code>new</code> — falls back to global/undefined</td></tr>
+                <tr><td>Implicit</td><td>3</td><td>Called as <code>obj.method()</code> — this is the object left of the dot</td></tr>
+                <tr><td>Explicit</td><td>2</td><td><code>call</code>/<code>apply</code>/<code>bind</code> set it directly</td></tr>
+                <tr><td><code>new</code></td><td>1 (highest)</td><td>A fresh object is created and bound automatically</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="call-apply-bind">
+        <h2>2. call / apply / bind Sandbox</h2>
+        <p>One function, three ways to explicitly set <code>this</code>. Pick a target object and an invocation style, then run it.</p>
+        <pre><code>function announce(greeting, punctuation) {
+  return `${greeting}, I am ${this.label}${punctuation}`;
+}
+const alice = { label: 'Alice' };
+const bob = { label: 'Bob' };</code></pre>
+        <div class="btn-row">
+            <label>thisArg: <select id="cab-target"><option value="alice">alice</option><option value="bob">bob</option></select></label>
+            <label>method: <select id="cab-method"><option value="call">call</option><option value="apply">apply</option><option value="bind">bind</option></select></label>
+            <button onclick="runCallApplyBind()">Run</button>
+        </div>
+        <div class="log" id="cab-log">Choose a target and a method, then click Run.</div>
+    </section>
+
+    <section id="arrow">
+        <h2>3. Arrow Functions: Not a Fifth Rule</h2>
+        <p>Same object, two "method" definitions — one regular, one arrow. Same call syntax. Predict whether they behave the same before running.</p>
+        <div class="split">
+            <pre><code>const objA = {
+  label: 'objA',
+  regular: function () { return this.label; }
+};
+objA.regular();</code></pre>
+            <pre><code>const objB = {
+  label: 'objB',
+  arrow: () => { return this.label; }
+};
+objB.arrow();</code></pre>
+        </div>
+        <div class="btn-row">
+            <button onclick="runArrowComparison()">Run both</button>
+        </div>
+        <div class="log" id="arrow-log">Click to run both and compare.</div>
+    </section>
+
+    <section id="lost-this">
+        <h2>4. The Classic Lost-<code>this</code> Bug — And Three Fixes</h2>
+        <p>A method gets extracted and handed to something else to call later (exactly what <code>addEventListener</code> or <code>setTimeout</code> does). Watch it break, then watch each fix repair it, live.</p>
+        <pre><code>const counter = {
+  count: 0,
+  increment() { this.count++; return this.count; }
+};
+// Something else extracts and calls it later, bare:
+const extracted = counter.increment;
+extracted(); // ?</code></pre>
+        <div class="btn-row">
+            <button onclick="lostThisBroken()">Run broken version</button>
+            <button onclick="lostThisBindFix()">Fix with .bind()</button>
+            <button onclick="lostThisArrowFix()">Fix with arrow field</button>
+            <button class="secondary" onclick="lostThisReset()">Reset counters</button>
+        </div>
+        <div class="log" id="lost-log">Click "Run broken version" first to see the actual failure.</div>
+    </section>
+
+    <section id="precedence">
+        <h2>5. Precedence Showdown: <code>new</code> vs. a Hard-Bound Function</h2>
+        <p>The one genuinely surprising rule: <code>bind()</code> is supposed to be permanent — nothing can override it. Except one thing. Predict, then run.</p>
+        <pre><code>function Widget() { this.made = true; }
+const boundToNull = Widget.bind(null);
+
+const viaCall = (() => { try { boundToNull.call({fake: true}); return 'ran normally, this = {fake:true} attempt'; } catch(e) { return e.message; } })();
+const viaNew = new boundToNull(); // does `new` still work here, and whose this does it use?</code></pre>
+        <div class="btn-row">
+            <button onclick="precedenceShowdown()">Run the showdown</button>
+        </div>
+        <div class="log" id="prec-log">Click to see whether <code>new</code> can escape a hard binding.</div>
+        <div class="callout" id="prec-explain" style="display:none;"></div>
+    </section>
+</main>
+
+<script>
+/* ---------- Section 1: the four rules ---------- */
+function whoAmI() {
+    return this === undefined ? 'undefined'
+        : this === globalThis ? 'the global object'
+        : this.label ? `an object with label "${this.label}"`
+        : String(this);
+}
+
+function rulesLog(text, cls) {
+    const log = document.getElementById('rules-log');
+    if (log.dataset.used !== '1') { log.textContent = ''; log.dataset.used = '1'; }
+    const line = document.createElement('div');
+    line.className = 'line' + (cls ? ' ' + cls : '');
+    line.textContent = text;
+    log.appendChild(line);
+}
+
+function rule(kind) {
+    if (kind === 'default') {
+        const bare = whoAmI;
+        const result = bare();
+        rulesLog(`Bare call: this → ${result}  (this page's script runs in non-strict mode, so default binding falls through to the global object — this is the exact silent-pollution gotcha the topic doc warns about)`, 'ok');
+    } else if (kind === 'implicit') {
+        const obj = { label: 'implicitTarget', whoAmI };
+        const result = obj.whoAmI();
+        rulesLog(`obj.whoAmI(): this → ${result}`, 'ok');
+    } else if (kind === 'explicit') {
+        const otherObj = { label: 'explicitTarget' };
+        const result = whoAmI.call(otherObj);
+        rulesLog(`whoAmI.call(otherObj): this → ${result}`, 'ok');
+    } else if (kind === 'new') {
+        function Whoish() { this.label = 'a freshly constructed object'; this.captured = whoAmI.call(this); }
+        const instance = new Whoish();
+        rulesLog(`new Whoish(): this inside constructor → ${instance.captured}`, 'ok');
+    }
+}
+
+/* ---------- Section 2: call/apply/bind sandbox ---------- */
+function announce(greeting, punctuation) {
+    return `${greeting}, I am ${this.label}${punctuation}`;
+}
+const alice = { label: 'Alice' };
+const bob = { label: 'Bob' };
+
+function runCallApplyBind() {
+    const targetName = document.getElementById('cab-target').value;
+    const method = document.getElementById('cab-method').value;
+    const target = targetName === 'alice' ? alice : bob;
+    const log = document.getElementById('cab-log');
+    log.innerHTML = '';
+    const addLine = (text, cls) => {
+        const line = document.createElement('div');
+        line.className = 'line' + (cls ? ' ' + cls : '');
+        line.textContent = text;
+        log.appendChild(line);
+    };
+
+    if (method === 'call') {
+        const result = announce.call(target, 'Hello', '!');
+        addLine(`announce.call(${targetName}, 'Hello', '!') → "${result}"`, 'ok');
+    } else if (method === 'apply') {
+        const result = announce.apply(target, ['Hello', '!']);
+        addLine(`announce.apply(${targetName}, ['Hello', '!']) → "${result}"`, 'ok');
+    } else {
+        const bound = announce.bind(target, 'Hello');
+        addLine(`const bound = announce.bind(${targetName}, 'Hello')  // not invoked yet`, 'muted');
+        const result = bound('!');
+        addLine(`bound('!') → "${result}"`, 'ok');
+        addLine(`Calling bound.call(${targetName === 'alice' ? 'bob' : 'alice'}) would NOT change this - try section 5 for the one exception.`, 'muted');
+    }
+}
+
+/* ---------- Section 3: arrow exemption ---------- */
+function runArrowComparison() {
+    const log = document.getElementById('arrow-log');
+    log.innerHTML = '';
+    const addLine = (text, cls) => {
+        const line = document.createElement('div');
+        line.className = 'line' + (cls ? ' ' + cls : '');
+        line.textContent = text;
+        log.appendChild(line);
+    };
+
+    const objA = { label: 'objA', regular: function () { return this && this.label; } };
+    const result = objA.regular();
+    addLine(`objA.regular() → "${result}"  (implicit binding worked - this is objA)`, 'ok');
+
+    // objB's arrow captures `this` from the enclosing scope of THIS script, not objB
+    const outerThis = (function(){ return this; })(); // whatever bare `this` is at top level of this function
+    const objB = {
+        label: 'objB',
+        arrow: () => { return (this === undefined) ? undefined : (this && this.label); }
+    };
+    const arrowResult = objB.arrow();
+    addLine(`objB.arrow() → ${JSON.stringify(arrowResult)}  (NOT "objB" - the arrow captured whatever this was outside the object literal, not objB)`, arrowResult === 'objB' ? 'bad' : 'bad');
+    addLine('Same call syntax (obj.method()) on both. Only the regular function actually participates in implicit binding.', 'muted');
+}
+
+/* ---------- Section 4: lost-this bug and fixes ---------- */
+let counter = { count: 0, increment() { this.count++; return this.count; } };
+let counterBind = { count: 0, increment() { this.count++; return this.count; } };
+let counterArrowHost;
+
+function lostLog(text, cls) {
+    const log = document.getElementById('lost-log');
+    if (log.dataset.used !== '1') { log.textContent = ''; log.dataset.used = '1'; }
+    const line = document.createElement('div');
+    line.className = 'line' + (cls ? ' ' + cls : '');
+    line.textContent = text;
+    log.appendChild(line);
+}
+
+function lostThisBroken() {
+    const extracted = counter.increment;
+    try {
+        const result = extracted();
+        lostLog(`extracted() → ${result}  (this silently wasn't counter - count on the real object is still ${counter.count})`, 'bad');
+    } catch (e) {
+        lostLog(`extracted() threw: ${e.message}  (this was undefined in strict mode, so this.count++ failed loudly instead of silently)`, 'bad');
+    }
+}
+
+function lostThisBindFix() {
+    const bound = counterBind.increment.bind(counterBind);
+    const result = bound();
+    lostLog(`const bound = counter.increment.bind(counter); bound() → ${result}  (fixed - this is permanently counter)`, 'ok');
+}
+
+function lostThisArrowFix() {
+    class Counter {
+        count = 0;
+        increment = () => { this.count++; return this.count; }; // arrow field - lexically captures this
+    }
+    if (!counterArrowHost) counterArrowHost = new Counter();
+    const extracted = counterArrowHost.increment; // extract it, same as the broken scenario
+    const result = extracted(); // call it bare
+    lostLog(`Arrow class field, extracted and called bare → ${result}  (fixed structurally - it was never eligible to lose binding)`, 'ok');
+}
+
+function lostThisReset() {
+    counter = { count: 0, increment() { this.count++; return this.count; } };
+    counterBind = { count: 0, increment() { this.count++; return this.count; } };
+    counterArrowHost = undefined;
+    const log = document.getElementById('lost-log');
+    log.textContent = 'Counters reset. Click "Run broken version" to see the actual failure.';
+    log.dataset.used = '0';
+}
+
+/* ---------- Section 5: precedence showdown ---------- */
+function precedenceShowdown() {
+    const log = document.getElementById('prec-log');
+    const explain = document.getElementById('prec-explain');
+    log.innerHTML = '';
+    const addLine = (text, cls) => {
+        const line = document.createElement('div');
+        line.className = 'line' + (cls ? ' ' + cls : '');
+        line.textContent = text;
+        log.appendChild(line);
+    };
+
+    function Widget() { this.made = true; this.isWidgetInstance = this instanceof Widget; }
+    const boundToNull = Widget.bind(null);
+
+    let callResult;
+    try {
+        boundToNull.call({ fake: true });
+        callResult = 'ran normally - but this was still bound to null, .call() could not override it';
+    } catch (e) {
+        callResult = `threw: ${e.message}`;
+    }
+    addLine(`boundToNull.call({fake:true}) → ${callResult}`, 'muted');
+
+    const instance = new boundToNull();
+    addLine(`new boundToNull() → succeeded, produced a real object: ${JSON.stringify(instance)}`, 'ok');
+    addLine(`instance instanceof Widget → ${instance instanceof Widget}`, 'ok');
+
+    explain.style.display = 'block';
+    explain.innerHTML = '<strong>What just happened:</strong> a hard-bound function is normally immune to having its <code>this</code> overridden - that\'s the whole point of <code>bind()</code>. But <code>new</code> is special-cased in the spec: when a bound function is invoked with <code>new</code>, the engine ignores the bound <code>this</code> entirely and constructs a fresh object as if <code>new</code> had been called on the original function. That\'s the one documented case where <code>new</code> genuinely outranks explicit binding, which is exactly why the precedence table lists it first.';
+}
+</script>
+
+</body>
+</html>

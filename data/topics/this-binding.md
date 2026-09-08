@@ -137,6 +137,8 @@ sequenceDiagram
     Btn-->>Dev: "Works - bind produced a hard-bound function,<br>immune to how the browser calls it"
 ```
 
+**→ Play with it:** [`resources/this-binding-playground.html`](resources/this-binding-playground.html) runs every rule above against real, live JavaScript — the four binding rules, a `call`/`apply`/`bind` sandbox, the arrow-function exemption, the lost-`this` bug and its fixes, and the `new`-escapes-a-hard-binding precedence showdown. Predict each result before clicking Run.
+
 ## 🏢 Interview Context & FAANG Signals
 
 This surfaces constantly in **coding rounds** ("what does this code log," "implement your own `bind`"), **debugging rounds** (a real callback-loses-`this` bug in a class component or event handler), and as a quick warm-up question before a deeper JavaScript-fundamentals conversation. It's also a common follow-up inside system design and framework-internals discussions whenever class-based code or manual event wiring comes up.

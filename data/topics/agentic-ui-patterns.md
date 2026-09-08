@@ -8,6 +8,7 @@ This is a must-know topic because the interview bar has shifted: it's no longer 
 
 ## 🧠 Core Technical Deep Dive
 
+
 ### 1. The vocabulary: LLM, AI feature, agent, agentic AI
 
 These four terms get used interchangeably in practice, but they describe genuinely different levels of autonomy, and the distinction determines whether there's even a loop to design a UI for:
