@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Staff/Tech Lead Interview — Coding Question Booklet</title>
+    <style>
+        :root {
+            --primary: #61dafb;
+            --dark: #20232a;
+            --text: #ffffff;
+            --gray: #282c34;
+            --accent: #f08d49;
+            --text-muted: #999;
+            --code-bg: #1e1e1e;
+            --good: #4ade80;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background-color: var(--dark);
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: var(--gray);
+            padding: 3rem 2rem;
+            text-align: center;
+            border-bottom: 4px solid var(--primary);
+        }
+        header p { color: var(--text-muted); max-width: 700px; margin: 0.75rem auto 0; }
+        main {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1rem 4rem;
+        }
+        .how-to-use {
+            background: var(--gray);
+            border-left: 3px solid var(--primary);
+            padding: 1.5rem 1.75rem;
+            border-radius: 8px;
+            margin-bottom: 3rem;
+        }
+        .how-to-use h2 { margin-top: 0; color: var(--primary); font-size: 1.1rem; }
+        section.question {
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: var(--gray);
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.35);
+        }
+        h1, h2, h3 { color: var(--primary); }
+        h3 { margin-top: 0; }
+        code {
+            background: var(--code-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-family: "Fira Code", "Courier New", monospace;
+            font-size: 0.9em;
+            color: var(--accent);
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 1rem 1.25rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            border-left: 3px solid var(--primary);
+            font-family: "Fira Code", "Courier New", monospace;
+            font-size: 0.85rem;
+            margin: 1rem 0;
+        }
+        pre code { background: none; padding: 0; color: #d4d4d4; }
+        .what-this-tests {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #3a3f4b;
+        }
+        .what-this-tests strong { color: var(--accent); font-style: normal; }
+        ol, ul { padding-left: 1.3rem; }
+        ol li, ul li { margin-bottom: 0.4rem; }
+        details.solution {
+            margin-top: 1.5rem;
+            border: 1px solid #3a3f4b;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        details.solution summary {
+            cursor: pointer;
+            padding: 0.9rem 1.25rem;
+            background: rgba(97, 218, 251, 0.08);
+            color: var(--primary);
+            font-weight: bold;
+            list-style: none;
+        }
+        details.solution summary::-webkit-details-marker { display: none; }
+        details.solution summary::before { content: "▶ "; display: inline-block; transition: transform 0.15s; }
+        details.solution[open] summary::before { transform: rotate(90deg); }
+        details.solution .solution-body { padding: 0 1.25rem 1.25rem; }
+        .why-it-works {
+            background: rgba(74, 222, 128, 0.06);
+            border-left: 3px solid var(--good);
+            padding: 1rem 1.25rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+        .why-it-works strong { color: var(--good); }
+        .why-it-works p { margin: 0.5rem 0; }
+        .why-it-works p:first-child { margin-top: 0; }
+        .why-it-works p:last-child { margin-bottom: 0; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Frontend Staff/Tech Lead Interview — Coding Question Booklet 📓</h1>
+    <p>Six JavaScript/frontend coding questions covering closures, async control flow, data structures, and React rendering pitfalls — the kind of depth expected at a Staff/Tech Lead bar (judgment, edge cases, and trade-offs, not just a working happy path).</p>
+</header>
+
+<main>
+    <div class="how-to-use">
+        <h2>How to use this</h2>
+        <p style="margin-bottom: 0;">Attempt each question fresh, ideally timeboxed to 15–20 minutes, before expanding the solution below it.</p>
+    </div>
+
+    <section class="question" id="q1">
+        <h3>Question 1: Implement <code>debounce</code></h3>
+        <p>Write a <code>debounce(fn, delay)</code> function with the following behavior:</p>
+        <ol>
+            <li>Standard debounce: only invoke <code>fn</code> after <code>delay</code> ms have passed since the <em>last</em> call.</li>
+            <li>Support a <code>cancel()</code> method on the returned function to cancel any pending invocation.</li>
+            <li>Support an <code>immediate</code> option — if <code>true</code>, invoke <code>fn</code> on the <em>leading</em> edge instead of trailing.</li>
+            <li>Preserve <code>this</code> context and arguments correctly when <code>fn</code> is finally invoked.</li>
+        </ol>
+        <pre><code>function debounce(fn, delay, immediate = false) {
+  // your implementation
+}
+
+// Usage:
+const debounced = debounce(() => console.log('called'), 300);
+debounced();
+debounced.cancel();</code></pre>
+        <p class="what-this-tests"><strong>What this tests:</strong> closures, timer management, and correctly implementing two related-but-distinct modes (leading vs. trailing edge) without duplicating logic.</p>
+
+        <details class="solution">
+            <summary>Reveal Solution</summary>
+            <div class="solution-body">
+<pre><code>function debounce(fn, delay, immediate = false) {
+  let timer = null;
+
+  function debounced(...args) {
+    const callNow = immediate && timer === null;
+
+    clearTimeout(timer);
+
+    timer = setTimeout(() => {
+      timer = null;
+      if (!immediate) {
+        fn.apply(this, args);
+      }
+    }, delay);
+
+    if (callNow) {
+      fn.apply(this, args);
+    }
+  }
+
+  debounced.cancel = function () {
+    clearTimeout(timer);
+    timer = null;
+  };
+
+  return debounced;
+}</code></pre>
+                <div class="why-it-works">
+                    <p><strong>Why it works:</strong> a single <code>timer</code> variable tracks whether a debounce window is currently active. In <code>immediate</code> mode, <code>callNow</code> is only true on the <em>first</em> call of a fresh window (<code>timer === null</code>); the timer started afterward exists purely to reset that window once it fully elapses, not to fire <code>fn</code> again. In trailing mode, the <code>setTimeout</code> callback itself does the firing. <code>cancel()</code> clears the pending timer and resets it to <code>null</code> so a subsequent call is treated as fresh.</p>
+                </div>
+            </div>
+        </details>
+    </section>
+
+    <section class="question" id="q2">
+        <h3>Question 2: Implement a memoization function with cache invalidation</h3>
+        <p>Write a <code>memoize(fn, options)</code> function that:</p>
+        <ol>
+            <li>Caches results based on the arguments passed (assume arguments are JSON-serializable primitives/objects).</li>
+            <li>Supports a <code>maxSize</code> option — when the cache exceeds <code>maxSize</code> entries, evict the <strong>least recently used (LRU)</strong> entry.</li>
+            <li>Supports a <code>ttl</code> option (milliseconds) — cached entries expire after <code>ttl</code> ms and get recomputed on next access.</li>
+            <li>Exposes a <code>.clear()</code> method on the returned function to wipe the entire cache.</li>
+        </ol>
+        <pre><code>function memoize(fn, options = {}) {
+  // your implementation
+}
+
+// Usage:
+const expensiveCalc = memoize((a, b) => {
+  console.log('computing...');
+  return a + b;
+}, { maxSize: 100, ttl: 5000 });
+
+expensiveCalc(1, 2); // computing... 3
+expensiveCalc(1, 2); // 3 (cached)</code></pre>
+        <p class="what-this-tests"><strong>What this tests:</strong> cache key design, LRU eviction (data structure choice matters — O(1) access + reordering), and TTL bookkeeping.</p>
+
+        <details class="solution">
+            <summary>Reveal Solution</summary>
+            <div class="solution-body">
+<pre><code>function memoize(fn, options = {}) {
+  const { maxSize = Infinity, ttl = Infinity } = options;
+  const cache = new Map(); // key -> { value, expiresAt }
+
+  function memoized(...args) {
+    const key = JSON.stringify(args);
+    const now = Date.now();
+
+    if (cache.has(key)) {
+      const entry = cache.get(key);
+
+      if (entry.expiresAt > now) {
+        // LRU bump: delete + re-set moves this key to the "most recent" end
+        cache.delete(key);
+        cache.set(key, entry);
+        return entry.value;
+      } else {
+        cache.delete(key); // expired, evict it
+      }
+    }
+
+    const value = fn.apply(this, args);
+    const expiresAt = ttl === Infinity ? Infinity : now + ttl;
+    cache.set(key, { value, expiresAt });
+
+    if (cache.size > maxSize) {
+      const oldestKey = cache.keys().next().value;
+      cache.delete(oldestKey);
+    }
+
+    return value;
+  }
+
+  memoized.clear = function () {
+    cache.clear();
+  };
+
+  return memoized;
+}</code></pre>
+                <div class="why-it-works">
+                    <p><strong>Why it works:</strong> <code>Map</code> preserves insertion order, which is exploited for O(1) LRU tracking — re-inserting a key on access moves it to the "newest" end, so the <em>first</em> key in iteration order is always the least recently used. TTL is stored per-entry since different calls are cached at different times.</p>
+                    <p><strong>Known limitation worth stating out loud:</strong> <code>JSON.stringify</code> as a key breaks down for <code>undefined</code> arguments and is sensitive to object key ordering (<code>{a:1,b:2}</code> vs <code>{b:2,a:1}</code> stringify differently despite being logically equal).</p>
+                </div>
+            </div>
+        </details>
+    </section>
+
+    <section class="question" id="q3">
+        <h3>Question 3: Implement a simple Event Emitter</h3>
+        <p>Build an <code>EventEmitter</code> class with:</p>
+        <pre><code>class EventEmitter {
+  on(event, callback) {}
+  off(event, callback) {}
+  emit(event, ...args) {}
+  once(event, callback) {}
+}</code></pre>
+        <p>Requirements:</p>
+        <ol>
+            <li><code>on(event, callback)</code> registers a listener; multiple listeners for the same event should all fire, in registration order.</li>
+            <li><code>off(event, callback)</code> removes a specific listener (not all listeners for that event).</li>
+            <li><code>emit(event, ...args)</code> calls all registered listeners for that event with the given args.</li>
+            <li><code>once(event, callback)</code> registers a listener that fires exactly once, then auto-removes itself.</li>
+            <li><strong>Tricky part:</strong> if a listener calls <code>off()</code> on <em>another</em> listener for the same event, from <em>within</em> its own callback during an active <code>emit()</code>, the emit should still behave correctly — no skipped listeners, no crashes.</li>
+        </ol>
+        <p class="what-this-tests"><strong>What this tests:</strong> correct data structure choice, mid-iteration mutation safety, and clean API design (avoiding duplicated bookkeeping for <code>once</code> vs. regular listeners).</p>
+
+        <details class="solution">
+            <summary>Reveal Solution</summary>
+            <div class="solution-body">
+<pre><code>class EventEmitter {
+  listeners = new Map();
+  oncelist = new Map();
+
+  on(event, callback) {
+    if (!this.listeners.get(event)) {
+      this.listeners.set(event, []);
+    }
+    this.listeners.get(event).push(callback);
+  }
+
+  once(event, callback) {
+    if (!this.listeners.get(event)) {
+      this.listeners.set(event, []);
+    }
+    this.listeners.get(event).push(callback);
+    this.oncelist.set(callback, true);
+  }
+
+  off(event, callback) {
+    const cbs = this.listeners.get(event) || [];
+    const index = cbs.indexOf(callback);
+    if (index > -1) {
+      cbs.splice(index, 1);
+    }
+    if (this.oncelist.get(callback)) {
+      this.oncelist.delete(callback);
+    }
+  }
+
+  emit(event, ...args) {
+    const cbs = this.listeners.get(event) || [];
+    const snapshot = [...cbs]; // immune to mutation during iteration
+    for (let i = 0; i < snapshot.length; i++) {
+      snapshot[i].apply(this, args);
+      if (this.oncelist.get(snapshot[i])) {
+        this.off(event, snapshot[i]);
+      }
+    }
+  }
+}</code></pre>
+                <div class="why-it-works">
+                    <p><strong>Why it works:</strong> a single array per event preserves true registration order (no separate <code>once</code> list that could fire out of order relative to <code>on</code> listeners). <code>emit</code> iterates a <strong>snapshot</strong> of the array, so removals triggered mid-emit (by <code>off</code>, or by a <code>once</code> listener auto-removing itself) never shift indices out from under the active loop.</p>
+                </div>
+            </div>
+        </details>
+    </section>
+
+    <section class="question" id="q4">
+        <h3>Question 4: Fix a race condition in a search component</h3>
+        <p>Here's a typical "search-as-you-type" component. It has a subtle but classic bug.</p>
+        <pre><code>function SearchResults({ query }) {
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/search?q=${query}`)
+      .then(res => res.json())
+      .then(data => {
+        setResults(data);
+        setLoading(false);
+      });
+  }, [query]);
+
+  if (loading) return &lt;p&gt;Loading...&lt;/p&gt;;
+  return (
+    &lt;ul&gt;
+      {results.map(item => &lt;li key={item.id}&gt;{item.name}&lt;/li&gt;)}
+    &lt;/ul&gt;
+  );
+}</code></pre>
+        <p><strong>Your task:</strong></p>
+        <ol>
+            <li>Identify the bug — describe <em>when</em> it manifests and the exact mechanism (what two requests, in what order, cause what wrong outcome).</li>
+            <li>Fix it using <strong>two different techniques</strong> — first with a manual cleanup-flag/ignore pattern (no <code>AbortController</code>), then rewrite it using <code>AbortController</code> to actually cancel the in-flight request.</li>
+            <li>Bonus: what changes if <code>query</code> updates very rapidly (e.g., every keystroke, no debounce upstream)? Does your fix alone make this efficient, or just correct? What would you add?</li>
+        </ol>
+        <p class="what-this-tests"><strong>What this tests:</strong> understanding of <code>useEffect</code> cleanup semantics, the difference between "ignoring a stale result" and "cancelling a request," and recognizing that correctness and efficiency are separate concerns.</p>
+
+        <details class="solution">
+            <summary>Reveal Solution</summary>
+            <div class="solution-body">
+                <p><strong>The bug, precisely:</strong> if <code>query</code> changes from <code>"a"</code> to <code>"ab"</code> quickly, two requests are in flight. Response order is not guaranteed to match request order — if the <code>"a"</code> response arrives <em>after</em> the <code>"ab"</code> response (e.g. due to server timing or network jitter), its <code>.then()</code> fires last and calls <code>setResults(dataForA)</code>, <strong>overwriting the correct <code>"ab"</code> results with stale <code>"a"</code> results.</strong></p>
+
+                <p><strong>Fix A — manual ignore-flag pattern:</strong></p>
+<pre><code>useEffect(() => {
+  let ignore = false;
+  setLoading(true);
+
+  fetch(`/api/search?q=${query}`)
+    .then(res => res.json())
+    .then(data => {
+      if (!ignore) {
+        setResults(data);
+        setLoading(false);
+      }
+    });
+
+  return () => {
+    ignore = true;
+  };
+}, [query]);</code></pre>
+                <p>Each effect run has its own private <code>ignore</code> closure. React runs the <em>previous</em> effect's cleanup before the <em>new</em> effect starts, flipping the old <code>ignore</code> to <code>true</code> — so when the stale request resolves, its result is discarded. Note: this doesn't cancel the network request itself, only its effect on state.</p>
+
+                <p><strong>Fix B — <code>AbortController</code> (also cancels the request):</strong></p>
+<pre><code>useEffect(() => {
+  const controller = new AbortController();
+  setLoading(true);
+
+  fetch(`/api/search?q=${query}`, { signal: controller.signal })
+    .then(res => res.json())
+    .then(data => {
+      setResults(data);
+      setLoading(false);
+    })
+    .catch(err => {
+      if (err.name !== 'AbortError') throw err;
+    });
+
+  return () => {
+    controller.abort();
+  };
+}, [query]);</code></pre>
+
+                <div class="why-it-works">
+                    <p><strong>Bonus — rapid keystrokes:</strong> cancellation makes this <em>correct</em>, not <em>efficient</em>. It still fires (and immediately aborts) a request on every keystroke. The efficiency fix is a <strong>debounced <code>query</code> value upstream</strong> (e.g., <code>useDebouncedValue(query, 300)</code>) feeding into this effect — debounce and cancellation solve different problems and are typically used together.</p>
+                </div>
+            </div>
+        </details>
+    </section>
+
+    <section class="question" id="q5">
+        <h3>Question 5: Implement <code>Promise.all</code> from scratch</h3>
+        <p>Write your own version of <code>Promise.all</code>:</p>
+        <pre><code>function promiseAll(promises) {
+  // your implementation — must return a Promise
+}</code></pre>
+        <p>Requirements:</p>
+        <ol>
+            <li>Resolves with an array of results, <strong>in the same order as the input array</strong> — even though promises may resolve out of order.</li>
+            <li>Rejects immediately with the <strong>first</strong> rejection reason encountered (fail-fast), even if other promises are still pending.</li>
+            <li>Handle an <strong>empty array</strong> input correctly (<code>promiseAll([])</code> should resolve immediately with <code>[]</code>).</li>
+            <li>Handle non-promise values in the array (e.g. <code>promiseAll([1, Promise.resolve(2), 3])</code> should treat plain values as already-resolved).</li>
+        </ol>
+        <p class="what-this-tests"><strong>What this tests:</strong> understanding of the Promise executor, closures for tracking async completion count, and edge cases most people forget (empty array, non-promise values, preserving the original rejection reason unmodified).</p>
+
+        <details class="solution">
+            <summary>Reveal Solution</summary>
+            <div class="solution-body">
+<pre><code>function promiseAll(promises = []) {
+  return new Promise((resolve, reject) => {
+    if (promises.length === 0) {
+      resolve([]);
+      return;
+    }
+
+    const outputData = [];
+    let completed = 0;
+
+    promises.forEach((promise, index) => {
+      Promise.resolve(promise).then((data) => {
+        outputData[index] = data;
+        completed++;
+        if (completed === promises.length) {
+          resolve(outputData);
+        }
+      }).catch((error) => {
+        reject(error);
+      });
+    });
+  });
+}</code></pre>
+                <div class="why-it-works">
+                    <p><strong>Why it works:</strong></p>
+                    <p><strong>Order preserved:</strong> writing to <code>outputData[index]</code> directly (not <code>.push</code>) means results land in input order regardless of resolution order.</p>
+                    <p><strong>Fail-fast:</strong> <code>reject(error)</code> fires immediately on the first rejection, independent of other pending promises. A Promise can only settle once, so any later <code>resolve</code>/<code>reject</code> calls are harmless no-ops.</p>
+                    <p><strong>Empty array:</strong> handled with an explicit early check before iterating — without it, the returned promise would hang forever.</p>
+                    <p><strong>Non-promise values:</strong> <code>Promise.resolve(promise)</code> is idempotent on real promises and wraps plain values into already-resolved promises, so <code>.then</code> works uniformly on every element.</p>
+                    <p><strong>Original error preserved:</strong> <code>reject(error)</code> passes the rejection reason through unmodified — don't wrap it in a new generic <code>Error</code>, which would destroy properties/stack traces callers may depend on.</p>
+                </div>
+            </div>
+        </details>
+    </section>
+
+    <section class="question" id="q6">
+        <h3>Question 6: Implement a mini state store (Redux-lite)</h3>
+        <p>Build a simple observable store:</p>
+        <pre><code>function createStore(reducer, initialState) {
+  // your implementation
+}
+
+// Usage:
+const reducer = (state, action) => {
+  switch (action.type) {
+    case 'INCREMENT': return { ...state, count: state.count + 1 };
+    case 'DECREMENT': return { ...state, count: state.count - 1 };
+    default: return state;
+  }
+};
+
+const store = createStore(reducer, { count: 0 });
+
+const unsubscribe = store.subscribe((state) => console.log('state changed:', state));
+
+store.dispatch({ type: 'INCREMENT' }); // logs: state changed: { count: 1 }
+store.getState(); // { count: 1 }
+
+unsubscribe();
+store.dispatch({ type: 'INCREMENT' }); // no log — listener removed</code></pre>
+        <p>Requirements:</p>
+        <ol>
+            <li><code>getState()</code> returns the current state (should be treated as read-only externally — think about what a reasonable level of protection looks like, since full immutability is hard to guarantee in JS).</li>
+            <li><code>dispatch(action)</code> runs the reducer, updates internal state, and notifies <strong>all</strong> subscribed listeners with the new state.</li>
+            <li><code>subscribe(listener)</code> registers a listener and returns an <strong>unsubscribe function</strong> (the returned closure itself should do it, not a separate method).</li>
+            <li>Multiple listeners should all fire, in registration order.</li>
+            <li><strong>Tricky part:</strong> if a listener calls <code>dispatch()</code> again from <em>within</em> itself (a nested dispatch, triggered by a state change), decide on an explicit policy (allow / queue / throw) and enforce it.</li>
+        </ol>
+        <p class="what-this-tests"><strong>What this tests:</strong> the same subscribe/unsubscribe/mid-iteration patterns as the EventEmitter question, plus reducer purity assumptions and re-entrancy policy.</p>
+
+        <details class="solution">
+            <summary>Reveal Solution</summary>
+            <div class="solution-body">
+<pre><code>function createStore(reducer, initialState) {
+  let store = initialState;
+  let subscribers = [];
+  let isDispatching = false;
+
+  const dispatch = (action) => {
+    if (isDispatching) {
+      throw new Error('Cannot dispatch while a dispatch is already in progress.');
+    }
+    isDispatching = true;
+    try {
+      store = reducer(store, action);
+    } finally {
+      isDispatching = false;
+    }
+    const snapshot = [...subscribers];
+    snapshot.forEach((subscriber) => subscriber(store));
+  };
+
+  const getState = () => ({ ...store });
+
+  const subscribe = (fn) => {
+    subscribers.push(fn);
+    return () => {
+      subscribers = subscribers.filter(sub => sub !== fn);
+    };
+  };
+
+  return { subscribe, getState, dispatch };
+}</code></pre>
+                <div class="why-it-works">
+                    <p><strong>Why it works:</strong></p>
+                    <p><strong>Read-only protection:</strong> <code>getState()</code> returns a shallow copy, so mutating the returned object doesn't corrupt internal state. (Known limitation: only shallow — nested objects are still mutable by reference. <code>Object.freeze(store)</code> is a common alternative.)</p>
+                    <p><strong>Subscriber storage:</strong> a plain array, not an object keyed by stringified function — using <code>fn.toString()</code> as an object key risks silent collisions between structurally identical listener functions.</p>
+                    <p><strong>Mid-dispatch mutation safety:</strong> <code>dispatch</code> snapshots <code>subscribers</code> into a new array before notifying, so a listener calling <code>unsubscribe()</code> on another listener mid-dispatch can't skip anyone.</p>
+                    <p><strong>Re-entrancy policy:</strong> <code>isDispatching</code> explicitly guards against a reducer triggering another <code>dispatch</code> while one is already computing, throwing rather than silently allowing undefined behavior — matching real Redux's stance ("Reducers may not dispatch actions").</p>
+                    <p><strong>Design trade-off worth noting:</strong> this guard is scoped narrowly around reducer execution only, so a <em>listener</em> calling <code>dispatch</code> after being notified (not during reducer execution) is still allowed — a deliberate choice, since forbidding that entirely would block legitimate "dispatch a follow-up action after a state change" patterns. Wrapping the guard around the whole dispatch (including listener notification) is a stricter alternative worth naming explicitly as a trade-off in an interview.</p>
+                </div>
+            </div>
+        </details>
+    </section>
+</main>
+
+</body>
+</html>

@@ -107,11 +107,11 @@ sequenceDiagram
 
     Alice->>Alice: "Applies edit locally and optimistically (renders instantly)"
     Alice--xServer: "Network drops before operation is sent"
-    Alice->>Alice: "Continues editing offline; operations queued locally"
+    Alice->>Alice: "Continues editing offline - operations queued locally"
     Bob->>Server: "Sends concurrent edits while Alice is offline"
     Server->>Bob: "Broadcasts merged state to Bob (Alice not reachable)"
     Note over Alice: "10 minutes offline, several queued local operations"
-    Alice->>Server: "Reconnects; flushes queued operations"
+    Alice->>Server: "Reconnects - flushes queued operations"
     Server->>Server: "Merges/transforms queued ops against everything that happened while offline"
     Server-->>Alice: "Sends back reconciled document state"
     Server-->>Bob: "Broadcasts Alice's now-merged operations"
