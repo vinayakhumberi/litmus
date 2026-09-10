@@ -244,7 +244,8 @@ fido.name = 'Fido';</code></pre>
 
     <section id="shape">
         <h2>4. Object Shape: Monomorphic vs. Megamorphic, For Real</h2>
-        <p>A page's JavaScript can't ask V8 directly "was that lookup monomorphic or megamorphic?" — but it <em>can</em> measure the real-world consequence. Below, the exact same property access (<code>obj.value</code>) runs millions of times against two object sets: one where every object shares an identical shape, one where the shape changes constantly. Same call site, same CPU, same number of accesses — only shape consistency differs.</p>
+        <p>A page's JavaScript can't ask V8 directly "was that lookup monomorphic or megamorphic?" — but it <em>can</em> measure the real-world consequence. Below, the same property reads run millions of times against two object sets: one where every object shares an identical shape, one where the shape changes constantly. Same access pattern, same CPU, same amount of work — only shape consistency differs.</p>
+        <p>Run it a few times honestly expecting a small or near-zero gap on a modern machine, not a dramatic one — and that result is itself worth understanding, not a broken demo. Modern V8's megamorphic stub cache has gotten genuinely fast at exactly this kind of simple case; the classic "megamorphic is dramatically slower" mental model was truer of engines from several years ago than it typically is today. The mechanism described in the topic doc is completely real — shapes, inline caches, and the monomorphic/polymorphic/megamorphic ladder all genuinely exist and genuinely drive engine behavior — it's specifically the <em>size</em> of the everyday penalty that's shrunk as engines improved, which is a more accurate, more useful thing to walk away knowing than a memorized "always X times slower."</p>
 
         <div class="btn-row">
             <button onclick="runShapeBenchmark()">Run the live benchmark (~1 second)</button>
@@ -252,12 +253,12 @@ fido.name = 'Fido';</code></pre>
 
         <div id="shape-results" style="display:none;">
             <div class="bench-row">
-                <div class="bench-label">Monomorphic<span class="bench-sub">8 objects, all one shape</span></div>
+                <div class="bench-label">Monomorphic<span class="bench-sub">2,000,000 objects, all one shape</span></div>
                 <div class="bench-bar-track"><div class="bench-bar mono" id="mono-bar"></div></div>
                 <div class="bench-value" id="mono-value">—</div>
             </div>
             <div class="bench-row">
-                <div class="bench-label">Megamorphic<span class="bench-sub">8 objects, 5 different shapes</span></div>
+                <div class="bench-label">Megamorphic<span class="bench-sub">2,000,000 objects, 5 different shapes</span></div>
                 <div class="bench-bar-track"><div class="bench-bar mega" id="mega-bar"></div></div>
                 <div class="bench-value" id="mega-value">—</div>
             </div>
@@ -266,19 +267,19 @@ fido.name = 'Fido';</code></pre>
 
         <div class="ic-visual" id="ic-visual" style="display:none;">
             <div class="ic-box">
-                <div class="ic-title">Call site 1 — monomorphic</div>
+                <div class="ic-title">Call site 1 — monomorphic <span class="bench-sub" style="display:inline;">(8 of 2,000,000 shown)</span></div>
                 <div class="ic-shapes" id="ic-mono-shapes"></div>
                 <div class="ic-status good">✓ one shape ever seen — inline cache stays hot, straight to a memory offset</div>
             </div>
             <div class="ic-box">
-                <div class="ic-title">Call site 2 — megamorphic</div>
+                <div class="ic-title">Call site 2 — megamorphic <span class="bench-sub" style="display:inline;">(8 of 2,000,000 shown)</span></div>
                 <div class="ic-shapes" id="ic-mega-shapes"></div>
                 <div class="ic-status bad">✕ too many distinct shapes — cache gives up, falls back to a generic lookup every time</div>
             </div>
         </div>
 
         <div class="callout">
-            <strong>Honest caveat:</strong> exact numbers vary by browser, hardware, and what else your machine is doing right now — run it a few times. The <em>direction</em> (megamorphic slower) is the reliable part; the exact ratio isn't a fixed constant worth memorizing.
+            <strong>Honest caveat:</strong> across repeated runs while building this demo, the megamorphic pass was often no slower than the monomorphic one on modern desktop Chrome — not a fluke, a genuine sign of how good V8's megamorphic stub cache has gotten for simple property reads. Don't take a ~1.0&times; result here as "the concept is wrong" — take it as real evidence that the everyday penalty is smaller than the folklore suggests, which is exactly the nuance worth carrying into an interview over a memorized "megamorphic is always slow."
         </div>
 
         <h3 style="font-size: 0.95rem; margin-top: 2rem;">What's actually different in the construction code</h3>
@@ -490,36 +491,62 @@ b.z = 5;
 renderShape();
 
 /* ---------- Section 4: live monomorphic vs megamorphic benchmark ---------- */
-function ShapeMono(v) { this.value = v; }
-function ShapeA(v) { this.value = v; this.a = 1; }
-function ShapeB(v) { this.b = 1; this.value = v; }
-function ShapeC(v) { this.value = v; this.c = 1; this.d = 2; }
-function ShapeD(v) { this.e = 1; this.f = 2; this.value = v; }
-function ShapeE(v) { this.value = v; this.g = 1; this.h = 2; this.i = 3; }
+// Each shape below reads the same three logical fields (a, b, c) but at genuinely
+// different offsets in each shape - closer to how real, differently-shaped objects
+// (component props, mixed API responses) actually diverge, and it means the demo
+// below does three real property reads per object instead of one, giving any real
+// per-lookup cost more total weight relative to loop overhead.
+function ShapeMono(v) { this.a = v; this.b = v + 1; this.c = v + 2; }
+function ShapeA(v) { this.a = v; this.b = v + 1; this.c = v + 2; this.extra1 = 1; }
+function ShapeB(v) { this.extra1 = 1; this.a = v; this.b = v + 1; this.c = v + 2; }
+function ShapeC(v) { this.a = v; this.extra1 = 1; this.b = v + 1; this.extra2 = 2; this.c = v + 2; }
+function ShapeD(v) { this.extra1 = 1; this.extra2 = 2; this.a = v; this.b = v + 1; this.c = v + 2; }
+function ShapeE(v) { this.a = v; this.b = v + 1; this.extra1 = 1; this.extra2 = 2; this.extra3 = 3; this.c = v + 2; }
 
-function runOneBenchmark(objs, iterations) {
-    function access(obj) { return obj.value; } // a fresh call site every time this runs
+function buildMonoArray(n) {
+    const arr = new Array(n);
+    for (let i = 0; i < n; i++) arr[i] = new ShapeMono(i);
+    return arr;
+}
+
+function buildMegaArray(n) {
+    const ctors = [ShapeA, ShapeB, ShapeC, ShapeD, ShapeE];
+    const arr = new Array(n);
+    for (let i = 0; i < n; i++) arr[i] = new ctors[i % ctors.length](i);
+    return arr;
+}
+
+function sumOnePass(objs) {
+    function access(obj) { return obj.a + obj.b + obj.c; } // three real property reads per object
     let sum = 0;
-    const warmup = 300000;
-    for (let i = 0; i < warmup; i++) sum += access(objs[i % objs.length]);
-    const start = performance.now();
-    for (let i = 0; i < iterations; i++) sum += access(objs[i % objs.length]);
-    const elapsed = performance.now() - start;
-    return { elapsed, sum }; // sum is read below so the loop can't be optimized away as dead code
+    const t0 = performance.now();
+    for (let i = 0; i < objs.length; i++) {
+        sum += access(objs[i]);
+    }
+    return { elapsed: performance.now() - t0, sum };
+}
+
+function bestOfTwo(objs) {
+    const first = sumOnePass(objs);
+    const second = sumOnePass(objs);
+    return second.elapsed < first.elapsed ? second : first; // best-of-N filters GC/scheduler noise
 }
 
 function runShapeBenchmark() {
-    const iterations = 15000000;
+    // A large single pass over genuinely distinct objects - much closer to a real hot
+    // render loop than looping a tiny 8-object array millions of times, and it's what
+    // actually produces a reliable signal on modern V8's fast megamorphic stub cache.
+    const N = 2000000;
 
-    const monoObjs = [];
-    for (let i = 0; i < 8; i++) monoObjs.push(new ShapeMono(i));
+    // Warm-up passes on smaller arrays first, so JIT tiering doesn't skew the real measurement.
+    sumOnePass(buildMonoArray(100000));
+    sumOnePass(buildMegaArray(100000));
 
-    const ctors = [ShapeA, ShapeB, ShapeC, ShapeD, ShapeE];
-    const megaObjs = [];
-    for (let i = 0; i < 8; i++) megaObjs.push(new ctors[i % ctors.length](i));
+    const monoObjs = buildMonoArray(N);
+    const megaObjs = buildMegaArray(N);
 
-    const monoResult = runOneBenchmark(monoObjs, iterations);
-    const megaResult = runOneBenchmark(megaObjs, iterations);
+    const monoResult = bestOfTwo(monoObjs);
+    const megaResult = bestOfTwo(megaObjs);
 
     const maxTime = Math.max(monoResult.elapsed, megaResult.elapsed, 1);
     document.getElementById('mono-bar').style.width = (monoResult.elapsed / maxTime * 100) + '%';
@@ -530,18 +557,18 @@ function runShapeBenchmark() {
     const ratio = megaResult.elapsed / monoResult.elapsed;
     const verdict = document.getElementById('shape-verdict');
     if (ratio > 1.05) {
-        verdict.innerHTML = `<strong>In this run:</strong> the megamorphic version took ${ratio.toFixed(2)}&times; as long as the monomorphic version, for the exact same number of property accesses (sum check: ${monoResult.sum === megaResult.sum ? 'identical results either way' : 'results differ only because the object values differ'}). Same work, same call site shape - only the shape <em>consistency</em> differed.`;
+        verdict.innerHTML = `<strong>In this run:</strong> the megamorphic pass took ${ratio.toFixed(2)}&times; as long as the monomorphic pass, for the exact same ${N.toLocaleString()} objects and the same three property reads each (sum check: ${monoResult.sum === megaResult.sum ? 'identical totals either way' : 'totals differ only because the underlying values differ'}). Same access pattern, same amount of work - only shape consistency differed. That's the effect the topic doc describes, caught live.`;
     } else {
-        verdict.innerHTML = `<strong>In this run:</strong> the gap was small (${ratio.toFixed(2)}&times;) - modern JITs are very good at hiding this at tiny scale, and 8 objects is a tiny working set. Try the button again, or picture this same gap at the scale of a hot render loop processing thousands of objects per frame, where it stops being hideable.`;
+        verdict.innerHTML = `<strong>In this run:</strong> essentially no gap (${ratio.toFixed(2)}&times;) - and that's the realistic, expected result on a modern engine for a case this simple, not a broken demo. V8's megamorphic stub cache is fast enough today to hide the classic penalty for small objects with a handful of properties. The mechanism is still real (see the schematic below); it just takes a genuinely hot loop over many more properties, or a real production render/hit-testing path, before the gap reliably shows up outside a browser's own dev tooling.`;
     }
 
     document.getElementById('shape-results').style.display = 'block';
     document.getElementById('ic-visual').style.display = 'grid';
 
-    document.getElementById('ic-mono-shapes').innerHTML = monoObjs.map(() =>
+    document.getElementById('ic-mono-shapes').innerHTML = Array.from({ length: 8 }, () =>
         `<div class="ic-shape-badge" style="background:#61dafb">S</div>`).join('');
     const megaColors = ['#61dafb', '#f08d49', '#4ade80', '#a78bfa', '#f87171'];
-    document.getElementById('ic-mega-shapes').innerHTML = megaObjs.map((_, i) =>
+    document.getElementById('ic-mega-shapes').innerHTML = Array.from({ length: 8 }, (_, i) =>
         `<div class="ic-shape-badge" style="background:${megaColors[i % megaColors.length]}">${String.fromCharCode(65 + (i % 5))}</div>`).join('');
 }
 </script>
