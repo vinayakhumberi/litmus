@@ -6,6 +6,18 @@
 
 Most candidates answer this badly in one of two ways: either the failure is subtly reframed as someone else's fault, or it's told as a compelling story with no durable fix at the end. The goal of this topic is a repeatable structure — diagnosing why a project actually failed, catching a slip early enough to act, communicating it honestly, running a real post-mortem, and closing the loop with a concrete change — so the answer holds up under follow-up questions instead of collapsing.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** this is about how to answer the interview question "tell me about a time a project failed or you missed a deadline" in a way that actually demonstrates good judgment, instead of either dodging blame or telling a nice story that changes nothing.
+
+At its core, this isn't about the failure itself — it's about three separate skills the interviewer is trying to see evidence of: can you honestly figure out *why* something actually went wrong (rather than a vague "things got hard"), did you notice the problem early enough to still do something about it, and did you turn the experience into a real, lasting change rather than just a lesson you say you learned. Most people's instinct when describing a failure is either to quietly shift the blame onto "the requirements" or "the team," or to tell an emotionally satisfying story that conveniently ends before anyone has to admit a mistake.
+
+A simple way to picture it: think of the difference between someone who, after tripping on the same loose stair every week, just says "I'll be more careful next time," versus someone who actually fixes the stair. The interview question is designed to reveal which kind of person you are — and specifically, whether you can name your own part in tripping in the first place, not just describe the fall.
+
+This section skips the "why this matters for a Lead" framing — that's covered above — and turns straight to the mechanics.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### 1. Diagnosing why a project actually failed

@@ -6,6 +6,18 @@ Accessibility fails at scale for a predictable reason: it's treated as a per-com
 
 This is a must-know topic because interviewers treat accessibility the way they treat security: an unprompted signal of seniority, not something they expect to have to ask about. A Lead candidate who can implement a compliant modal from scratch *and* describe how to keep a whole org's components compliant over time is demonstrating exactly the systemic thinking the role requires — not "I remember to add `alt` text," but "I know automated tools catch roughly a third of real issues, so here's what covers the rest." This document goes deep on the WCAG/ARIA/keyboard mechanics and on scaling accessibility as an organizational discipline; for how accessibility should be architected *into* a shared component library specifically, see the "Accessibility as architecture, not a checklist" section of [`design-component-library.md`](design-component-library.md) — that's the design-system angle, this is the standards, patterns, and org-process angle.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** accessibility means building a website or app so that people with disabilities — someone who can't see the screen, can't use a mouse, can't hear audio, or can't easily read small or low-contrast text — can still use it fully. "At scale" means keeping that true across hundreds of components and teams, not just one screen you tested yourself.
+
+Concretely, this covers things like: can someone navigate the entire page using only a keyboard, with no mouse at all? Does a screen reader (software that reads the screen aloud for blind users) correctly announce what a button does and whether a menu is open or closed? Is text readable for someone with low vision or color blindness? WCAG (Web Content Accessibility Guidelines) is simply the industry rulebook that defines these requirements as testable pass/fail criteria, and ARIA is a set of extra HTML attributes you add to custom widgets (like a dropdown you built yourself) to tell assistive technology what that widget is and what state it's in, since the browser can't infer that on its own.
+
+A useful analogy: think of ARIA as captions and stage directions you add to a play script so someone who can't watch the performance still knows who's talking and what's happening on stage. Without them, a screen reader user is watching the play with the sound off and no script.
+
+Here's how the actual guidelines, patterns, and org-wide practices work.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### WCAG 2.1 AA: what the four principles actually require

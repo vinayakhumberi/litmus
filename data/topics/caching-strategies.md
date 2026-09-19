@@ -10,6 +10,18 @@ Why it's a must-know for Leads: caching decisions span multiple layers your team
 
 ---
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** caching means keeping a saved copy of something (a file, an image, an API response) close at hand so the next time it's needed, it can be reused instantly instead of being fetched or recomputed all over again from scratch. A "cache hit" is when that saved copy is used; a "cache miss" is when nothing was saved yet, so the real, slower work has to happen.
+
+Think of it like keeping a photocopy of a document on your desk instead of walking to the filing room every time you need to glance at it. That's fast and convenient — until the original document in the filing room gets updated, and now your desk copy is out of date. This exact problem — knowing when your saved copy is stale and needs to be refreshed — is what almost all of caching strategy is actually about; the "saving" part is easy, the "knowing when to throw it away and get a fresh one" part is the hard, failure-prone half.
+
+On the web, this shows up as HTTP headers like `Cache-Control` that tell browsers and servers how long a saved copy is considered good, and techniques like putting a unique fingerprint (a "content hash") into a file's name so that any time the file's content changes, its name changes too — meaning the old cached copy is simply never looked at again, instead of needing to somehow notify every cache that it's now outdated.
+
+Here's exactly how these headers and techniques work together in practice.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### `Cache-Control` directives: the ones that get confused

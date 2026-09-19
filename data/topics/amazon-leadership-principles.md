@@ -6,6 +6,18 @@ At most FAANG companies, the behavioral round is one data point among several, a
 
 That structural fact changes how much prep this deserves. Treating LPs as a warm-up question to improvise on the day is the single most common way strong engineers fail Amazon loops. This topic builds a repeatable system — a clustering framework, a compact story bank, and a stress-test for what actually survives follow-up questioning — so you walk in with pre-mapped, specific stories instead of fourteen answers you're inventing live.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** the Amazon Leadership Principles (LPs) are a fixed list of 14 values Amazon uses to decide who to hire and promote — things like "Customer Obsession" (start from what the customer actually needs), "Ownership" (treat problems as yours even if nobody assigned them to you), and "Bias for Action" (be willing to act on incomplete information rather than waiting for certainty). Instead of just being a poster on a wall, Amazon actually interviews candidates against these principles directly, by asking "tell me about a time when..." questions and expecting a real story from your own experience as the answer.
+
+Think of it like a company having its own specific personality test woven directly into the interview process: rather than asking "are you a hard worker," they ask you to prove it by describing a real, specific situation where you demonstrated that trait, and then they cross-examine the details to check the story is genuine.
+
+The practical skill being tested here isn't memorizing the 14 principles — it's having real stories from your own work ready to tell, each one clearly connected to one or more of these principles, structured well enough to hold up under follow-up questions.
+
+Here's how the interview process actually uses these principles, and how to prepare for it.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### 1. Why Amazon's loop is structurally different

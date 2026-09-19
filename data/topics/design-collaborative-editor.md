@@ -6,6 +6,16 @@ The central problem in a collaborative editor isn't rendering text — it's that
 
 This is a favorite Staff/Lead frontend system design question precisely because it forces distributed-systems reasoning inside a frontend context: consistency models, conflict resolution, and offline reconciliation, all while still needing sub-100ms perceived latency on every keystroke. A candidate who says "it uses some conflict resolution algorithm" and moves on has skipped the one part of the problem the interviewer actually wants to probe — the difference between Operational Transformation and CRDTs, and the concrete trade-offs each one commits you to for offline support, server architecture, and implementation risk.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** A collaborative document editor is software where multiple people can edit the same document at the same time — like Google Docs — and everyone's screen eventually shows the exact same final result, even though people typed at different moments, over networks with real delays, without anyone having to manually click "accept" or "reject" on someone else's change the way you would with a `git merge` conflict.
+
+The tricky part isn't showing text on a screen — it's that two people's edits can arrive out of order, or after the document has already changed underneath them, and the software still needs to figure out what both people *meant* and combine those intentions correctly. Imagine two people editing the same physical sticky note at once, but each can only see the note as it looked when they started writing — somehow, both of their scribbles need to end up correctly layered onto the same final note without either person's writing overwriting or garbling the other's.
+
+That reconciliation problem — making everyone's edits converge to one identical, correct document — is the actual engineering challenge this topic is about. Here's how systems like Google Docs or Figma actually solve it under the hood.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### Framing the problem precisely

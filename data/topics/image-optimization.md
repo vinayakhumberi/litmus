@@ -10,6 +10,18 @@ Why it's a must-know for Leads: this is one of the few performance areas where t
 
 ---
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** image optimization is the set of techniques for making the images on a webpage load fast and look sharp without wasting bandwidth — choosing efficient file formats, sending only the image size a device actually needs, and delaying the download of images the user hasn't scrolled to yet.
+
+Concretely, it covers three separate ideas that often get lumped together. First, **format**: newer image formats like WebP and AVIF can show essentially the same picture in a much smaller file than an older format like JPEG, the same way a better zip-compression algorithm shrinks a file without losing its contents. Second, **responsive sizing** (`srcset`): instead of sending one giant image to every device, the page offers several sizes of the same image and lets each device pick the smallest one that still looks sharp on its screen — a phone doesn't need the same pixel count as a large desktop monitor. Third, **lazy loading**: images far down the page, which the user may never even scroll to, are only downloaded once the user actually scrolls near them, rather than all at once when the page first opens.
+
+A simple analogy: it's like packing for a trip. You don't bring your entire wardrobe (full-resolution images for every device) — you pack outfits sized to the trip (responsive sizing), you pack efficiently (better formats take less space for the same content), and you don't unpack everything the moment you land — you unpack what you need first and the rest later (lazy loading). The one place this analogy — and lazy loading generally — breaks is the very first thing the user sees on page load, which needs to be ready immediately, not delayed.
+
+Here's how that actually works under the hood.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### Format landscape: what you're actually trading off

@@ -14,6 +14,18 @@ Hoisting and the Temporal Dead Zone (TDZ) round this out: they're not "JavaScrip
 
 ---
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** Scope is just "which variables can this piece of code see right now." A closure is a function that keeps access to the variables from the place it was created, even after that place has finished running and would normally be cleaned up. Hoisting is the fact that JavaScript sets up all your variable and function names *before* it runs any of your code line by line — so some names already "exist" even before their declaration line has executed.
+
+A closure is easiest to picture with an analogy: imagine a function as a backpack that gets packed the moment it's created, stuffed with references to whatever variables were around it at that time. The function can wander off and get called somewhere else entirely, minutes later, but it still has that backpack — it never lost access to what it packed. That's why an inner function can keep reading (and even updating) a variable from an outer function long after that outer function has returned.
+
+Hoisting is more like a teacher taking attendance before class starts: every name on the roster gets a slot reserved ahead of time, even before anyone has actually shown up or answered. Some names get filled in immediately (functions), some get a placeholder value (`var`), and some are reserved but off-limits until their turn (`let`/`const`).
+
+With those two ideas in place, here's what the engine is actually doing to make it happen.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### Execution contexts: the two-phase model

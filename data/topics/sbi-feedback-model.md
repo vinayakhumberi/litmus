@@ -6,6 +6,18 @@ Every Frontend Lead candidate claims to "give direct feedback." Almost none of t
 
 This matters because feedback quality is one of the few Lead-competency signals that's actually checkable in an interview — the interviewer can ask "what exactly did you say" and a candidate with a real structure answers immediately, while one without it starts paraphrasing. The goal here is to know SBI well enough to construct a real example on the spot, know when to bend it (real-time vs. scheduled, upward vs. downward, praise vs. correction), and recognize the ways people think they're using it while actually reverting to vague, character-based judgments.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** SBI (Situation-Behavior-Impact) is a simple three-part template for giving feedback: name the specific moment it happened (Situation), describe exactly what the person did — an observable action, not a label about their character (Behavior), and state the real consequence it had (Impact).
+
+Most people, without a framework, give feedback as a vague judgment — "you've been careless lately" — which describes a trait, not an event, and gives the other person nothing concrete to change. SBI forces you to instead describe something like a security camera would have recorded (a specific action, at a specific time) and then name what actually happened as a result of it.
+
+A simple way to picture it: it's the difference between a courtroom argument that says "you're a bad driver" and one that says "at 3pm on Tuesday, you ran the red light on Main Street, and it caused a collision." The second version is checkable, specific, and impossible to argue with as "just an opinion" — which is exactly what makes it easier to actually hear and act on.
+
+Here's how to build and adapt that structure for different situations.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### 1. What SBI actually is, and why it beats vague feedback

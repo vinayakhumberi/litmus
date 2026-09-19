@@ -10,6 +10,16 @@ Why it's a must-know at Lead level: code-splitting strategy has to be decided at
 
 ---
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** Code splitting means breaking your app's JavaScript into multiple smaller files ("chunks") instead of shipping one giant bundle to every visitor. The browser downloads only the chunk it actually needs for the page or feature the user is on right now, and fetches the rest later, only if and when it's needed.
+
+Think of it like packing for a multi-stop trip using several small bags instead of one oversized suitcase. If you're only going hiking today, you grab the hiking bag — you don't haul the beach gear and the formal-wear bag along too, just in case. Code splitting applies that same idea to JavaScript: the "checkout page" code doesn't need to load when someone's just browsing the homepage, so it gets packed into its own bag and only fetched when the user actually navigates to checkout.
+
+Without code splitting, every visitor downloads the entire app's JavaScript upfront — including code for pages, modals, and features they may never touch in that session — which slows down that all-important first load. Here's the mechanism that makes this splitting possible, and the judgment calls involved in deciding where to draw the boundaries.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### What dynamic `import()` actually does

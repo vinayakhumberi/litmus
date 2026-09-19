@@ -6,6 +6,16 @@
 
 This topic covers a structure built around a standing 70/30 capacity split: roughly 70% of a team's cycles on committed feature work, 30% reserved for tech debt, infra, and quality work — defended as policy, not re-litigated every sprint. It also covers how to classify debt, prioritize within the reserved capacity, defend it against pressure, and measure whether the paydown work is actually working.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** tech debt is the gap between the code you have and the code you'd write if you had unlimited time — shortcuts, workarounds, and outdated patterns that made sense once but now slow the team down every time they touch that part of the codebase. The name is a deliberate metaphor: like financial debt, taking a shortcut today can be a reasonable trade, but it accrues "interest" — every future change in that area takes longer, and every new bug is a little more likely — until someone actually pays down the principal.
+
+"Managing" tech debt just means having a real plan for that repayment instead of hoping it never comes due. The 70/30 model in the title is one such plan: a team agrees upfront to spend roughly 70% of its time on new features and roughly 30% on fixing up existing code, treating that split as a standing rule rather than something renegotiated from scratch every sprint.
+
+The hard part isn't believing tech debt is bad — everyone agrees on that. It's building a mechanism sturdy enough to survive the moment a deadline gets tight and someone asks to skip the debt work "just this once."
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### 1. Tech debt is a categorization problem before it's a scheduling problem

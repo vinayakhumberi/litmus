@@ -6,6 +6,16 @@ Micro-frontend architecture decomposes a frontend application into independently
 
 This is a must-know topic for a Lead because organizations at FAANG scale structure frontend ownership around team boundaries (Conway's Law made explicit), and a Lead is expected to reason about the *organizational* trade-offs — deployment independence vs. version governance, team autonomy vs. shared runtime consistency, blast-radius containment — not just wire up a bundler plugin. The deeper signal interviewers probe for is judgment: knowing when micro-frontends solve a real organizational problem versus when they add coordination tax without corresponding benefit.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** a micro-frontend architecture means splitting one big web application into several smaller, separately-built pieces — each owned and deployed independently by a different team — that get stitched together in the user's browser so the end result looks and feels like a single, seamless app.
+
+Normally, a frontend application is one codebase: one team builds it, one pipeline tests and deploys it, and every change goes out together. That works fine for a small team, but it breaks down at large-company scale, where dozens of teams each own a different part of a product (search, cart, checkout, recommendations) and don't want to wait on each other's release schedules just to ship their own piece. Micro-frontends solve that organizational problem by letting each team's piece be built, tested, and deployed on its own timeline, then assembled into one page at runtime.
+
+A useful analogy: think of a shopping mall versus a single store. A single store has one owner deciding everything under one roof. A mall lets each store operate, restock, and renovate independently, while shoppers still experience it as one place to walk through. iframes, single-spa, and Module Federation (covered below) are three different ways of building that "mall" — they differ mainly in how strongly they wall off one team's code from another's, and how much they let those pieces share things like a common UI library.
+
+The deep dive below covers exactly how each of these three mechanisms accomplishes that.
+
 ## 🧠 Core Technical Deep Dive
 
 Micro-frontend tooling exists to answer an **organizational** question, not a technical one: how do multiple teams each ship independently deployable code that still composes into one page? Route-based code-splitting (`React.lazy`) doesn't answer this — it changes *what* gets downloaded, not *who* can deploy it; the app is still one repo, one build, one release train.

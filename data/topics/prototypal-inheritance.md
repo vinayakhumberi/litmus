@@ -6,6 +6,16 @@ Ask most engineers how `class extends` works in JavaScript, and you'll get some 
 
 This is a must-know topic because it's a proxy for whether a candidate understands JavaScript's object model at the engine level, or has only ever memorized `class` syntax well enough to use it without asking what it's syntax *for*. The deeper signal interviewers are after is the composition-over-inheritance judgment call — knowing when a prototype chain is the right tool and when it quietly becomes the source of a fragile, over-coupled hierarchy — illustrated concretely, and rather famously, by React's own move from class components to hooks.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** inheritance is a way for one object in your code to automatically reuse another object's properties and methods instead of duplicating them, and JavaScript does this through prototypal inheritance — every object can be linked to one other object it "falls back to" whenever it's asked for something it doesn't have itself.
+
+This is different from how many other languages (like Java or C++) do inheritance, where a class is a fixed blueprint and objects are stamped out copies of it. In JavaScript, there's no blueprint and no copying — there's just a chain of live links between actual objects. If you ask an object for a property it doesn't have, JavaScript walks up that chain, object by object, checking each one, until it either finds the property or runs out of chain to walk. Because the check happens fresh every single time, if the thing further up the chain changes later, everything below it sees that change immediately — nothing was ever "locked in" ahead of time.
+
+A simple analogy: imagine asking a coworker a question, and if they don't know the answer, they forward it to their manager, who forwards it further up if needed, until someone answers. Nobody memorized the answer in advance — the chain of "who do I ask next" is what matters, and if the person at the top changes their answer, everyone below gets the new answer next time they ask.
+
+JavaScript's `class` keyword, introduced later, doesn't replace this mechanism — it's a friendlier syntax written on top of the exact same prototype-chain system. Here's how that chain actually works, and where `class` adds real behavior on top of it.
+
 ## 🧠 Core Technical Deep Dive
 
 ### 1. Forget everything you think you know about inheritance — start here

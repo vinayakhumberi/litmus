@@ -6,6 +6,18 @@ An "AI feature" and an "agent" are not the same thing, and the gap between them 
 
 This is a must-know topic because the interview bar has shifted: it's no longer enough to know how to render a chat bubble. Leads are expected to understand the actual mechanics of a tool-calling loop well enough to design around its real failure modes — a stuck loop, an unconfirmed high-stakes action, an opaque multi-step task nobody can follow — and to be able to speak concretely about having built one, not just used one.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** an "agentic" AI system is one where the AI doesn't just answer a question in one shot — it can take actions, look at what happened as a result, and decide what to do next, repeating that cycle on its own until the task is done. A regular chatbot is a single question-and-answer exchange; an agent is more like a helper who can actually go do things — look something up, use a tool, check the result, and then decide whether it needs to do something else before reporting back to you.
+
+The core loop it runs is often described as "reason, act, observe": the AI thinks about what to do next, takes an action (like calling a piece of software — a "tool" — to look up an order or send an email), observes the result of that action, and then loops back to reasoning again, using what it just learned. It keeps doing this, step by step, until it decides the task is finished or it hits a safety limit.
+
+"Agentic UI patterns" is simply the design work of making that loop visible and safe for a human watching it happen: showing what the AI is doing at each step (not just a spinner), and — critically — pausing to ask a human for explicit approval before the AI takes any action that can't easily be undone, like issuing a refund or sending a message on someone's behalf.
+
+Here's how that loop is actually built and made safe.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 

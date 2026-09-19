@@ -6,6 +6,18 @@ STAR (Situation, Task, Action, Result) is the structural skeleton every other be
 
 This is a must-know topic because interviewers pattern-match on structure within the first thirty seconds of an answer, often before the content even matters — a rambling Situation signals an unprepared candidate regardless of how good the underlying story is. The Lead-level bar isn't "know the acronym," it's having a repeatable system for building and delivering STAR stories under real interview pressure, including the follow-up questions that expose a story that wasn't actually as solid as it sounded.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** STAR is a four-part template for answering behavioral interview questions — Situation (what was going on), Task (what you specifically needed to accomplish), Action (what you actually did), and Result (what happened because of it). It's a way to turn a rambling memory of something that happened at work into a tight, evaluable story.
+
+Without a structure like this, most people either ramble through irrelevant backstory, describe what "the team" did without saying what they personally contributed, or end the story vaguely without a real outcome. STAR fixes this by giving each part of the story one specific job, in a fixed order, so nothing important gets skipped and nothing irrelevant eats up the time.
+
+A simple analogy: it's like the standard structure of a news article — a short lead-in (Situation), what needed to happen (Task), what was actually done (Action), and the outcome (Result) — instead of a stream-of-consciousness account of the whole event in the order it happened to occur to you.
+
+Here's what each part needs to contain, and where candidates most commonly get it wrong.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### 1. What each letter actually needs to contain

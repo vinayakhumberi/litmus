@@ -6,6 +6,18 @@ LLM inference is autoregressive — the model produces one token at a time, each
 
 This is a must-know topic for a Lead because it's the newest concrete interview surface in the FAANG loop, and it rewards exactly the kind of systems thinking a Lead is hired for: reasoning about network protocol trade-offs, memory behavior under a slow consumer, and — the detail almost everyone misses — that clicking "stop" in the UI doesn't automatically stop an LLM provider from generating (and billing for) tokens nobody is listening to anymore.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** streaming is showing an AI's answer word by word (or chunk by chunk) as it's being generated, instead of making the user stare at a blank screen until the entire answer is finished and then dumping it all on screen at once. It's the difference between watching someone type a message live versus waiting in silence until they hit send.
+
+This is possible because of how large language models (the AI behind chatbots like ChatGPT or Claude) actually work: they generate their response one small piece at a time — called a "token," roughly a word or part of a word — and each new piece depends on everything generated before it. A full answer might take several seconds to finish completely, but the very first token is often ready in a few hundred milliseconds. Streaming just means sending each piece to the screen the instant it's produced, rather than waiting for the model to finish the whole thing on the server first.
+
+Behind that simple idea sits a genuinely tricky plumbing problem: how the browser receives that trickle of data over the network (a technique often built on something called Server-Sent Events, or a raw streamed HTTP response), how the app decodes and displays each piece correctly without garbling text, and what happens if the user clicks "stop" partway through — does the AI actually stop generating, or does it keep running in the background?
+
+Here's how that pipeline actually works, piece by piece.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 **Why this matters at all:** the naive implementation — `fetch` the prompt, `await response.json()`, render the full answer — works, but it's the wrong experience. Users stare at a blank spinner for three to eight seconds per question, because that's how long the model actually takes to finish generating a full answer, with no way to show progress before then.

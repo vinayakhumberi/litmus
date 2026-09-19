@@ -6,6 +6,16 @@
 
 The Lead-level signal isn't "can you resolve conflict" — most Senior engineers can do that in the easy cases. It's whether you diagnose *which kind* of conflict you're in before you pick a resolution approach, and whether you can act on a power-dynamic problem (two reports of unequal seniority, a senior stakeholder overruling a junior's correct call) rather than just observing it. This topic builds a framework for that diagnosis, plus a concrete in-the-room mediation structure.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** Conflict resolution, in a work setting, is the practice of handling a disagreement between people — over a technical approach, priorities, or how people are working together — in a way that actually settles it, rather than letting it fester, get avoided, or get "won" by whoever is loudest or most senior.
+
+Not all conflict is the same kind of problem, which is the whole reason this needs a framework rather than a single trick. A disagreement between two engineers about which library to use is fundamentally different from a junior engineer being overruled by a senior one without a real hearing, and different again from engineering and product wanting different things because they're optimizing for different goals. Treating all of these the same way — "just talk it out and compromise" — works for the easy cases and quietly fails the harder ones, especially when the two people in conflict don't have equal standing to push back.
+
+A useful frame: think of yourself less as a referee just keeping the peace, and more as someone diagnosing what kind of disagreement is actually happening before deciding how to intervene. The rest of this topic builds out that diagnosis and the moves that follow from it.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### 1. Diagnose the conflict type before choosing a resolution approach

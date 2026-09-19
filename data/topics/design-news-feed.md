@@ -6,6 +6,18 @@ A news feed looks like a scrolling list, but the actual design problem is that i
 
 This is a recurring FAANG frontend system design prompt precisely because it can't be solved by picking two features off a shelf and bolting them together — cursor pagination, list virtualization, and a WebSocket feed are each individually well-understood, but combining them without breaking each other (duplicated items, lost scroll position, gaps after a reconnect) is the actual engineering problem. A candidate who designs the pagination layer and the real-time layer as independent concerns will produce a feed that behaves correctly in isolation and badly the moment both are exercised at once, which is exactly what an interviewer is listening for.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** a news feed is a scrolling list of posts — like Twitter's timeline or Facebook's homepage — that does two things at once: it lets you keep scrolling down to load older posts (infinite scroll), and it can show you brand-new posts the moment someone publishes them, without you refreshing the page (real-time updates).
+
+Think of it like standing at the bottom of an escalator that's constantly bringing up older content from below while new content occasionally gets dropped in from above. Infinite scroll is the "keep feeding me older stuff as I go down" behavior — the app fetches the next batch of posts only when you're close to running out of ones already loaded. Real-time updates are the "something new just happened" behavior — a live connection to the server tells your screen about a fresh post as soon as it exists, rather than you having to pull down to refresh.
+
+The tricky part, in plain terms, is that these two behaviors both want to touch the same list of posts but in opposite directions — one adds old things at the bottom, the other wants to add new things at the top — and if you're not careful, the "new post" arriving can literally shift the screen out from under you while you're reading something further down.
+
+Here's how that actually works under the hood.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### The central tension: append-only history vs. prepend-only updates

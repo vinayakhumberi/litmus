@@ -6,6 +6,16 @@ Every "real-time" feature request — a chat window, a live notification bell, c
 
 This is a must-know topic because it comes up in nearly every "design a real-time feature" system design round, and it's cheap to get visibly wrong — reaching for the heaviest, most powerful-sounding option (WebSockets) for a problem that's actually one-directional signals a candidate optimizing for sounding impressive rather than for operational cost. The deeper signal interviewers look for is a Lead reasoning from requirements (direction, frequency, latency tolerance, infra budget) to a transport, not from transport familiarity to a justification.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** these are four different techniques for getting live updates from a server to a browser — the mechanics behind things like a chat message appearing instantly, or a notification badge updating without you refreshing the page. Regular web requests are like mailing a letter and waiting for a reply: the browser has to ask before the server can answer. These four techniques are different ways of getting around that limitation, each with a different trade-off between simplicity, efficiency, and how "live" the updates actually feel.
+
+Picture it as four ways of finding out if a package has arrived. **Short polling** is calling the delivery company every five minutes to ask "has it arrived yet?" — simple, but wasteful and slow to notice. **Long polling** is calling once and asking them to stay on the line until they actually have an update for you. **Server-Sent Events (SSE)** is like leaving a phone line permanently open where the delivery company can talk to you anytime, but you can't talk back over it. **WebSockets** is a phone line that's open in both directions at once — either side can talk whenever they want.
+
+The right choice usually comes down to one question: does your feature need the browser to talk back over the same live connection, or does it only need to listen?
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 Four approaches show up in production and in interviews, ordered from the naive baseline to the most capable (and most expensive) option.
