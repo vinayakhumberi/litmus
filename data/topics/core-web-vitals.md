@@ -91,6 +91,16 @@ This ordering isn't a law — a checkout flow with heavy INP complaints should j
 
 ---
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** Core Web Vitals are three specific measurements Google created to answer one question: does this webpage actually *feel* fast and stable to a real person using it — not "is the code technically fast," but did the biggest thing on the page show up quickly, did anything jump around unexpectedly while they were reading or clicking, and did the page respond promptly when they tapped or typed something.
+
+Each of the three metrics targets a different moment of frustration. LCP (Largest Contentful Paint) asks "how long did I stare at a blank or half-loaded page before the main content showed up?" CLS (Cumulative Layout Shift) asks "did a button I was about to tap suddenly move, making me misclick?" INP (Interaction to Next Paint) asks "did the page freeze for a beat after I clicked something?" All three come from real, measurable moments of everyday annoyance with slow or janky websites — they're not abstract engineering metrics invented in a vacuum.
+
+Google picked these three specifically because they're also used, in aggregate, as a factor in Search rankings — so a page that scores poorly on them isn't just annoying to use, it can also rank lower. With that grounding, here's how each one is actually measured and improved.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### LCP — Largest Contentful Paint

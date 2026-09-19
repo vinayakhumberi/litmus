@@ -6,6 +6,18 @@ Frontend system design interviews are evaluated on a different axis than backend
 
 This is a must-know topic for Leads because system design rounds are where "can this person operate at Staff scope" gets tested directly. A Senior candidate gives a correct answer to the question asked; a Lead candidate demonstrates the judgment to scope the problem correctly, narrate trade-offs instead of just decisions, and manage a 45-minute conversation like a collaborative design review rather than a monologue. The framework isn't a script to recite — it's a forcing function that makes those behaviors happen under time pressure.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** this is a repeatable, step-by-step structure for answering an open-ended "design the frontend for X" interview question — a checklist that tells you what order to talk through things in, so a 45-minute conversation doesn't turn into either a rambling monologue or a five-minute dead end.
+
+A frontend system design interview gives you a vague prompt like "design a photo-sharing feed" with no further instructions, and expects you to figure out, out loud, what the app needs to do, how it should be built, and what could go wrong. Without a framework, most people either freeze because the question is so open-ended, or jump straight into implementation details before agreeing on what they're even building. The framework fixes that by breaking the conversation into ordered stages — first pin down what the feature actually needs to do (requirements), then sketch its overall shape (architecture), then figure out the data it needs (data model), then go deep on one hard part, then mention things like performance and accessibility, then wrap up by naming trade-offs.
+
+Think of it like a recipe for running a meeting: it doesn't tell you what dish to cook (what architecture to propose), it tells you the order of operations that keeps any dish from turning into a mess — figure out who's eating before you shop, shop before you cook, and taste before you serve.
+
+Here's how that actually works under the hood.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### Why frontend system design is a distinct discipline, not scaled-down backend design

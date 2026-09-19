@@ -14,6 +14,18 @@ Why it matters for Leads specifically:
 
 ---
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** Reconciliation is the process React uses to figure out what actually changed between the UI you had a moment ago and the UI your latest code wants, so it can update only the parts of the real DOM that need updating — instead of tearing down and rebuilding the whole page every time something changes.
+
+Think of it like proofreading two drafts of a document side by side: instead of retyping the entire document from scratch every time you make an edit, you scan both versions, spot exactly which sentences changed, and only touch those. React does the same thing with the tree of components describing your UI — comparing an old version against a new one, then applying the minimal set of edits to the browser.
+
+Fiber is the name of the specific engine React uses to do this comparison — it's what lets React do this work in small interruptible steps rather than one long uninterruptible pass, and it's the same underlying machinery that makes features like concurrent rendering possible. "Reconciliation," "Fiber," and "the render/commit phases" all describe pieces of this one system: comparing trees, deciding what changed, and applying it efficiently.
+
+Here's what that comparison process actually looks like mechanically.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### The Naive Problem: Tree Diffing is O(n³)

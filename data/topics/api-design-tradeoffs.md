@@ -6,6 +6,16 @@ There is no universally "best" API style — REST, GraphQL, and tRPC each optimi
 
 This is a must-know topic because the API layer sits directly upstream of client performance (over-fetching, waterfalls), team velocity (type safety, codegen), and product surface area (who can consume this API, and how). Getting it wrong shows up as chronic over-fetching on mobile, a brittle public integration story, or a full-stack team paying REST's coordination tax for no real benefit. The deeper signal interviewers look for is naming the specific trade-off that matters for the actual client scenario, not asserting one technology is unconditionally better than the others.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** an API is the contract that lets a frontend (a website or app) ask a backend server for data — "give me this user's profile," "place this order." REST, GraphQL, and tRPC are three different styles of writing that contract, and the difference between them mostly comes down to one question: who decides exactly what data comes back in the response, and how rigidly is that shape locked in ahead of time?
+
+REST is the oldest and most common style: each piece of data lives at its own web address (a URL), and the server decides in advance exactly what a request to that address returns — like ordering from a fixed restaurant menu, where each dish comes exactly as described, whether or not you wanted every ingredient in it. GraphQL flips that around: the client sends a request describing precisely which fields it wants, and the server assembles exactly that shape in one response — more like describing your custom order to a chef, who then prepares exactly that combination in one dish instead of ordering three separate courses. tRPC is for when the same team builds both the frontend and backend in the same programming language (TypeScript): it lets the frontend call backend functions almost as if they were regular functions in the same codebase, with the code editor immediately flagging a mismatch — like two people on the same team using an internal shorthand only they need to understand, rather than writing everything out formally for outside readers.
+
+Here's how each of these actually works under the hood, and what each one costs you in return.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 Three distinct styles dominate production API design today, differing in *who defines the shape of a response* and *how tightly client and server are coupled*.

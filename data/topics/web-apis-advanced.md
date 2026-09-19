@@ -17,6 +17,18 @@ These four APIs are the browser's answer to a single recurring problem: **how do
 
 ---
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** these are all browser-provided tools that let your JavaScript code say "call me back at the right moment" instead of constantly checking things itself. Each one answers a different version of "when is the right moment": right before the screen redraws, whenever the browser is otherwise idle, when an element scrolls into view, or when something in the page's HTML changes.
+
+Without these APIs, developers used to solve the same problems with blunt instruments — a `setInterval` timer polling "has this element scrolled into view yet?" dozens of times a second, whether or not anything actually changed. That wastes battery and CPU, and can visibly stutter the page (this stuttering is usually called "jank"). Each API in this topic exists because someone noticed a specific version of that wasteful pattern happening constantly in real production code, and the browser vendors built a purpose-made, more efficient callback for that exact situation instead.
+
+A rough analogy: instead of repeatedly asking "are we there yet?" on a road trip (polling), you ask the driver to tap you on the shoulder the moment you arrive (an event-driven callback). `requestAnimationFrame`, `requestIdleCallback`, `IntersectionObserver`, and `MutationObserver` are four different "tap me on the shoulder" mechanisms, each tied to a different kind of moment.
+
+Here's exactly where each one sits on the browser's internal timeline.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### The one picture that unifies all four APIs

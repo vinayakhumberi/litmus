@@ -6,6 +6,18 @@ The React DevTools Profiler is not a "make it faster" button — it's an instrum
 
 This is a must-know topic because interviewers use it to separate candidates who can *name* React performance concepts from candidates who can actually *diagnose* a specific regression under time pressure. The signal isn't "have you opened the Profiler" — it's whether you reason correctly about what each number and color actually represents before proposing a fix.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** The React DevTools Profiler is a recording tool, built into the browser's React DevTools extension, that watches your app while it re-renders and tells you exactly which components rendered, how long each one took, and why they rendered at all.
+
+Think of it like a stopwatch-and-clipboard combo for a relay race: you hit record, trigger some interaction in your app (typing, clicking, a state update), hit stop, and it hands you a breakdown of every "runner" (component) that participated in that lap — how long each one ran, and whether it actually needed to run or was just standing around because a teammate upstream passed it the baton unnecessarily.
+
+It doesn't measure your whole app's speed, and it doesn't touch anything the browser does after React hands off — things like layout and painting pixels to the screen. It's specifically a window into React's own internal decision-making: which components re-executed their render function during a given update, and what triggered each one.
+
+Here's how to actually read what it shows you.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### What the Profiler actually measures

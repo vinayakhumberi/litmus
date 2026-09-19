@@ -6,6 +6,18 @@ Every visible pixel a user sees is the output of a pipeline: HTML/CSS get **pars
 
 At Staff/Lead level, the interview signal isn't "can you name the five stages" — any mid-level candidate can do that. The signal is: **can you reason backwards from a stage to the CSS/JS property that triggers it, and forwards from a property to its stage, fast enough to architect around it.** This shows up as "why is this animation janky," "how would you build a virtualized list that doesn't thrash layout," "design a component library API that makes layout thrashing hard to write by accident," and "how do you explain this regression to a team that doesn't know the rendering pipeline." A Lead is expected to turn this knowledge into team-wide guardrails (lint rules, `contain`, CSS containment, code review heuristics) — not just fix one bug.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** the browser rendering pipeline is the sequence of steps a web browser goes through to turn the raw HTML and CSS code of a page into actual, visible pixels on your screen. Every time something on a page changes — text updates, an element moves, a color shifts — the browser has to redo some or all of these steps to redraw what you see, and how expensive that redo is depends entirely on which step it has to restart from.
+
+The five steps, in order, are: **parse** the HTML and CSS text into structured data the browser can work with; **style**, where the browser figures out the final, resolved visual style of every single element (what color, what font, what size, after all the CSS rules are applied); **layout**, where it calculates the exact position and size of every element on the page, like a diagram of where every box goes; **paint**, where it actually draws the pixels — colors, text, shadows — for each element; and **composite**, where all those separately-drawn pieces get layered together into the final image you see, similar to how a video editor stacks separate visual layers into one final frame.
+
+A useful mental model: it's like building a room. Parse is reading the furniture-assembly instructions. Style is deciding what each piece of furniture looks like. Layout is figuring out exactly where each piece goes and how much floor space it takes up. Paint is actually painting and finishing each piece. Composite is placing everything into the room and taking the final photo. Changing something late in this chain (like sliding a lamp a few inches, similar to a compositor-only change) is cheap; changing something early (like resizing a couch, forcing you to replan the whole room's layout) is expensive because everything downstream has to be redone.
+
+Here's exactly how each of these stages works, and which CSS properties trigger which ones.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### The five (really six) stages

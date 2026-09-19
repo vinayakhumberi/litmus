@@ -10,6 +10,16 @@ Why it's a must-know at Lead level: CRP optimization decisions (critical CSS ext
 
 ---
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** The critical rendering path is the sequence of steps a browser has to work through to turn the raw HTML, CSS, and JavaScript files it downloads into actual pixels on someone's screen. It's the pipeline between "the browser received some bytes" and "the user can see and interact with the page."
+
+Think of it like a kitchen preparing a dish: raw ingredients (the downloaded bytes) first need to be read and organized (parsed into a structure), then combined according to a recipe (the structure and the styling are merged), then the exact size and placement of everything on the plate gets worked out (layout), and only then does it actually get plated and served (painted onto the screen). Skip a step, or do them out of the most efficient order, and the dish comes out slower or wrong — even if every individual ingredient was fine.
+
+Every "make the page load faster" technique — where to put a `<script>` tag, whether to inline some CSS, how to load fonts — is really just a decision about which step of this pipeline that resource sits in, and whether it's holding up the steps after it. Here's the pipeline in full, stage by stage.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### The pipeline, stage by stage

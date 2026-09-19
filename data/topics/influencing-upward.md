@@ -6,6 +6,16 @@ Being technically correct is not the same as being persuasive, and most engineer
 
 This is a distinct, learnable skill: translating an engineering concern into the vocabulary the audience already uses to make decisions. This topic is the companion to tech-debt-management's 70/30 allocation model — that topic covers *how much* time to protect for quality work, this one covers *how to actually get that time approved* by someone who doesn't share your technical context. The Staff/Lead signal here isn't persistence or technical depth; it's a repeatable translation framework plus real judgment about audience, timing, and format.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** influencing upward means getting someone more senior than you — a manager, a director, an exec — to agree to spend time or money on something, using an argument built around what *they* care about rather than what *you* care about.
+
+Most engineers default to explaining things the way they'd explain them to another engineer: here's the problem, here's why it's technically bad, here's the fix. That works great in a code review. It falls flat with a director, because a director isn't grading the argument for technical accuracy — they're deciding what to spend a limited, contested budget of time, money, and attention on. If your pitch doesn't tell them why this beats the other five things competing for that same budget, it doesn't matter how correct you are.
+
+A simple way to think about it: imagine pitching a home renovation to someone who only cares about resale value. Telling them "the wiring is outdated" won't move them. Telling them "outdated wiring is the #1 thing inspectors flag, and it knocks $15k off the sale price" will. Same underlying fact, translated into the currency the listener actually uses to decide.
+
+Here's how that translation actually gets built and delivered.
+
 ## 🧠 Core Technical Deep Dive
 
 ### 1. Why technical correctness doesn't self-execute

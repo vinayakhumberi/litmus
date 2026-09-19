@@ -10,6 +10,18 @@ At FAANG, this topic is rarely asked as pure trivia. It's used as a **diagnostic
 
 ---
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** the event loop is the mechanism that lets JavaScript — which can only do one thing at a time — handle things like timers, network requests, and click events without freezing the page while it waits for them.
+
+JavaScript runs on a single thread, meaning it can only execute one piece of code at any given instant; there's a "call stack" that tracks what function is currently running, like a stack of plates where you can only work on the top one. If JavaScript could only ever run code from top to bottom with nothing else happening, waiting for a slow network request would freeze the entire page for however long that request took. The event loop is what avoids that: it's a constantly-running process that checks "is the call stack empty? If so, is there any waiting work — a finished timer, a completed network request, a queued callback — that's ready to run next?" and feeds that work in, one piece at a time.
+
+Microtasks and macrotasks are the two "waiting rooms" for that ready-to-run work, and they have different priority: microtasks (mainly `Promise` callbacks) always get to run first and get fully cleared out before anything else happens, while macrotasks (like `setTimeout` callbacks or click handlers) run one at a time, with the browser getting a chance to repaint the screen in between. The everyday analogy: imagine a single cashier (the call stack) who, between customers, always finishes every person in the "quick question" line (microtasks) before calling the next person from the "full transaction" line (macrotasks) — and only glances up to refresh the store display (render the page) once the quick-question line is empty.
+
+Here's how that actually works under the hood.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### The Runtime Model: What's Actually Happening

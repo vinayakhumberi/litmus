@@ -6,6 +6,18 @@ A URL shortener is the canonical "warm-up" backend system design question, and i
 
 The system itself is deceptively simple: map a long URL to a short code, and redirect visitors from the short code back to the long URL. What makes it a real system design exercise is that it's overwhelmingly **read-heavy** (redirects vastly outnumber new-link creation), which cascades into almost every other decision — how aggressively to cache, whether to accept eventual consistency on writes, and even which HTTP status code to redirect with. A Lead-level answer treats this read/write asymmetry as the organizing constraint for the whole design, not just a footnote.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** a URL shortener is a service that takes a long web address (like `https://example.com/products/category/electronics?ref=summer-sale-2026`) and gives you back a short one (like `short.ly/x7Yq2`) that redirects to the original when visited — the same idea as `bit.ly` or `tinyurl.com`.
+
+The mechanism is simple to picture: when you submit a long URL, the service invents a short, unique "code" (that `x7Yq2` part), stores a mapping of "this code points to that long URL" in a database, and hands you back the short link. Later, when anyone clicks that short link, the service looks up the code in its database, finds the original long URL, and tells the visitor's browser "actually, go here instead" — that's the "redirect."
+
+It's like a coat-check ticket: you hand over something big and unwieldy (the coat, or the long URL), you get back a small ticket (the short code), and handing the ticket back later retrieves the original item. The interesting engineering questions all live in the details of how that ticket is generated, how the lookup stays fast even under massive traffic, and what happens when millions of people are "checking their coat" (creating links) while orders of magnitude more people are just presenting tickets (clicking redirects).
+
+Here's how that actually works under the hood.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### Requirements framing: functional vs. non-functional

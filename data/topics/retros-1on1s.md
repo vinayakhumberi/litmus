@@ -6,6 +6,18 @@
 
 Both formats fail the same way when they fail: they run on schedule, feel productive in the room, and produce nothing that persists. This topic builds two concrete, whiteboard-able structures — one for retros, one for 1:1s — that close that gap, plus the specific signals a Lead should be reading for in each.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** A retro (retrospective) is a recurring team meeting, usually held at the end of a sprint or project, where the team looks back at how the work went and decides what to change going forward. A 1:1 is a recurring private meeting between a manager and one direct report, meant to cover things that don't fit anywhere else — career growth, blockers, feedback, and how that person is actually doing.
+
+Both are just structured, repeating conversations — the "structure" part is the whole point. Without one, a retro turns into people venting with nothing decided, and a 1:1 turns into an informal status update that could've been a Slack message.
+
+A helpful way to think about the difference: a retro is the team looking backward together to improve how it works as a group; a 1:1 is a manager looking one level deeper at a single person, on an ongoing basis, to catch things — disengagement, misaligned priorities, growth needs — that never surface in a group setting.
+
+Here's what actually separates a retro or 1:1 that works from one that quietly stops mattering.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### 1. Why most retros fail: no accountability loop

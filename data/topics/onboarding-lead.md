@@ -6,6 +6,16 @@
 
 This is a must-know topic because nearly every experienced candidate has changed teams or companies at least once, and the question is asked precisely because it's easy to answer badly. The bad answer is generic ("I'd get to know the team and the codebase") or overconfident ("I'd assess what's broken and start fixing it"). The good answer is a deliberate, phased plan that explicitly distinguishes listening from acting — that's the actual signal, and it's the structure this topic builds.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** onboarding as a lead is the process of joining a new team as its manager or technical lead, where the goal isn't just learning the codebase — it's earning the team's trust and understanding how the group actually operates before you start directing anything.
+
+When a regular engineer joins a new team, their onboarding is mostly technical: learn the codebase, ship a small fix, ask questions freely. Nobody's counting on them to make calls yet. A lead joining a new team has a title that already grants them authority on day one — they can technically tell people what to prioritize — but that authority is hollow until the team actually trusts their judgment, and trust has to be earned with this specific group of people; it doesn't come bundled with the job title.
+
+A helpful comparison: think of a new coach taking over a sports team that's already been playing together. The coach has formal authority immediately — they can call plays — but if they show up in week one and start overhauling the team's whole strategy without first understanding why the players do things a certain way, the team stops trusting the coach's calls even if some of those calls turn out to be right. The smart move is to watch a few games, talk to the players, and understand what's actually working before changing anything.
+
+The framework below turns that intuition into a concrete, phased plan.
+
 ## 🧠 Core Technical Deep Dive
 
 ### 1. Why Lead onboarding is a categorically different problem than IC onboarding

@@ -6,6 +6,18 @@ Most state-management pain at scale doesn't come from picking the wrong library 
 
 This is a must-know topic for a Lead because the cost of getting this taxonomy wrong doesn't show up in a code review — it shows up months later as stale-data bugs, race conditions between tabs, cache invalidation spaghetti, and a Redux store nobody can safely modify anymore. The deeper signal interviewers are after is whether a candidate reaches for "what category of state is this, and what does it actually need" before reaching for a library at all.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** "state" just means any data your app is holding onto — and "state management" is the set of rules for where that data lives, who's allowed to change it, and how the rest of the app finds out when it changes. The core idea in this topic is that not all state is the same *kind* of data, so it shouldn't all be stored and updated the same way.
+
+Think of it like organizing a house. Some things belong to a landlord who can change them without asking you — that's **server state**: data that actually lives on a remote server (a list of orders, a user's profile), which your app just borrows a copy of and has to keep checking is still accurate. Other things are entirely yours to manage in the moment — that's **client state**: whether a dropdown is open, what you've typed into a search box — nobody else in the world needs to know or agree on it.
+
+The mistake most teams make is dumping both kinds into one giant bucket (like a single Redux store) and updating them the same way. That works fine at small scale, but it starts producing weird bugs — stale data, flickering UIs, two browser tabs disagreeing with each other — once an app gets big enough that "server-owned" and "locally-owned" data need genuinely different rules to stay correct.
+
+Here's how that actually plays out in practice.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 Most state-management pain at scale traces back to one mistake: treating every piece of state as the same kind of thing. A team that puts `orders` (fetched from a server, shared across users) and `isOrderModalOpen` (local to one tab) into the same Redux store, updated through the same dispatch pipeline, eventually hits bugs like these:

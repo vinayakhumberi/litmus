@@ -6,6 +6,16 @@
 
 This is a must-know topic because "tell me about someone you developed" is one of the most common behavioral prompts at Staff/Lead level, and most candidates answer it with a warm anecdote instead of a repeatable method. The goal of this topic is a structure you can actually whiteboard: how to calibrate how much to intervene, how to structure stretch and safety net, how to use code review as a teaching surface, how to measure growth, and what to do when it stalls.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** mentoring a junior developer means deliberately helping someone earlier in their career get better at making good decisions on their own — not just being friendly and answering their questions when they happen to ask.
+
+It's easy to confuse "being a good mentor" with "being a nice, available person." Someone can answer every question a junior brings them, be endlessly patient, and still not actually be mentoring — if two years later that junior still needs to check in on every non-trivial decision, nothing was actually transferred. Real mentoring is closer to teaching someone to ride a bike: at first you hold the seat and run alongside, but the entire point is to let go at the right moment, not to keep holding on forever because holding on feels helpful.
+
+The skill involved is figuring out, for a given task, how much to step in versus how much to step back — too much guidance and the person never builds their own judgment; too little too soon and they fail in ways that damage their confidence or the project. Good mentoring also uses everyday moments, especially code review, as teaching opportunities rather than just quality-control checkpoints.
+
+The framework below breaks that down into something concrete and repeatable.
+
 ## 🧠 Core Technical Deep Dive
 
 ### 1. What mentoring is actually optimizing for

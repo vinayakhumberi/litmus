@@ -6,6 +6,16 @@ Web security is one of the few interview topics where a Staff/Lead engineer is e
 
 This topic is a "must-know" because it's a proxy for a broader Lead signal: **do you think about failure modes of the systems you didn't personally write?** Frontend leads increasingly own the client's security posture even though the actual exploits (stored XSS in a comment field, a CSRF'd money transfer) are executed against backend endpoints. Interviewers use this topic to test whether you can reason about trust boundaries — between origins, between the DOM and the JS engine, between first-party and third-party code — rather than just reciting "sanitize your inputs."
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** these are three different ways an attacker can get a web page to do something it shouldn't, and three different lines of defense against that. **XSS (Cross-Site Scripting)** means an attacker sneaks their own JavaScript into a page you trust — like slipping a fake note into someone else's mailbox and having it read as if it came from the homeowner. **CSRF (Cross-Site Request Forgery)** means an attacker tricks your browser into sending a real request to a site you're logged into, without you meaning to — like forging your signature on a form using a pen you left lying around (your browser automatically attaches your login credentials to requests, whether you meant to send them or not). **CSP (Content-Security-Policy)** isn't an attack, it's a defense: a rule set the server sends the browser saying "only run scripts from these trusted sources, and don't allow certain risky behaviors at all," so that even if an attacker does sneak something in, it's blocked from actually doing damage.
+
+The common thread: browsers are built to trust whatever code ends up on a page, and to automatically attach your login session to any request going to a site you're logged into. Both of those defaults are useful most of the time, but they're exactly what these attacks exploit — so defending against them means adding rules that don't trust blindly.
+
+Here's how each attack actually works, and the layered defenses that stop them.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 All three vulnerabilities in this topic trace back to one fact about the browser's trust model: it makes no runtime distinction between a `<script>` tag the developer wrote and one that ended up in the page because user input got concatenated into HTML or because a cookie was attached automatically. Once anything is parsed as markup or a request is fired with ambient credentials, it runs fully privileged — there's no concept of "this arrived via user input, treat it as less trusted."

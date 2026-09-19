@@ -6,6 +6,16 @@ JavaScript's garbage collector doesn't free "unused" objects — it frees **unre
 
 This is a must-know topic because long-lived single-page applications make memory management a frontend concern, not just a backend/Node.js one — a dashboard left open for a work day, a chat app that never navigates away, an admin tool with dozens of open tabs, all accumulate leaked memory the same way a long-running server process does. Interviewers use this topic to test whether a candidate can go from "the app feels sluggish after a while" to a specific, tooling-verified root cause, rather than guessing and patching symptoms.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** memory management is how a running program keeps track of the data it's using and gets rid of data it's done with, and garbage collection (GC) is the specific mechanism JavaScript uses to do the "getting rid of" part automatically, without the programmer having to manually free memory the way languages like C require.
+
+Every time your code creates something — a variable, an object, an array — the browser sets aside a chunk of memory to hold it. If the program kept everything forever, memory usage would climb until the browser slowed down or crashed the tab. The garbage collector's job is to periodically look at everything in memory and ask: "is this still reachable — could my running code possibly get to this thing by following some chain of references?" If nothing leads to it anymore, it's safe to throw away.
+
+A memory leak, then, isn't really about the collector being broken — it's about the program accidentally keeping a path to something it no longer needs, so the collector correctly (if unhelpfully) leaves it alone. A useful analogy: it's like a library that only removes a book from the shelf once every card in the card catalog referencing it has been pulled. If someone forgot to pull one card, the book stays on the shelf forever, "reachable" but never actually read again.
+
+The deep dive below gets specific about how that reachability check works and how it goes wrong.
+
 ## 🧠 Core Technical Deep Dive
 
 ### Reachability, not usefulness: the mental model that matters

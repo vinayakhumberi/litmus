@@ -6,6 +6,18 @@
 
 This is a must-know topic because "just wrap it in useMemo" is the single most common wrong answer to a React performance question, and interviewers use it specifically to separate candidates who've internalized *why* memoization works from candidates who've memorized *that* it exists. The Lead-level signal is knowing when reaching for these APIs is a net loss, not just how to use them.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** `useMemo`, `useCallback`, and `React.memo` are three ways of telling React "don't redo this work if nothing that matters to it has actually changed — just reuse what you computed last time."
+
+`useMemo` remembers the *result* of a calculation (a computed value). `useCallback` remembers a *function itself*, so the same function reference survives across renders instead of a brand-new one being created every time. `React.memo` wraps a whole component and tells React "skip re-rendering this component if its props look the same as last time." All three are really the same trick — cache something, compare it to what came before, and skip the work if it matches — just applied to a value, a function, and a component respectively.
+
+A useful analogy: it's like a barista who, before making a new cup of coffee, checks whether the order is identical to the one they just made — if yes, they hand over the same cup instead of pouring a new one. That check itself takes a moment, though, so it only pays off if actually remaking the coffee would have been genuinely expensive.
+
+Here's how that comparison mechanism actually works under the hood, and where it commonly goes wrong.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### The shared mechanism: reference caching keyed by shallow comparison

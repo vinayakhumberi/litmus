@@ -6,6 +6,16 @@ There is no single "correct" rendering strategy — CSR, SSG, SSR, ISR, and stre
 
 This is a must-know topic because rendering strategy sits directly upstream of Core Web Vitals, infrastructure spend, and SEO outcomes simultaneously — getting it wrong on a high-traffic route is expensive in all three dimensions at once. The deeper signal interviewers look for is per-route judgment: recognizing that a marketing homepage, a product page, and an authenticated dashboard in the same app have genuinely different requirements and shouldn't share a rendering strategy by default.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** "rendering strategy" is just an answer to one question: when and where does the HTML for a web page actually get built — on the user's device, or on a server, and if on a server, how often? Every one of these five approaches (CSR, SSG, SSR, ISR, streaming SSR) is a different answer to that same question, and each one trades off speed, freshness, and cost differently.
+
+Picture a restaurant. CSR (Client-Side Rendering) is like handing the customer raw ingredients and a recipe card and letting them cook it themselves at the table — flexible, but slow to get food, and useless if the customer doesn't have a kitchen (a search engine crawler that can't run JavaScript). SSG (Static Site Generation) is like a bakery that makes a batch of bread every morning and just hands out slices all day — extremely fast, but the bread is exactly as fresh as this morning's batch, no fresher. SSR (Server-Side Rendering) is a restaurant that cooks every dish fresh, per order, the moment it's requested — fresh every time, but the kitchen has to do real work for every single customer. ISR (Incremental Static Regeneration) is the bakery baking a new batch every so often instead of only once a day. Streaming SSR is a kitchen that serves the appetizer the moment it's ready instead of making the customer wait for the whole meal to be plated at once.
+
+Here's how each of these actually works under the hood.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 Five distinct strategies actually get used in production, differing in *when* rendering happens and *how fresh* the result is by the time a user sees it.

@@ -6,6 +6,18 @@ General ("backend-aware") system design rounds show up in an increasing share of
 
 The bar here is not backend infrastructure expertise — nobody expects a Frontend Lead to out-design a Staff backend engineer on sharding strategy. The bar is structured, honest reasoning under a discipline that isn't the candidate's primary specialty: asking the right clarifying questions, doing real arithmetic instead of hand-waving at "capacity estimation" as a step, and being explicit about what's a confident opinion versus an educated guess. A candidate who says "this part is outside my day-to-day depth, but here's how I'd reason about it" reads as more Staff-ready than one who bluffs a plausible-sounding answer and gets it wrong under a follow-up.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** this is a step-by-step structure for answering a "design a backend service" interview question (like "design a URL shortener" or "design a rate limiter") when you're a frontend engineer being asked to reason about the server side of a system, not the UI.
+
+Unlike a frontend design question, which is about screens, components, and what the user sees, this kind of question is about the machinery behind the screen: how data is stored, how many requests per second the system needs to handle, and whether it's more important for the system to always give a correct answer or to always give *some* answer quickly. The framework walks through the same broad shape as any structured design answer — clarify the requirements, then estimate how much traffic and data you're actually dealing with using real math (not just saying "it needs to scale"), then sketch the pieces, then go deep on one piece, then name the trade-offs you made.
+
+A useful mental picture: it's the difference between designing a house's floor plan (frontend design — rooms, layout, what people experience) versus designing its plumbing and electrical systems (backend design — capacity, pressure, what happens under load, and what breaks first). The framework matters here specifically because it's easy for someone used to designing floor plans to wander into a plumbing conversation and start talking about paint colors instead.
+
+Here's how that actually works under the hood.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### Why this is a different discipline than frontend system design

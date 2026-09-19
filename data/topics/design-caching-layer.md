@@ -6,6 +6,16 @@ Caching is not "add Redis in front of the database" — it's a **consistency-vs-
 
 This is a must-know topic because it rarely appears as a standalone prompt only — it's a component inside nearly every other system design answer (a URL shortener's redirect cache, a feed's item cache, a search-results cache), and a candidate who says "we'd add a cache" without naming which invalidation strategy, which eviction policy, and which consistency trade-off applies to *this specific* data has not actually answered the question. A Lead-level answer treats cache placement and invalidation as the design, not an implementation detail bolted on afterward.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** A cache is a temporary copy of some piece of data, stored somewhere faster or closer to where it's needed, so a system doesn't have to go all the way back to the original, slower source every single time that data is requested.
+
+The everyday version of this: keeping a few snacks in your desk drawer instead of walking to the kitchen every time you're hungry. The drawer is faster to reach, but it's also a *copy* — if someone restocks the kitchen with a new snack, your drawer doesn't automatically know about it, and it can quietly go stale if nobody remembers to refill it. That tension — faster access versus the risk of serving something outdated — is the entire game with caching. It's not just "store data somewhere," it's a constant trade-off between how fast you want to go and how out-of-date you're willing to let that copy get.
+
+In a real system, "the drawer" can exist at several different layers between a user and the database — the user's own browser, a server near their geographic location, an in-memory store next to the application — and each layer makes that speed-versus-freshness trade-off differently. That's what the rest of this topic walks through.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### The cache placement spectrum

@@ -6,6 +6,16 @@
 
 This is a must-know topic because it's now a standard portfolio/behavioral opener, and most candidates answer it badly in one of two directions: either a vague "I use Copilot sometimes" with no structure, or an overclaimed "I led our org's AI transformation" that collapses under one follow-up question. The goal of this topic is a repeatable, honest structure — something you can actually whiteboard — for answering it well.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** this topic is about how a team leader introduces AI coding assistants (tools like GitHub Copilot or Claude Code, which suggest or write code as an engineer types) to a whole team responsibly — deciding who uses what, how carefully their output gets checked, and what rules prevent the tool from causing new kinds of trouble.
+
+An AI coding tool sits inside an editor and, given a prompt or just the surrounding code, drafts a function, a test, or an entire feature. It's genuinely useful — it can save real time — but it also fails in a specific new way: it doesn't produce sloppy-looking code, it produces confident-looking code that can be subtly wrong, like citing a library function that doesn't actually exist. A team that just "turns it on" for everyone without a plan is trusting all of that to individual judgment and hoping for the best.
+
+Think of it like giving every engineer power tools instead of hand tools: faster, and also capable of a different, faster kind of mistake if nobody agrees on safety rules first. "Leading adoption" means being the person who sets those rules — what the tool is allowed to touch, how output gets reviewed, and how the team notices when something's gone wrong — instead of letting each person improvise their own.
+
+The rest of this section lays out exactly what that rollout looks like in practice.
+
 ## 🧠 Core Technical Deep Dive
 
 ### 1. The adoption maturity model

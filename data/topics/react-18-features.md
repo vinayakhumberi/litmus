@@ -6,6 +6,18 @@ React 18's concurrent features don't make React faster — they make React's sch
 
 This is a must-know topic because it's one of the few areas where React's public API directly exposes an internal architectural concept (priority lanes) to userland. Interviewers use it to test whether a candidate can reason about *scheduling* as a first-class system design concern — the same instinct that shows up in OS process scheduling, event-loop prioritization, and network request prioritization — rather than treating "make it faster" as a single undifferentiated goal.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** React 18's concurrent features let React pause a render that isn't urgent, handle something more important (like a keystroke), and come back to finish the less-urgent work afterward — instead of being forced to finish whatever it started, in order, no matter what.
+
+Think of a single cashier at a store who's in the middle of restocking a shelf (a slow, unimportant task) when a customer walks up to the register. Before React 18, the cashier had to finish restocking the entire shelf before helping the customer, even though the customer is clearly more urgent. Concurrent rendering lets the cashier set the restocking down mid-task, ring up the customer immediately, and go back to the shelf right after — nothing about restocking got faster, it just stopped blocking the more important thing.
+
+`useTransition` and `useDeferredValue` are two ways of telling React "this particular update can wait its turn." `Suspense` is a way of telling React "don't show anything for this part of the UI until its data is actually ready — show a placeholder instead." All three are just different buttons for controlling the order React does work in, not ways of making the work itself smaller or faster.
+
+Here's how that ordering mechanism actually works under the hood.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### Concurrent rendering: the mechanism underneath all three APIs

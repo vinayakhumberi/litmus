@@ -10,6 +10,18 @@ Why it's a must-know at Lead level: this is the single most consequential fronte
 
 ---
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** Server Components and Client Components are two different kinds of building blocks in a Next.js app: a Server Component runs only on the server and never sends its own code to the browser, while a Client Component runs in the browser too, so it can respond to clicks, hold state, and update itself the way "normal" React always has.
+
+Think of a Server Component like a chef preparing a finished dish in the kitchen and sending out just the plated meal — the customer never sees the recipe or the kitchen equipment, only the result. A Client Component is more like a make-your-own-taco station at the table — the customer (the browser) needs the actual ingredients and tools shipped to them so they can assemble and rearrange it themselves, interactively.
+
+This matters because every piece of JavaScript a Client Component needs gets downloaded by the user's browser, while a Server Component's code never leaves the server at all — only its rendered output does. So choosing which type a given piece of UI should be is really a choice about how much code you're willing to ship to every visitor, not just a stylistic preference.
+
+Here's how that boundary actually works mechanically, and where teams get it wrong.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### Two rendering environments, one component tree

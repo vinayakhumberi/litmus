@@ -6,6 +6,18 @@ ICs are mostly shielded from this problem. Ambiguous, high-stakes calls with no 
 
 The trap most candidates fall into is treating "let's gather more data" as a free, safe default. It isn't — every day spent gathering data is a day the team isn't shipping, and that delay has a real cost that competes directly with the cost of being wrong. The Staff/Lead signal here isn't "I made a bold call under pressure" — it's a repeatable structure for deciding *how much* certainty a given decision actually needs, making the call explicitly, and leaving a trail that lets the team recover cleanly if it turns out wrong.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** this is about how to make a real decision when you don't have all the facts — because in practice, you almost never do, and waiting for certainty is itself a choice with consequences. It's a structured way of saying "here's what I'm assuming, here's what would prove me wrong, and here's when I'll check" instead of either freezing until more data arrives or just guessing and hoping.
+
+A useful analogy: it's like a doctor prescribing a treatment before every test result is back. Waiting for perfect certainty could mean the patient gets worse in the meantime — so the doctor makes the best call with available evidence, tells the patient what to watch for, and sets a follow-up appointment to check whether the assumption held. That's the whole shape of this skill: commit to a decision, name what you don't know, and build in a checkpoint to revisit it.
+
+The framework also includes a first filter — deciding how *carefully* to think something through, based on how expensive it would be to undo if it turns out wrong. A decision that's easy to reverse deserves a fast, low-drama call; one that's expensive or impossible to walk back deserves real deliberation.
+
+Here's how that plays out as a repeatable process.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### 1. Why this is a distinct leadership skill, not just confidence

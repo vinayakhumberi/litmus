@@ -6,6 +6,16 @@ A component library is not a UI-building exercise — it's a **platform and API 
 
 This is a must-know topic because it's one of the highest-leverage tests of Staff/Lead judgment available in an interview: it forces trade-offs across API design, styling architecture, governance, and distribution simultaneously, with no single correct answer — exactly the kind of ambiguity a Lead is expected to navigate on the job. A candidate who jumps straight to "I'll use styled-components and Storybook" without addressing versioning, accessibility architecture, or governance has scoped the problem as a tooling choice instead of a platform.
 
+## 📖 What Is It? (Plain-English Definition)
+
+**In plain terms:** A component library (also called a design system) is a shared collection of pre-built, reusable UI pieces — buttons, dropdowns, modals, form fields — that many different teams within an organization use instead of each team building their own version from scratch. The goal is that an app's buttons look and behave the same way whether they show up in the checkout flow, the settings page, or a completely different product built by a different team.
+
+A useful comparison: think of building blocks like a standardized electrical outlet in a building. Every room uses the same outlet shape, so any appliance plugs in correctly everywhere, and if the outlet design ever needs to change, that change happens once, centrally, instead of every room inventing its own wiring. A component library plays that same role for an app's UI — one well-built, well-tested `Button` component, used everywhere a button is needed, instead of dozens of slightly different hand-rolled buttons scattered across the codebase.
+
+What makes this hard in practice isn't drawing the button — it's designing that shared piece so it's flexible enough for many different teams' needs, and figuring out how to change it later without breaking everyone who already depends on it. That's the real subject of this topic.
+
+---
+
 ## 🧠 Core Technical Deep Dive
 
 ### Component API design: the actual hard problem
