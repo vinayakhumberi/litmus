@@ -84,7 +84,6 @@
             border-radius: 12px;
             background: rgba(240, 141, 73, 0.05);
         }
-        .jank-explanation { font-size: 0.9rem; color: #aaa; font-style: italic; }
         .callout {
             background: rgba(97, 218, 251, 0.08);
             border-left: 3px solid var(--primary);
@@ -132,6 +131,40 @@
         ol.steps li { margin-bottom: 0.6rem; }
         .steps code { color: var(--accent); }
         #panel-mount-target { min-height: 20px; }
+        .heap-diagram {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin: 1.5rem 0;
+        }
+        .heap-region {
+            border: 1.5px solid #444;
+            border-radius: 10px;
+            padding: 0.9rem 1rem;
+            background: rgba(0,0,0,0.25);
+        }
+        .heap-region.young { border-color: var(--primary); background: rgba(97, 218, 251, 0.08); }
+        .heap-region.old { border-color: var(--accent); background: rgba(240, 141, 73, 0.08); }
+        .heap-region.large { border-color: #a78bfa; background: rgba(167, 139, 250, 0.08); }
+        .heap-region.meta { border-color: #666; }
+        .heap-region h4 { margin: 0 0 0.4rem; font-size: 0.9rem; }
+        .heap-region p { margin: 0; font-size: 0.8rem; color: #bbb; }
+        .term-table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+        .term-table th, .term-table td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #444; vertical-align: top; }
+        .term-table th { color: var(--primary); }
+        .console-note { font-size: 0.82rem; color: #999; margin-top: 0.4rem; }
+        .deduction {
+            background: rgba(74, 222, 128, 0.08);
+            border-left: 3px solid var(--good);
+            padding: 1rem 1.25rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            margin: 1.5rem 0 0;
+        }
+        .deduction h4 { margin: 0 0 0.6rem; color: var(--good); font-size: 0.95rem; }
+        .deduction ul { margin: 0.4rem 0 0; padding-left: 1.25rem; }
+        .deduction li { margin-bottom: 0.5rem; }
+        .deduction pre { margin: 0.5rem 0; }
     </style>
 </head>
 <body>
@@ -142,15 +175,59 @@
 </header>
 
 <nav>
+    <a href="#basics">Heap Basics</a>
     <a href="#how-to">How to Use This</a>
     <a href="#scenario-1">Interval Leak</a>
     <a href="#scenario-2">Detached DOM Node</a>
     <a href="#scenario-3">WeakMap vs Map</a>
+    <a href="#scenario-4">Global Leak</a>
+    <a href="#scenario-5">Subscriber Leak</a>
+    <a href="#toolkit">Detection Toolkit</a>
 </nav>
 
 <main>
+    <section id="basics">
+        <h2>1. Heap Memory Basics — What You're Actually Looking At</h2>
+        <p>Every value in JavaScript lives in one of two places. The <strong>stack</strong> holds primitives and function call frames — fixed-size, LIFO, cleaned up automatically the instant a frame pops. The <strong>heap</strong> is a large, unstructured region where every object, array, function, and closure actually lives; it is cleaned up <em>only</em> by the garbage collector, never by a variable simply going out of scope. (For an animated, step-by-step version of this split — including exactly what a closure keeps alive and why — see the <a style="color: cyan" href="js-memory-visualizer.html">JS Memory &amp; Execution Visualizer</a>. Everything below builds on that.)</p>
+
+        <p>V8 (Chrome and Node's engine) doesn't treat the heap as one flat blob — it's split into generations, because of the <strong>generational hypothesis</strong>: the overwhelming majority of objects die young (a render's temporary props object, one iteration's loop variable), so the collector is optimized hard for cheaply reclaiming short-lived garbage, and only occasionally pays for a full, more expensive sweep of what's left.</p>
+
+        <div class="heap-diagram">
+            <div class="heap-region young">
+                <h4>New Space (Young Generation)</h4>
+                <p>Small (a few MB), where every new object is allocated first. Split into two semi-spaces; a fast, frequent <strong>Scavenge</strong> (minor GC) copies survivors from one to the other. Objects that survive a couple of scavenges get <strong>promoted</strong> to Old Space.</p>
+            </div>
+            <div class="heap-region old">
+                <h4>Old Space (Old Generation)</h4>
+                <p>Where promoted, long-lived objects go. Cleaned by a slower, less frequent <strong>Mark-Sweep-Compact</strong> ("Major GC") — the pass that causes visible jank if it runs on the main thread, and what a heap snapshot is mostly showing you.</p>
+            </div>
+            <div class="heap-region large">
+                <h4>Large Object Space</h4>
+                <p>Objects too big to fit comfortably in New Space (large arrays, big strings) are allocated here directly, regardless of age.</p>
+            </div>
+            <div class="heap-region meta">
+                <h4>Code / Map Space</h4>
+                <p>Compiled function code and "hidden class" shape metadata. Rarely the target of a leak hunt, but shows up as its own category in a snapshot.</p>
+            </div>
+        </div>
+
+        <p><strong>The only question the collector ever asks is reachability, not lifetime or usage.</strong> Starting from a set of <strong>GC roots</strong> (the global object, everything currently on the call stack, active closures), the collector walks every reference it can find; anything reachable through that walk is kept alive — unconditionally, no matter what your program logic thinks — and anything it can't reach gets swept. (This is the exact mark-and-sweep process animated in <a style="color:cyan" href="js-memory-visualizer.html">the visualizer's GC example</a>, if you want to watch it happen step by step.)</p>
+
+        <div class="callout">
+            <strong>So what is a "memory leak" in a garbage-collected language?</strong> You never manually free anything in JS, so a leak here specifically means: an object your program logic considers dead is <em>still reachable</em> from a root through some reference you forgot you were holding — an unremoved event listener, a stale closure, a cache with no eviction, an uncleared timer. The garbage collector is doing its job correctly the whole time; the bug is upstream, in code that's still (accidentally) pointing at the object.
+        </div>
+
+        <p>Two numbers appear on every row of a heap snapshot, and reading them correctly is the actual skill:</p>
+        <table class="term-table">
+            <tr><th>Term</th><th>Meaning</th></tr>
+            <tr><td><strong>Shallow size</strong></td><td>Memory the object itself occupies — not counting anything it points to.</td></tr>
+            <tr><td><strong>Retained size</strong></td><td>Memory that would be freed if this object became unreachable, including everything <em>only</em> reachable through it. This is the number that actually matters when hunting leaks — a tiny object with a huge retained size is usually the head of the leak, not the small object itself.</td></tr>
+            <tr><td><strong>Retainers / Retaining path</strong></td><td>For any object, DevTools can show the chain of "what's holding onto this," back up to a GC root. Reading that chain is how you go from "this object leaked" to "this specific line of code is why."</td></tr>
+        </table>
+    </section>
+
     <section id="how-to">
-        <h2>1. Why no screenshots</h2>
+        <h2>2. Why no screenshots (and how to use this)</h2>
         <p>A static screenshot of DevTools would go stale the moment Chrome ships a UI update, and worse, it can't actually teach you anything you can't already read in the docs. Every scenario below <strong>genuinely leaks or doesn't</strong> depending on a toggle — the same real JavaScript objects, DOM nodes, and closures described in the write-up, running live in your own browser. Open Chrome DevTools now (<code>F12</code> or <code>Cmd+Opt+I</code>) and follow along with your own Memory panel — that's the actual skill being taught here.</p>
 
         <div class="callout">
@@ -171,7 +248,7 @@
     </section>
 
     <section id="scenario-1">
-        <h2>2. Scenario: Forgotten <code>setInterval</code></h2>
+        <h2>3. Scenario: Forgotten <code>setInterval</code></h2>
         <p>Each "mount" creates a widget holding a ~50,000-element array, plus a <code>setInterval</code> whose closure references that array. In buggy mode, "Unmount all" only removes <em>our own</em> reference to the widgets — the browser's timer system still holds the interval callback (and everything it closed over) alive, because an uncleared interval is retained by the runtime itself, independent of any variable in your code.</p>
 
         <div class="playground">
@@ -184,12 +261,43 @@
                 <div class="stat-badge" id="s1-mounted">Widgets currently tracked by us: <span>0</span></div>
                 <div class="stat-badge" id="s1-intervals">Intervals actually still running: <span>0</span></div>
             </div>
-            <p class="jank-explanation">Try this with the fix OFF: mount, unmount, mount, unmount a few times, then run the three-snapshot technique above and search the Comparison view's class filter for <code>Array</code> or look at growing <code>(closure)</code> entries — the interval callbacks are still alive even though "Widgets currently tracked by us" drops to 0 each time, because <em>your</em> tracking array isn't what's keeping them alive.</p>
+            <div class="callout">
+                <strong>A. Confirm the leak (fix OFF)</strong>
+                <ol class="steps">
+                    <li>Make sure <strong>Apply the fix</strong> above is unchecked.</li>
+                    <li>Open DevTools (<code>F12</code> / <code>Cmd+Opt+I</code>) → <strong>Memory</strong> tab → select <strong>Heap snapshot</strong> → click <strong>Take snapshot</strong>. This is your baseline.</li>
+                    <li>Back on the page, click <strong>Mount 20 widgets</strong> three times (60 total), then click <strong>Unmount all</strong>. Watch "Widgets currently tracked by us" drop to 0 — don't trust that number yet.</li>
+                    <li>In the Memory panel's toolbar, click the small circular <strong>Collect garbage</strong> icon, then click <strong>Take snapshot</strong> again (snapshot #2).</li>
+                    <li>Repeat step 3 once more (mount 60, unmount all), click <strong>Collect garbage</strong> again, take a third snapshot.</li>
+                    <li>Select snapshot #3, change the view dropdown from <strong>Summary</strong> to <strong>Comparison</strong>, and set the comparison baseline to snapshot #2.</li>
+                    <li>Click the <strong># Delta</strong> column header to sort by it. <strong>Look for:</strong> an <code>Array</code> row with a positive, growing delta even though you "unmounted" everything both times — each retained widget's 50,000-element array is still alive. (Exactly how V8 labels the closure/context object itself varies by Chrome version — it won't reliably say "closure," so <code>Array</code> is the filter to trust here.) Click that <code>Array</code> row, expand <strong>Retainers</strong> below it, and confirm the chain leads back to a timer entry rather than to <code>trackedWidgets</code>.</li>
+                </ol>
+                <strong>B. Confirm the fix (fix ON)</strong>
+                <ol class="steps">
+                    <li>Check <strong>Apply the fix</strong>.</li>
+                    <li>Repeat the exact same mount → unmount → collect garbage → snapshot cycle from steps 2–6 above.</li>
+                    <li><strong>Compare:</strong> the same <code>Array</code> row in the Comparison view should now sit at roughly 0 delta — <code>clearInterval</code> on unmount actually releases them this time.</li>
+                </ol>
+            </div>
+            <div class="deduction">
+                <h4>🔎 Deduction: what the evidence means, and where to look in real code</h4>
+                <p><strong>What it means:</strong> a growing <code>Array</code> delta that survives repeated "unmount + collect garbage" cycles, with a Retainers chain that leads to a timer instead of any variable in your own tracking code, means something is still <em>ticking</em> for objects your app already considers gone. In a GC'd language, a timer that's still armed is a first-class reason an object can't die — no user-facing symptom (a component visually disappearing) tells you whether its <code>setInterval</code>/<code>setTimeout</code> died with it.</p>
+                <p><strong>Where to look in your own codebase:</strong></p>
+                <ul>
+                    <li>Grep for every <code>setInterval(</code> and <code>setTimeout(</code> call site, then check each one has a matching <code>clearInterval</code> / <code>clearTimeout</code> reachable from wherever that component/module actually tears down:
+                        <pre><code>grep -rn "setInterval(\|setTimeout(" src/</code></pre>
+                    </li>
+                    <li>For each hit, ask: is the interval/timeout ID stored somewhere the teardown code can actually reach it? A common bug is storing the ID on a local variable that goes out of scope, instead of on the component instance/ref.</li>
+                    <li>In React: is the <code>setInterval</code> started inside <code>useEffect</code>, and does that same <code>useEffect</code> <em>return</em> a cleanup function that calls <code>clearInterval</code>? A <code>useEffect</code> with no return value is the single most common source of this exact leak.</li>
+                    <li>Check every early-return / conditional branch in the unmount or cleanup path — a cleanup function that only calls <code>clearInterval</code> inside an <code>if</code> that doesn't always fire will leak intermittently, which is much harder to catch by inspection than by testing with the three-snapshot technique above.</li>
+                    <li>Don't forget third-party libraries: a polling widget, an analytics SDK, or a "keep-alive" heartbeat can start its own internal interval you never call directly — check its docs for a <code>destroy()</code>/<code>dispose()</code> method and confirm your code actually calls it on unmount.</li>
+                </ul>
+            </div>
         </div>
     </section>
 
     <section id="scenario-2">
-        <h2>3. Scenario: Detached DOM Node via Uncleaned Listener</h2>
+        <h2>4. Scenario: Detached DOM Node via Uncleaned Listener</h2>
         <p>Each "mount" appends a padded DOM subtree to the page and registers a <code>window</code> resize listener whose closure references that subtree. Removing the panel from the document (what "Unmount" does) does not make it collectible if the listener is never removed — <code>window</code> outlives the panel and keeps the listener, and the listener keeps the node.</p>
 
         <div class="playground">
@@ -203,12 +311,42 @@
                 <div class="stat-badge" id="s2-listeners">Resize listeners registered: <span>0</span></div>
             </div>
             <div id="panel-mount-target"></div>
-            <p class="jank-explanation">With the fix OFF: mount, then unmount, then take a heap snapshot and type <code>Detached</code> into the class filter search box — Chrome's heap snapshot view has this filter specifically because this pattern is common enough to deserve one-click discovery. With the fix ON, repeat the same steps and confirm nothing shows up under that filter.</p>
+            <div class="callout">
+                <strong>A. Confirm the leak (fix OFF)</strong>
+                <ol class="steps">
+                    <li>Make sure <strong>Apply the fix</strong> above is unchecked.</li>
+                    <li>Click <strong>Mount a panel</strong>.</li>
+                    <li>Click <strong>Unmount the panel</strong>. The stat badge "Panel currently in the document" flips to "no" — that only proves it left the DOM tree, not that it's collectible.</li>
+                    <li>DevTools → <strong>Memory</strong> tab → <strong>Heap snapshot</strong> → <strong>Take snapshot</strong>.</li>
+                    <li>In the snapshot results, find the class filter search box near the top of the list and type <code>Detached</code> into it.</li>
+                    <li><strong>Look for:</strong> a group called <code>Detached &lt;div&gt;</code>, expandable to a row reading <code>Detached &lt;div class="leak-panel"&gt;</code> — that's this scenario's panel, confirmed still in memory by its own class name. Click that row, then expand <strong>Retainers</strong> in the panel at the bottom of the DevTools window — walk the chain until you find the <code>resize</code> listener on <code>window</code> as the thing still holding it, exactly as described above.</li>
+                </ol>
+                <strong>B. Confirm the fix (fix ON)</strong>
+                <ol class="steps">
+                    <li>Check <strong>Apply the fix</strong>.</li>
+                    <li>Click <strong>Mount a panel</strong>, then <strong>Unmount the panel</strong> again.</li>
+                    <li>Take a fresh heap snapshot and search <code>Detached</code> again. <strong>Compare:</strong> this time the filter should return nothing new — <code>removeEventListener</code> on unmount let the node go.</li>
+                </ol>
+            </div>
+            <div class="deduction">
+                <h4>🔎 Deduction: what the evidence means, and where to look in real code</h4>
+                <p><strong>What it means:</strong> a row under the <code>Detached</code> filter is unambiguous — it's a DOM node no longer in the visible page, kept alive purely by a JS reference. The Retainers chain telling you it's a listener on <code>window</code> (or <code>document</code>) specifically is the key detail: those two targets outlive almost everything else on the page, so any listener registered on them and never removed is a leak by construction, not just a possibility.</p>
+                <p><strong>Where to look in your own codebase:</strong></p>
+                <ul>
+                    <li>Grep for listeners attached to long-lived targets specifically — these are far more dangerous than listeners on a component's own DOM node:
+                        <pre><code>grep -rn "window.addEventListener\|document.addEventListener" src/</code></pre>
+                    </li>
+                    <li>For each hit, confirm a matching <code>removeEventListener</code> exists on the teardown path — and that it passes <em>the exact same function reference</em>. <code>removeEventListener('resize', () => {...})</code> with a freshly-written inline arrow function does nothing; it silently fails because it's not the same function object that was added. This is one of the most common "I did clean up, but it still leaks" bugs.</li>
+                    <li>In React: check <code>useEffect</code> hooks that call <code>window.addEventListener</code> or <code>document.addEventListener</code> — the cleanup function returned from that <code>useEffect</code> must call <code>removeEventListener</code> with the identical handler reference, usually meaning the handler needs to be defined once (e.g. via <code>useCallback</code> or declared outside the effect body) rather than inline.</li>
+                    <li>Check any code that removes a DOM node directly (<code>el.remove()</code>, <code>parentNode.removeChild(el)</code>, or a framework unmounting it) without first checking whether that node — or anything inside it — had listeners registered on a global target.</li>
+                    <li>Third-party widgets (modals, tooltips, drag-and-drop libraries) are a frequent source here too — check their docs for a <code>destroy()</code> call and confirm it's actually invoked when your component using them unmounts.</li>
+                </ul>
+            </div>
         </div>
     </section>
 
     <section id="scenario-3">
-        <h2>4. Scenario: Unbounded <code>Map</code> Cache vs. <code>WeakMap</code></h2>
+        <h2>5. Scenario: Unbounded <code>Map</code> Cache vs. <code>WeakMap</code></h2>
         <p>Each "view a user" call creates a DOM node standing in for a user card and a ~10,000-element array standing in for cached summary data, then caches them keyed by the node. The node is never appended anywhere and nothing else references it after the function returns — whether it's collectible depends entirely on which cache holds it.</p>
 
         <div class="playground">
@@ -221,8 +359,174 @@
                 <div class="stat-badge" id="s3-regular">Regular Map size: <span>0</span></div>
                 <div class="stat-badge good" id="s3-weak-note">WeakMap size: <span>not inspectable — that's the point</span></div>
             </div>
-            <p class="jank-explanation">This is the cleanest of the three scenarios to verify: with WeakMap checked, "View 20 users" repeatedly should <em>not</em> cause a growing count in your heap snapshot comparison after forcing GC, since each user-card node becomes unreachable the instant the function returns — a WeakMap doesn't count as a strong reference. With a regular Map, the count should climb linearly with clicks, every time, with no GC able to touch any of it.</p>
+            <div class="callout">
+                <strong>A. Confirm the leak (fix OFF — regular Map)</strong>
+                <ol class="steps">
+                    <li>Make sure <strong>Use WeakMap instead of Map</strong> is unchecked, and click <strong>Reset caches</strong> first to start clean.</li>
+                    <li>DevTools → <strong>Memory</strong> tab → <strong>Heap snapshot</strong> → <strong>Take snapshot</strong> (baseline).</li>
+                    <li>Click <strong>View 20 users</strong> three times (60 total). Watch "Regular Map size" climb to 60.</li>
+                    <li>Click <strong>Collect garbage</strong>, then take snapshot #2.</li>
+                    <li>Click <strong>View 20 users</strong> once more (20 more), collect garbage again, take snapshot #3.</li>
+                    <li>Select snapshot #3 → <strong>Comparison</strong> view → baseline = snapshot #2 → sort by <strong># Delta</strong>.</li>
+                    <li><strong>Look for:</strong> an <code>Array</code> row with a delta matching the 20 new entries (exact grouping/naming of the surrounding object rows can vary slightly by Chrome version), surviving every garbage collection — the regular <code>Map</code> is a strong reference keyed by a node nothing else points to, so GC can never touch it.</li>
+                </ol>
+                <strong>B. Confirm the fix (fix ON — WeakMap)</strong>
+                <ol class="steps">
+                    <li>Check <strong>Use WeakMap instead of Map</strong>, then click <strong>Reset caches</strong>.</li>
+                    <li>Repeat the exact same click / collect-garbage / snapshot cycle from steps 2–5 above.</li>
+                    <li><strong>Compare:</strong> the <code>Array</code> delta in the Comparison view should now sit at roughly 0 — each user-card node becomes unreachable the instant <code>viewUsers</code> returns, since a <code>WeakMap</code> never counts as a strong reference.</li>
+                    <li>Note that "WeakMap size" deliberately can't show a live count in the UI — that's the whole point of a WeakMap being non-enumerable. The heap snapshot comparison is the only way to verify it's actually being cleaned up.</li>
+                </ol>
+            </div>
+            <div class="deduction">
+                <h4>🔎 Deduction: what the evidence means, and where to look in real code</h4>
+                <p><strong>What it means:</strong> an <code>Array</code>/object-count delta that climbs in lockstep with how many times you called the "view" action, and never drops after a garbage collection, points at a cache or lookup table that's a strong reference with no eviction — not a timer, not a listener, just a data structure that only ever grows.</p>
+                <p><strong>Where to look in your own codebase:</strong></p>
+                <ul>
+                    <li>Grep for module-level or long-lived caches — these are the ones that outlive any individual request/render and are the most common offenders:
+                        <pre><code>grep -rn "new Map(\|new WeakMap(\|= {}" src/ | grep -i "cache\|registry\|store"</code></pre>
+                    </li>
+                    <li>For each cache you find, ask two questions: (1) is it keyed by an object/DOM node/instance that should become garbage once its "owner" is gone? If yes, a plain <code>Map</code> or object is the wrong tool — it should be a <code>WeakMap</code> (or <code>WeakSet</code> if you only need presence, not a value). (2) If it's legitimately keyed by a primitive (a string ID, a URL) — where <code>WeakMap</code> isn't an option, since WeakMap keys must be objects — does it have <em>any</em> eviction policy (max size, TTL, LRU)? An unbounded primitive-keyed cache is a leak by a different name.</li>
+                    <li>Check "memoize" utility functions and library-provided caching layers (data-fetching libraries, computed-value memoizers) for a documented cache size limit — many default to unbounded unless configured otherwise.</li>
+                    <li>Search for anywhere a DOM node, component instance, or callback is used as an object key at all — that's the single strongest signal this scenario applies:
+                        <pre><code>grep -rn "\.set(\(node\|el\|element\|ref\|instance\)" src/</code></pre>
+                    </li>
+                </ul>
+            </div>
         </div>
+    </section>
+
+    <section id="scenario-4">
+        <h2>6. Scenario: The Dynamic-Key Global Leak</h2>
+        <p>This is the JSONP-callback / debug-leftover pattern: instead of overwriting one shared identifier, each call stashes a ~20,000-element array under a <em>freshly generated</em> property name directly on <code>window</code> — the pattern real code hits when it does <code>window['handler_' + requestId] = fn</code> for a dynamic callback, or leaves <code>window['debugSnapshot_' + n] = hugeObject</code> in for "just this once." Because <code>window</code> is a GC root, every one of those keys is reachable forever — nothing ever needs to reference them again for them to survive.</p>
+
+        <div class="playground">
+            <label><input type="checkbox" id="s4-fixed" /> Apply the fix (store in a module-scoped Map, cleared on demand)</label>
+            <div class="btn-row">
+                <button onclick="runGlobalLeak(20)">Run 20 'dynamic callback' registrations</button>
+                <button class="secondary" onclick="clearGlobalLeak()">Clear (simulate proper cleanup)</button>
+            </div>
+            <div class="stat-row">
+                <div class="stat-badge" id="s4-window-keys">Leaked keys on <code>window</code>: <span>0</span></div>
+                <div class="stat-badge" id="s4-local-keys">Entries in local Map: <span>0</span></div>
+            </div>
+            <div class="callout">
+                <strong>A. Confirm the leak (fix OFF)</strong>
+                <ol class="steps">
+                    <li>Make sure <strong>Apply the fix</strong> above is unchecked.</li>
+                    <li>Open the DevTools <strong>Console</strong> tab (not Memory this time) and run: <code>Object.keys(window).filter(k => k.startsWith('handler_')).length</code>. Note the number.</li>
+                    <li>Back on the page, click <strong>Run 20 'dynamic callback' registrations</strong>.</li>
+                    <li>Re-run the exact same console line. <strong>Compare:</strong> the count jumped by 20.</li>
+                    <li>Click <strong>Clear (simulate proper cleanup)</strong>, then re-run the console line a third time. <strong>Look for:</strong> the count is unchanged — "Clear" did nothing for the buggy path, because nothing in the code ever <code>delete</code>s those <code>window</code> keys.</li>
+                    <li>Optional, to see it in a snapshot too: <strong>Memory</strong> tab → take a snapshot → Comparison against an earlier baseline — the <code>Array</code> class delta will match the leaked-key count exactly.</li>
+                </ol>
+                <strong>B. Confirm the fix (fix ON)</strong>
+                <ol class="steps">
+                    <li>Check <strong>Apply the fix</strong>.</li>
+                    <li>Click <strong>Run 20 'dynamic callback' registrations</strong>. Watch "Entries in local Map" climb to 20 while "Leaked keys on window" stays flat.</li>
+                    <li>Click <strong>Clear (simulate proper cleanup)</strong>. <strong>Compare:</strong> "Entries in local Map" drops back to 0.</li>
+                    <li>Re-run the console line from step 2 above to confirm no new <code>window.handler_*</code> keys were ever created in fixed mode.</li>
+                </ol>
+            </div>
+            <div class="deduction">
+                <h4>🔎 Deduction: what the evidence means, and where to look in real code</h4>
+                <p><strong>What it means:</strong> if <code>Object.keys(window)</code> (or <code>globalThis</code>) shows a count that only ever grows, no cache-clearing function in your app can be trusted to touch it — by definition, nothing is watching those keys or deciding when they're done. This is the one leak type you can confirm without opening the Memory panel at all.</p>
+                <p><strong>Where to look in your own codebase:</strong></p>
+                <ul>
+                    <li>Grep for any code writing to <code>window</code> or <code>globalThis</code> with a computed/dynamic property name — the bracket syntax is the tell, a hardcoded key like <code>window.myGlobal</code> can't accumulate the way a dynamic one can:
+                        <pre><code>grep -rn "window\[\|globalThis\[" src/</code></pre>
+                    </li>
+                    <li>Classic sources: a JSONP-style callback registered as <code>window['callback_' + requestId]</code>, a per-widget or per-iframe handle stashed on <code>window</code> for cross-script access, or debug/telemetry code that does <code>window['__debug_' + Date.now()] = someObject</code> and was never meant to ship.</li>
+                    <li>Also grep for accidental implicit globals — a plain assignment with no <code>let</code>/<code>const</code>/<code>var</code> inside a non-strict-mode function creates one silently:
+                        <pre><code>grep -rn "^\s*[a-zA-Z_$][a-zA-Z0-9_$]* = " src/ | grep -v "let \|const \|var \|\."</code></pre>
+                        (noisy — treat it as a starting point, not a precise match; a linter rule like ESLint's <code>no-implicit-globals</code>/<code>no-undef</code> catches this far more reliably going forward.)
+                    </li>
+                    <li>If you find a legitimate reason to expose something dynamically on <code>window</code>, replace it with a module-scoped <code>Map</code> you control (as the fix above does) — you get the same dynamic-key lookup with an actual place to call <code>.delete()</code> or <code>.clear()</code> from.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section id="scenario-5">
+        <h2>7. Scenario: The Never-Unsubscribed Event Bus</h2>
+        <p>A minimal pub/sub bus (the same shape as Node's <code>EventEmitter</code> or any custom app-wide event bus) keeps an array of subscriber callbacks. Each "component" subscribes with a callback that closes over a ~30,000-element buffer meant to represent per-component state. If "unmounting" the component never calls the matching unsubscribe, the bus's listener array — and everything each closure captured — stays reachable forever, because the bus itself is a long-lived, module-scoped object that's always a GC root's descendant.</p>
+
+        <div class="playground">
+            <label><input type="checkbox" id="s5-fixed" /> Apply the fix (unsubscribe on unmount)</label>
+            <div class="btn-row">
+                <button onclick="mountSubscribers(15)">Mount 15 subscriber components</button>
+                <button class="danger" onclick="unmountAllSubscribers()">Unmount all</button>
+                <button onclick="bus.emit()">Emit an event (proves they're still live)</button>
+            </div>
+            <div class="stat-row">
+                <div class="stat-badge" id="s5-tracked">Components we think are mounted: <span>0</span></div>
+                <div class="stat-badge" id="s5-bus">Listeners actually still on the bus: <span>0</span></div>
+            </div>
+            <div class="callout">
+                <strong>A. Confirm the leak (fix OFF)</strong>
+                <ol class="steps">
+                    <li>Reload this page first (this scenario's <code>bus</code> persists across runs — reloading guarantees a clean count). Make sure <strong>Apply the fix</strong> is unchecked.</li>
+                    <li>Open the DevTools <strong>Console</strong> tab so you can see logged output.</li>
+                    <li>Click <strong>Mount 15 subscriber components</strong>. Note "Listeners actually still on the bus" = 15.</li>
+                    <li>Click <strong>Unmount all</strong>. "Components we think are mounted" drops to 0 — but <strong>look for:</strong> "Listeners actually still on the bus" staying at 15. That mismatch is the leak.</li>
+                    <li>Click <strong>Emit an event (proves they're still live)</strong>. <strong>Look at the console:</strong> all 15 "[component N] still subscribed..." lines print, even though you just "unmounted" every one of them — the bus's own <code>listeners</code> array, not your tracking array, is what's keeping every closure (and its 30,000-item buffer) alive. This is exactly the shape of a real <code>MaxListenersExceededWarning</code> in Node, or a React app that subscribes to a global event bus in <code>useEffect</code> with no cleanup function returned.</li>
+                </ol>
+                <strong>B. Confirm the fix (fix ON)</strong>
+                <ol class="steps">
+                    <li>Reload the page again for a clean count, then check <strong>Apply the fix</strong>.</li>
+                    <li>Click <strong>Mount 15 subscriber components</strong> — "Listeners actually still on the bus" reads 15.</li>
+                    <li>Click <strong>Unmount all</strong>. <strong>Compare:</strong> this time "Listeners actually still on the bus" drops back to 0, since each subscriber now calls its own <code>unsubscribe()</code>.</li>
+                    <li>Click <strong>Emit an event</strong> again — the console stays silent, confirming those components are actually gone from the bus, not just from your own tracking array.</li>
+                </ol>
+            </div>
+            <div class="deduction">
+                <h4>🔎 Deduction: what the evidence means, and where to look in real code</h4>
+                <p><strong>What it means:</strong> a listener count on a shared bus/emitter that keeps climbing (or a Node <code>MaxListenersExceededWarning</code> in your real logs) while your own "how many components are mounted" count goes back to 0 means the emitter — not your component tree — is the actual owner of those closures. Every subscriber that never unsubscribed, plus everything it captured, is retained for the lifetime of the bus, which is usually the lifetime of the whole app.</p>
+                <p><strong>Where to look in your own codebase:</strong></p>
+                <ul>
+                    <li>Grep for every subscription call against a shared/singleton emitter — <code>.on(</code>, <code>.addListener(</code>, and <code>.subscribe(</code> are the three spellings to check:
+                        <pre><code>grep -rn "\.on(\|\.addListener(\|\.subscribe(" src/</code></pre>
+                    </li>
+                    <li>For each hit, find the matching teardown call (<code>.off(</code>, <code>.removeListener(</code>, or the object returned by <code>.subscribe(</code> usually exposes an <code>.unsubscribe()</code>) and confirm it's actually invoked on the same lifecycle event as the subscription — not just defined somewhere and never called.</li>
+                    <li>In React: check every <code>useEffect</code> that subscribes to a global bus, a Redux store, or an event emitter — if the effect doesn't <code>return () => bus.off(handler)</code> (or equivalent), every remount adds a new listener that never goes away, and the app leaks a little more on every navigation.</li>
+                    <li>In Node specifically, treat any real <code>MaxListenersExceededWarning</code> in your logs as exactly this scenario playing out live — it's Node's own built-in leak detector for <code>EventEmitter</code>, and the fix is always "find the subscribe call whose matching unsubscribe never runs."</li>
+                    <li>Be suspicious of any handler defined as an inline arrow function passed directly into <code>.on(...)</code> — the same reference problem as in Scenario 4's listener leak applies here too: you can't unsubscribe a handler you never kept a reference to.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section id="toolkit">
+        <h2>8. Detection Toolkit: Beyond Heap Snapshots</h2>
+        <p>The three-snapshot technique above is the core skill, but it's not the only tool — and for a quick first check, it's often not even the fastest one. Use these on the scenarios above to build a fuller picture of what each one confirms.</p>
+
+        <h3>Performance Monitor — a 10-second smoke test</h3>
+        <p>This is a different panel from the "Performance" tab you may already know — there's no Start/Stop recording here. It's a live dashboard of line graphs that update continuously while you use the page, useful as a quick first check before reaching for a full heap snapshot.</p>
+        <ol class="steps">
+            <li>With DevTools open, press <code>Cmd+Shift+P</code> (Mac) or <code>Ctrl+Shift+P</code> (Windows/Linux). This opens DevTools' <strong>Command Menu</strong> — a searchable command palette, separate from anything on the page itself.</li>
+            <li>Type <code>performance monitor</code> and select <strong>Show Performance Monitor</strong>. A new panel opens with live graphs already running: JS heap size, DOM Nodes, JS event listeners, Documents, and a few others.</li>
+            <li>Go back to a scenario above and click its "leak" and "cleanup" buttons repeatedly (e.g. Mount / Unmount, several times in a row) while watching the graphs move in real time.</li>
+            <li><strong>Look for:</strong> the <strong>JS heap size</strong> line tracing a "sawtooth" shape — climbing as things allocate, then dropping sharply whenever a garbage collection runs. That shape by itself is healthy. The leak signal is the <em>floor</em> of each drop: if it settles back to roughly the same baseline every time, you're fine; if it creeps a little higher after every cycle and never comes back down, that rising floor is your first hard evidence of a leak.</li>
+            <li><strong>Compare</strong> the <strong>DOM Nodes</strong> and <strong>JS event listeners</strong> lines against JS heap size at the same time: if those climb too, you're looking at a DOM leak (like Scenario 4, the detached-panel one); if only heap size climbs while DOM Nodes/Listeners stay flat, it's a pure JS data-structure leak (like Scenarios 6 and 7 above).</li>
+        </ol>
+
+        <h3>Allocation instrumentation on timeline</h3>
+        <p>Memory tab → select <strong>Allocation instrumentation on timeline</strong> → Start. Perform a scenario's leak action several times over a few seconds, then Stop. Each vertical bar represents allocations in that time slice; blue bars are objects still alive, grey bars are ones already collected. Click a tall blue bar that recurs on every action-repeat — this isolates just the objects allocated in that narrow window, filtering out unrelated page noise, and is often faster than the full three-snapshot comparison for confirming "yes, this specific action is what's allocating the retained objects."</p>
+
+        <h3>Console-only utilities (these don't exist in regular page JavaScript)</h3>
+        <table class="term-table">
+            <tr><th>Utility</th><th>What it's for</th></tr>
+            <tr><td><code>getEventListeners(node)</code></td><td>Lists every listener attached to a specific DOM node, grouped by event type. Run against the panel element in Scenario 4 (the detached-listener one) before and after "Unmount" to directly confirm whether the resize listener is actually gone — no snapshot needed.</td></tr>
+            <tr><td><code>queryObjects(Ctor)</code></td><td>Returns every live instance of a given constructor currently on the heap. Expose a class via <code>window.MyClass = MyClass</code> so the console can reach it, then run <code>queryObjects(MyClass)</code> — a growing count across repeated mount/unmount cycles is a leak, confirmed directly, with no snapshot comparison at all.</td></tr>
+            <tr><td><code>performance.memory.usedJSHeapSize</code></td><td>Chrome-only, approximate (rounded for security reasons), but pollable: wrap it in a <code>setInterval</code> + <code>console.log</code> for a crude, no-panel-needed heap graph while a scenario runs.</td></tr>
+        </table>
+        <p class="console-note">All three only work typed directly into the DevTools console on the inspected page — they're console-utility globals injected by DevTools itself, not real JS APIs, so they'll throw <code>ReferenceError</code> if called from a script tag.</p>
+
+        <h3>Reading a retainer chain to find the actual line of code</h3>
+        <p>In a Comparison snapshot, click a suspicious row → expand <strong>Retainers</strong> in the bottom pane. The chain shown is "what's holding this object alive," read from your object back up toward a GC root. Walk it top-to-bottom; the first entry that's recognizably <em>your</em> code — a named closure, a variable from one of the scenarios above, a listener callback — rather than an internal engine structure, is almost always the exact place to go fix.</p>
+
+        <h3>Chrome's dedicated Detached Elements panel</h3>
+        <p>Newer Chrome versions ship <strong>DevTools → More tools → Detached elements</strong> — a one-click alternative to manually filtering a heap snapshot for the word "Detached" the way Scenario 4 (the uncleaned-listener DOM panel) above describes. If it's available in your Chrome version, it lists every currently-detached subtree and its retaining path directly, skipping the manual snapshot filter step entirely.</p>
     </section>
 </main>
 
@@ -335,6 +639,85 @@
         regularCache = new Map();
         weakCache = new WeakMap();
         document.querySelector('#s3-regular span').textContent = '0';
+    }
+
+    /* ---------- Scenario 4: dynamic-key global leak ---------- */
+    let globalLeakCounter = 0;
+    const localHandlerCache = new Map();
+
+    function runGlobalLeak(n) {
+        const fixed = document.getElementById('s4-fixed').checked;
+        for (let i = 0; i < n; i++) {
+            const key = 'handler_' + (globalLeakCounter++);
+            const payload = new Array(20000).fill('callback-payload-chunk');
+            if (fixed) {
+                // Fix: a plain module-scoped Map we actually control and can clear.
+                localHandlerCache.set(key, payload);
+            } else {
+                // Buggy path: a fresh property on `window` every call. `window` is a
+                // GC root, so every one of these keys is reachable forever - nothing
+                // else ever needs to reference them for them to survive.
+                window[key] = payload;
+            }
+        }
+        updateS4Stats();
+    }
+
+    function clearGlobalLeak() {
+        const fixed = document.getElementById('s4-fixed').checked;
+        if (fixed) {
+            localHandlerCache.clear();
+        }
+        // Buggy path deliberately does nothing here - in real code, nobody ever
+        // remembers to hunt down and delete window['handler_...'] keys either.
+        updateS4Stats();
+    }
+
+    function updateS4Stats() {
+        const windowLeakCount = Object.keys(window).filter(k => k.startsWith('handler_')).length;
+        document.querySelector('#s4-window-keys span').textContent = windowLeakCount;
+        document.querySelector('#s4-local-keys span').textContent = localHandlerCache.size;
+    }
+
+    /* ---------- Scenario 5: never-unsubscribed event bus ---------- */
+    const bus = {
+        listeners: [],
+        on(fn) { this.listeners.push(fn); },
+        off(fn) { this.listeners = this.listeners.filter(l => l !== fn); },
+        emit() { this.listeners.forEach(fn => fn()); },
+    };
+    let mountedSubscribers = [];
+
+    function mountSubscribers(n) {
+        const fixed = document.getElementById('s5-fixed').checked;
+        for (let i = 0; i < n; i++) {
+            const componentId = mountedSubscribers.length + i;
+            const componentBuffer = new Array(30000).fill('per-component-state');
+            const handler = () => {
+                console.log(`[component ${componentId}] still subscribed, still holding ${componentBuffer.length} items`);
+            };
+            bus.on(handler);
+            mountedSubscribers.push({ id: componentId, unsubscribe: () => bus.off(handler) });
+        }
+        void fixed; // fix only changes what unmount does, not mount
+        updateS5Stats();
+    }
+
+    function unmountAllSubscribers() {
+        const fixed = document.getElementById('s5-fixed').checked;
+        if (fixed) {
+            mountedSubscribers.forEach(c => c.unsubscribe());
+        }
+        // Buggy path: we drop our own tracking array, but bus.listeners still
+        // holds every handler (and therefore every componentBuffer) - the bus
+        // outlives any individual "component" and is itself always reachable.
+        mountedSubscribers = [];
+        updateS5Stats();
+    }
+
+    function updateS5Stats() {
+        document.querySelector('#s5-tracked span').textContent = mountedSubscribers.length;
+        document.querySelector('#s5-bus span').textContent = bus.listeners.length;
     }
 </script>
 
