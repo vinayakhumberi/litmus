@@ -155,23 +155,26 @@ class Button {
 ### Diagram 1 — Property lookup walking the prototype chain
 
 ```mermaid
+%%{init: {"theme": "base", "themeVariables": {"primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#94a3b8","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontSize":"16px"}}}%%
 graph TD
-    A["obj.prop is accessed"] --> B{"Does obj have an<br>own property 'prop'?"}
-    B -- "Yes" --> C["Return obj's own value<br>Lookup complete"]
-    B -- "No" --> D{"Does obj have a<br>[[Prototype]] link?"}
-    D -- "No - reached null" --> E["Return undefined<br>Property does not exist"]
-    D -- "Yes" --> F["Move to obj.[[Prototype]]"]
-    F --> G{"Does this object have<br>an own property 'prop'?"}
-    G -- "Yes" --> H["Return this value<br>Lookup complete"]
-    G -- "No" --> I{"Does this object have<br>a further [[Prototype]] link?"}
+    A["obj.prop is accessed"] --> B{"Own property<br>'prop'?"}
+    B -- "Yes" --> C["Found — return<br>obj's own value"]
+    B -- "No" --> D{"Has a [[Prototype]]<br>link?"}
+    D -- "No, reached null" --> E["Not found —<br>return undefined"]
+    D -- "Yes" --> F["Move to<br>obj.[[Prototype]]"]
+    F --> G{"Own property<br>'prop'?"}
+    G -- "Yes" --> H["Found — return<br>this value"]
+    G -- "No" --> I{"Further<br>[[Prototype]] link?"}
     I -- "Yes" --> F
-    I -- "No - reached the end" --> E
+    I -- "No, reached the end" --> E
 
-    classDef found fill:#2f855a,stroke:#9ae6b4,color:#fff
-    classDef notfound fill:#c53030,stroke:#feb2b2,color:#fff
-    classDef decision fill:#805ad5,stroke:#d6bcfa,color:#fff
-    classDef walk fill:#2b6cb0,stroke:#90cdf4,color:#fff
+    classDef start fill:#0369a1,stroke:#7dd3fc,color:#f0f9ff,stroke-width:1.5px
+    classDef found fill:#047857,stroke:#6ee7b7,color:#ecfdf5,stroke-width:1.5px
+    classDef notfound fill:#b91c1c,stroke:#fca5a5,color:#fef2f2,stroke-width:1.5px
+    classDef decision fill:#4338ca,stroke:#c4b5fd,color:#f5f3ff,stroke-width:1.5px
+    classDef walk fill:#1d4ed8,stroke:#93c5fd,color:#eff6ff,stroke-width:1.5px
 
+    class A start
     class C,H found
     class E notfound
     class B,D,G,I decision
