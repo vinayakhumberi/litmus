@@ -107,24 +107,26 @@ A method passed directly as a callback (`setTimeout(obj.method, 1000)`, `<button
 ### Diagram 1 — Resolving `this` for a given function call
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"lineColor": "#a0aec0", "edgeLabelBackground": "#2d3748", "textColor": "#f7fafc"}}}%%
+%%{init: {"theme": "base", "themeVariables": {"primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#94a3b8","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontSize":"16px"}}}%%
 graph TD
-    A["A function is called - what is this?"] --> B{"Is it an arrow function?"}
-    B -- "Yes" --> C["Lexical this - inherited from<br>the enclosing scope at definition time,<br>fixed, cannot be changed"]
-    B -- "No" --> D{"Called with the new operator?"}
-    D -- "Yes" --> E["new binding - this is the<br>newly created object"]
-    D -- "No" --> F{"Called via call/apply/bind?"}
-    F -- "Yes" --> G["Explicit binding - this is<br>whatever was passed in"]
+    A["A function is called.<br>What is this?"] --> B{"Arrow function?"}
+    B -- "Yes" --> C["Lexical this —<br>inherited from enclosing<br>scope, fixed forever"]
+    B -- "No" --> D{"Called with new?"}
+    D -- "Yes" --> E["new binding —<br>this = the new object"]
+    D -- "No" --> F{"call / apply / bind?"}
+    F -- "Yes" --> G["Explicit binding —<br>this = whatever was passed"]
     F -- "No" --> H{"Called as obj.method()?"}
-    H -- "Yes" --> I["Implicit binding - this is<br>the object left of the dot"]
-    H -- "No - a bare call" --> J{"Strict mode?"}
+    H -- "Yes" --> I["Implicit binding —<br>this = object left of the dot"]
+    H -- "No, bare call" --> J{"Strict mode?"}
     J -- "Yes" --> K["this is undefined"]
-    J -- "No" --> L["Default binding - this is<br>the global object"]
+    J -- "No" --> L["Default binding —<br>this = global object"]
 
-    classDef decision fill:#805ad5,stroke:#d6bcfa,color:#f7fafc
-    classDef result fill:#2f855a,stroke:#9ae6b4,color:#f7fafc
-    classDef warn fill:#c53030,stroke:#feb2b2,color:#f7fafc
+    classDef start fill:#0369a1,stroke:#7dd3fc,color:#f0f9ff,stroke-width:1.5px
+    classDef decision fill:#4338ca,stroke:#c4b5fd,color:#f5f3ff,stroke-width:1.5px
+    classDef result fill:#047857,stroke:#6ee7b7,color:#ecfdf5,stroke-width:1.5px
+    classDef warn fill:#b91c1c,stroke:#fca5a5,color:#fef2f2,stroke-width:1.5px
 
+    class A start
     class B,D,F,H,J decision
     class C,E,G,I,K result
     class L warn

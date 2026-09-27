@@ -96,6 +96,23 @@
             font-size: 0.9rem;
             margin: 1.5rem 0;
         }
+        ol.steps li { margin-bottom: 0.6rem; }
+        .steps code { color: var(--accent); }
+        .deduction {
+            background: rgba(74, 222, 128, 0.08);
+            border-left: 3px solid var(--good);
+            padding: 1rem 1.25rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            margin: 1.5rem 0 0;
+        }
+        .deduction h4 { margin: 0 0 0.6rem; color: var(--good); font-size: 0.95rem; }
+        .deduction ul { margin: 0.4rem 0 0; padding-left: 1.25rem; }
+        .deduction li { margin-bottom: 0.5rem; }
+        .deduction pre { margin: 0.5rem 0; }
+        .term-table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+        .term-table th, .term-table td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #444; vertical-align: top; }
+        .term-table th { color: var(--primary); }
         button {
             padding: 0.7rem 1.4rem;
             background: var(--primary);
@@ -132,37 +149,195 @@
 </header>
 
 <nav>
-    <a href="#overview">Overview</a>
-    <a href="#demo">Live Demo</a>
-    <a href="#real-devtools">Compare With Real DevTools</a>
+    <a href="#basics">Profiler Basics</a>
+    <a href="#capture">How to Capture</a>
+    <a href="#overview">Unstable Callback</a>
+    <a href="#inline-object">Inline Object Prop</a>
+    <a href="#context-scenario">Context Re-render</a>
+    <a href="#toolkit">Detection Toolkit</a>
 </nav>
 
 <main>
-    <section id="overview">
-        <h2>1. The bug this page reproduces</h2>
-        <p>40 <code>ProductRow</code> components, each wrapped in <code>React.memo</code>. A "tick" button simulates something unrelated re-rendering the shared parent — think of it as a clock in the header, or any sibling state change that has nothing to do with the product list.</p>
-        <p>With the bug present, the parent defines <code>onSelect</code> as a fresh arrow function on every render, including the unrelated tick updates — a new reference every time, which defeats every row's <code>React.memo</code> check even though no product data changed.</p>
-        <pre><code>// BUG: new function reference every render, even for unrelated ticks
-const onSelect = (id) => selectProduct(id);
+    <section id="basics">
+        <h2>1. React Profiler Basics — What You're Actually Looking At</h2>
+        <p>The Profiler doesn't record every render — it records <strong>commits</strong>. A commit is the point where React actually flushes a completed render to the DOM. Every commit you record shows up as one bar in the commit picker at the top of the real Profiler tab; click a bar to inspect just that commit.</p>
 
-// FIX: stable reference across renders
-const onSelect = useCallback((id) => selectProduct(id), []);</code></pre>
-        <p>The panel below is built on React's real, public <code>&lt;Profiler&gt;</code> API — the same instrumentation the actual DevTools extension uses internally — wrapping the list and every individual row. Nothing here is a mockup; the durations and render/bail-out status are genuinely captured from your browser as you click.</p>
-    </section>
+        <p>Inside a selected commit, there are two ways to view which components rendered:</p>
+        <table class="term-table">
+            <tr><th>View</th><th>What it shows</th></tr>
+            <tr><td><strong>Flamegraph</strong></td><td>The component tree for this one commit. Bar width = how much of this commit's total time that component's subtree accounted for. Color = relative duration (yellow/orange = slower, blue/green = faster). A component that bailed out via <code>React.memo</code> (or <code>PureComponent</code>) with no changed context either is commonly <strong>missing from the chart entirely for that commit</strong> — not grayed out, just absent, since React never had to visit it. (Older guidance describes these as gray bars; in current extension versions they're simply not drawn — don't be surprised when a bailed-out sibling doesn't appear at all next to one that did render.)</td></tr>
+            <tr><td><strong>Ranked</strong></td><td>The same commit's components sorted by render duration, longest first, flattened out of the tree shape. Components that didn't render aren't shown at all. Use this when you just want "what's slow," not "where does it sit in the tree."</td></tr>
+        </table>
 
-    <section id="demo">
-        <h2>2. Live demo</h2>
-        <div id="react-root"></div>
-        <p class="jank-explanation">Click "Trigger unrelated re-render" a few times with the fix off, then turn the fix on and click again — watch the bars flip from colored to gray, and the duration drop.</p>
-    </section>
-
-    <section id="real-devtools">
-        <h2>3. Compare against the real extension</h2>
+        <p>Every profiled component reports two numbers, and the gap between them is often the whole story:</p>
+        <table class="term-table">
+            <tr><th>Term</th><th>Meaning</th></tr>
+            <tr><td><strong>actualDuration</strong></td><td>How long this render actually took, including any time saved by children bailing out via memoization.</td></tr>
+            <tr><td><strong>baseDuration</strong></td><td>An estimate of how long the subtree would take to render with <em>no</em> memoization at all — React's own "worst case" baseline.</td></tr>
+        </table>
         <div class="callout">
-            If you have the <strong>React Developer Tools</strong> browser extension installed, open your browser's DevTools on this page and switch to its <strong>Profiler</strong> tab. This page runs genuine React 18, so you'll see the actual <code>ProductList</code> and <code>ProductRow</code> components in the real tool — record the same "Trigger unrelated re-render" interaction there and compare its flame chart against the panel above. Same underlying data, same reasoning, real tool.
+            If <code>actualDuration</code> is close to <code>baseDuration</code> on a component wrapped in <code>React.memo</code>, memoization isn't actually helping there — either it's re-rendering every time anyway (the scenarios below show why), or the subtree is cheap enough that memoization wouldn't matter either way.
+        </div>
+
+        <p>Two more things worth knowing before you record anything: DevTools has a per-component <strong>"why did this render"</strong> panel (props/state/hooks/context changed, or parent re-rendered) — it must be turned on first via the gear icon in the Profiler tab's settings, <em>before</em> you record. And separately, <strong>"Highlight updates when components render"</strong> (also in settings) is an always-on visual overlay, unrelated to recording — it flashes a colored border around any DOM element that just re-rendered, live, as you use the app. It's the Profiler-panel equivalent of a 10-second smoke test, the same role Performance Monitor plays for memory in the companion memory-leak resource.</p>
+    </section>
+
+    <section id="capture">
+        <h2>2. How to Capture a Profile (Real Extension)</h2>
+        <p>Everything below this section runs a genuine, live React 18 app you can profile with the real tool. If you don't have it yet, install the <strong>React Developer Tools</strong> browser extension first.</p>
+        <ol class="steps">
+            <li>Open your browser's DevTools on this page (<code>F12</code> / <code>Cmd+Opt+I</code>) and switch to the <strong>⚛️ Profiler</strong> tab (a new tab the extension adds, separate from Chrome's own Memory/Performance tabs).</li>
+            <li>Click the gear icon in the Profiler tab's toolbar → check <strong>"Record why each component rendered while profiling"</strong>. Do this now — it can't be turned on retroactively for a recording you already made.</li>
+            <li>Click the blue record circle (top-left of the Profiler tab) to start recording.</li>
+            <li>Go interact with a scenario below (click its buttons a few times).</li>
+            <li>Click the record circle again to stop. A row of commit bars appears at the top — each one is a single commit captured while you were recording.</li>
+            <li>Click through the commit bars one at a time. For each, look at the Flamegraph (or switch to Ranked via the dropdown next to the commit bars), and click on any individual component's bar to open the <strong>"why did this render"</strong> panel for it on the right.</li>
+        </ol>
+    </section>
+
+    <section id="overview">
+        <h2>3. Scenario: Breaking <code>React.memo</code> — Two Different Ways</h2>
+        <p>40 <code>ProductRow</code> components, each wrapped in <code>React.memo</code>. A "tick" button simulates something unrelated re-rendering the shared parent — think of it as a clock in the header, or any sibling state change that has nothing to do with the product list. Both bugs below are the same root cause — a prop that's a new object/function reference every render — showing up in two shapes people don't always recognize as the same bug.</p>
+        <pre><code>// BUG A: new function reference every render, even for unrelated ticks
+const onSelect = (id) => selectProduct(id);
+// FIX A: stable reference across renders
+const onSelect = useCallback((id) => selectProduct(id), []);
+
+// BUG B: new object literal every render, even with the callback fixed
+&lt;ProductRow style={{ opacity: 1 }} /&gt;
+// FIX B: hoist it - it never actually depends on props/state
+const ROW_STYLE = { opacity: 1 };
+&lt;ProductRow style={ROW_STYLE} /&gt;</code></pre>
+        <p>The panel below is built on React's real, public <code>&lt;Profiler&gt;</code> API — the same instrumentation the actual DevTools extension uses internally — wrapping the list and every individual row. Nothing here is a mockup; the durations and render/bail-out status are genuinely captured from your browser as you click.</p>
+
+        <div id="react-root"></div>
+
+        <div class="callout">
+            <strong>A. Confirm the callback bug (fix OFF, inline style OFF)</strong>
+            <ol class="steps">
+                <li>Make sure <strong>Apply the fix (wrap onSelect in useCallback)</strong> and <strong>Pass an inline style object</strong> are both unchecked, and <strong>Simulate ~1.2ms of render work per row</strong> is checked.</li>
+                <li>Click <strong>Trigger unrelated re-render (tick)</strong> two or three times.</li>
+                <li><strong>Look for:</strong> "Rows re-rendered" reading <strong>40 / 40</strong> every single click, and every bar in the flame chart below colored (not gray). Hover any bar — the tooltip reads "re-rendered: onSelect", confirming it's the callback reference changing, not product data.</li>
+                <li>Optional, in the real extension (see section 2 above): record the same click, open the Flamegraph for that commit — you'll see the identical 40 colored <code>ProductRow</code> bars, and clicking one shows "why did this render: props changed (onSelect)" in the side panel.</li>
+            </ol>
+            <strong>B. Confirm the callback fix</strong>
+            <ol class="steps">
+                <li>Check <strong>Apply the fix</strong> (leave inline style unchecked).</li>
+                <li>Click <strong>Trigger unrelated re-render (tick)</strong> a few more times.</li>
+                <li><strong>Compare:</strong> "Rows re-rendered" should now read <strong>0 / 40</strong> — every row bailed out via <code>React.memo</code>, and every bar is gray with the tooltip "bailed out (memo)".</li>
+            </ol>
+        </div>
+        <div class="deduction">
+            <h4>🔎 Deduction: what the evidence means, and where to look in real code</h4>
+            <p><strong>What it means:</strong> a memoized component that re-renders on every parent update, where the "why did this render" panel names a <em>function</em> prop as the changed value, means the parent is defining that function inline in its render body — <code>React.memo</code> is doing its job correctly, it's just being handed a prop that's never equal to itself twice.</p>
+            <p><strong>Where to look in your own codebase:</strong></p>
+            <ul>
+                <li>Grep for components wrapped in <code>memo(</code>, then check every prop their parent passes for an inline arrow function or bound method:
+                    <pre><code>grep -rn "memo(" src/</code></pre>
+                </li>
+                <li>In the parent, look for callback props defined as <code>onClick={() => doThing(id)}</code> or <code>onClick={this.doThing.bind(this)}</code> directly in JSX — both allocate a new function every render. The fix is <code>useCallback</code> (function components) or binding once in the constructor (class components).</li>
+                <li>Turn on ESLint's <code>react/jsx-no-bind</code> rule (from <code>eslint-plugin-react</code>) — it flags exactly this pattern at lint time, before it ever reaches the Profiler.</li>
+                <li>If the "why did this render" panel isn't available, a quick manual check: pass a custom second argument to <code>memo(Component, (prev, next) => ...)</code> and <code>console.log</code> which specific prop fails <code>Object.is</code> — this pinpoints the exact prop without needing the extension at all.</li>
+            </ul>
+        </div>
+
+        <h3 id="inline-object">Scenario B: Inline Object/Array Literal Prop Defeats <code>memo</code> Too</h3>
+        <p>Fixing the callback isn't the whole fix if another prop has the same problem. The checkbox below controls whether the same list also receives a <code>style</code> object built fresh every render (<code>style={{ opacity: 1 }}</code>) versus a single hoisted constant — same values, but only one of the two is referentially stable.</p>
+        <div class="callout">
+            <strong>A. Confirm the inline-object bug (fix ON for callback, inline style ON)</strong>
+            <ol class="steps">
+                <li>Check <strong>Apply the fix</strong> (from Scenario A above) so the callback is no longer the variable — then check <strong>Pass an inline style object</strong> too.</li>
+                <li>Click <strong>Trigger unrelated re-render (tick)</strong> a few times.</li>
+                <li><strong>Look for:</strong> "Rows re-rendered" back up to <strong>40 / 40</strong>, even though the callback fix is still applied — hover a bar and the tooltip now reads "re-rendered: rowStyle" instead of "onSelect". Same symptom, different prop, proving fixing one unstable prop doesn't help if another one is still unstable.</li>
+            </ol>
+            <strong>B. Confirm the fix (hoisted style object)</strong>
+            <ol class="steps">
+                <li>Uncheck <strong>Pass an inline style object</strong>, leaving the callback fix checked.</li>
+                <li>Click <strong>Trigger unrelated re-render (tick)</strong> again.</li>
+                <li><strong>Compare:</strong> "Rows re-rendered" drops back to <strong>0 / 40</strong> — with both props now stable, every row bails out.</li>
+            </ol>
+        </div>
+        <div class="deduction">
+            <h4>🔎 Deduction: what the evidence means, and where to look in real code</h4>
+            <p><strong>What it means:</strong> if you've already memoized a callback and a component still re-renders every time, "why did this render" naming a plain object/array prop (not a function) means the same referential-equality problem exists one prop over — <code>style={{ ... }}</code>, <code>data={[...]}</code>, or any object/array literal written directly in JSX is a new reference on every render, full stop.</p>
+            <p><strong>Where to look in your own codebase:</strong></p>
+            <ul>
+                <li>Grep JSX for object/array literals passed as props — the opening <code>={{</code> or <code>={[</code> is the tell:
+                    <pre><code>grep -rn "=\{\{" src/*.jsx src/**/*.jsx 2>/dev/null</code></pre>
+                </li>
+                <li>For each hit feeding into a <code>memo</code>-wrapped component, decide which fix applies: if the value never depends on props/state (like this demo's <code>style</code>), hoist it to a module-level constant outside the component entirely. If it genuinely depends on props/state, wrap it in <code>useMemo(() =&gt; ({ ... }), [deps])</code> instead.</li>
+                <li>Inline array literals for list-shaped props (<code>items={[1,2,3]}</code>) have the identical problem and the identical two fixes.</li>
+            </ul>
         </div>
     </section>
-</main>
+
+    <section id="context-scenario">
+        <h2>4. Scenario: Unmemoized Context Value Re-renders Every Consumer</h2>
+        <p>One context wraps three independent, memoized consumer widgets. Every consumer reads from it — but only one of them, <code>ClockWidget</code>, actually needs to update every second. In buggy mode, the Provider's <code>value</code> prop is a fresh object literal every render, so React treats the context value as "changed" for every consumer on every tick — including the two widgets that never asked for that update. This is a different mechanism from <code>React.memo</code> entirely: <strong>a component consuming context via <code>useContext</code> re-renders whenever that context's value changes, and <code>React.memo</code> cannot stop it</strong> — memoization only blocks re-renders caused by the parent, not ones caused by a context the child subscribes to directly.</p>
+        <pre><code>// BUG: one context, one object, mixing a fast-changing field with slow ones
+&lt;AppContext.Provider value={{ theme, seconds }}&gt;
+  {/* ClockWidget, UserPanel, SettingsPanel all read the same context */}
+
+// TEMPTING BUT INCOMPLETE: useMemo doesn't actually fix this
+const value = useMemo(() =&gt; ({ theme, seconds }), [theme, seconds]);
+// `seconds` is still a dependency, so this still recomputes every tick -
+// every consumer of this context still re-renders every second, unfixed.
+
+// THE REAL FIX: split into two contexts, one per concern
+&lt;ThemeContext.Provider value={theme}&gt;
+  &lt;TimeContext.Provider value={seconds}&gt;
+    {/* ClockWidget reads TimeContext; UserPanel/SettingsPanel read ThemeContext */}
+  &lt;/TimeContext.Provider&gt;
+&lt;/ThemeContext.Provider&gt;</code></pre>
+
+        <div id="react-root-context"></div>
+
+        <div class="callout">
+            <strong>A. Confirm the context bug (fix OFF)</strong>
+            <ol class="steps">
+                <li>Make sure <strong>Split into two contexts (the real fix)</strong> is unchecked.</li>
+                <li>Click <strong>Start ticking</strong> and let it run for a few seconds.</li>
+                <li><strong>Look for:</strong> all three "renders" counters — <code>ClockWidget</code>, <code>UserPanel</code>, and <code>SettingsPanel</code> — climbing in lockstep, once per second, even though <code>UserPanel</code> and <code>SettingsPanel</code> display nothing that changes every second.</li>
+                <li>Optional, in the real extension: record a couple of ticks, open the Flamegraph — all three consumer components show as colored (rendered) on every single commit, and clicking <code>SettingsPanel</code>'s bar shows "why did this render: context changed" even though neither its props nor its own state changed.</li>
+            </ol>
+            <strong>B. Confirm the fix (fix ON)</strong>
+            <ol class="steps">
+                <li>Check <strong>Split into two contexts (the real fix)</strong>.</li>
+                <li>Click <strong>Reset counters</strong> (toggling recreates the widgets, so this gives you a clean comparison), then let it tick for a few more seconds.</li>
+                <li><strong>Compare:</strong> <code>ClockWidget</code>'s counter keeps climbing (it's supposed to — it displays the seconds), but <code>UserPanel</code> and <code>SettingsPanel</code>'s counters now stay completely flat — they only move if you click <strong>Toggle theme</strong>, which is the one thing they actually care about.</li>
+            </ol>
+        </div>
+        <div class="deduction">
+            <h4>🔎 Deduction: what the evidence means, and where to look in real code</h4>
+            <p><strong>What it means:</strong> multiple unrelated components re-rendering in perfect sync with each other, all tracing back to "context changed" in the why-did-this-render panel rather than to their own props or state, means they all share one context whose value object is being rebuilt on every Provider render — <code>React.memo</code> on the consumers won't save you, because context reads bypass the parent-prop-comparison memo relies on entirely.</p>
+            <p><strong>Where to look in your own codebase:</strong></p>
+            <ul>
+                <li>Grep for every <code>.Provider value=</code> in the app and check whether the value is an inline object literal:
+                    <pre><code>grep -rn "\.Provider" src/ | grep "value={"</code></pre>
+                </li>
+                <li>Before reaching for <code>useMemo</code>, check what's actually inside that object first: if any one field changes on a timer, a subscription, or fast user input, wrapping the whole object in <code>useMemo</code> won't help — that field is a dependency, so the memoized value still changes exactly as often as the fastest field does, and every consumer still pays for it. This demo's "fix" isn't <code>useMemo</code> at all; it's splitting <code>seconds</code> and <code>theme</code> into two separate contexts.</li>
+                <li>The tell to search for: one context's value object mixing a field that changes on a timer/subscription/frequent-input with a field that changes rarely (a theme, a feature flag, a logged-in user). That mismatch in change-frequency, bundled into one object, is what forces slow-changing consumers to re-render at the fast field's rate.</li>
+                <li>The fix is always the same shape: give the fast-changing field its own context, so a component that only reads the slow-changing one can subscribe to just that context and never re-render on the fast tick at all.</li>
+            </ul>
+        </div>
+    </section>
+
+    <section id="toolkit">
+        <h2>5. Detection Toolkit: Reading a Real Profiling Session</h2>
+        <p>The three scenarios above tell you exactly which prop or context is at fault because they're instrumented to say so. In a real app, you won't have that ground truth handed to you — here's how to get the same answers out of the real extension on a codebase you don't already know inside out.</p>
+
+        <h3>Flamegraph vs. Ranked — when to use which</h3>
+        <p>Default to <strong>Ranked</strong> when you already know a commit felt slow and just want to know what to open first — it sorts every component that rendered by duration, longest at the top, with the tree shape stripped away. Switch to <strong>Flamegraph</strong> once you have a suspect and need to see <em>where</em> it sits relative to its parents and siblings — specifically, whether a slow child sits under a parent that could have blocked it from rendering at all via <code>memo</code>. Note that a sibling which bailed out (via <code>memo</code>, or by not subscribing to whatever context/state changed) typically isn't drawn at all for that commit rather than shown grayed-out — so "my suspect is the only thing in this row" is itself the signal that everything else correctly bailed out, not proof that nothing else exists in the tree.</p>
+
+        <h3>"Why did this render" — reading it correctly</h3>
+        <p>Click any component's bar in either view (after turning the setting on, per section 2 above) to open this panel. It reports one of a small set of reasons: <strong>props changed</strong> (and names which ones), <strong>state changed</strong>, <strong>hooks changed</strong> (context read via a hook, or a custom hook's internal state), <strong>context changed</strong>, or <strong>parent re-rendered</strong> (no memoization at all on this component, so it renders whenever its parent does regardless of props). That last one is worth specifically checking for: a component with no memoization shows this reason on every single commit, which is expected and not itself a bug — only worth fixing if that component's <code>actualDuration</code> is high enough to matter.</p>
+
+        <h3>Highlight updates when components render — a smoke test, not a recording</h3>
+        <p>This is a separate toggle (also under the gear icon), and unlike everything else here, it needs no recording at all — turn it on and it stays on, flashing a colored border around any DOM element whose component just rendered, live, the instant it happens. Use it before you ever open the Profiler proper: click around the real app for a few seconds with this on, and anything flashing that has no visible reason to update (a static header, a sidebar you didn't touch) is your first lead on where to record a real profile.</p>
+
+        <h3>Cross-checking with the Components tab</h3>
+        <p>The Profiler tells you <em>that</em> and <em>why</em> something rendered; the extension's other tab, <strong>⚛️ Components</strong>, lets you inspect <em>what it actually received</em>. Select the same component there (search by name in its search box) and look at its current Props/State/Hooks panel on the right — useful for confirming a suspicion from "why did this render" (e.g., it says a prop object changed; the Components panel lets you expand that object and see whether its fields are actually different, or identical-but-a-new-reference, which is precisely the bug Scenario B above reproduces).</p>
+    </section>
 
 <script type="text/babel" data-presets="react">
 const { useState, useCallback, useRef, memo, Profiler, Fragment } = React;
@@ -171,17 +346,24 @@ const PRODUCT_COUNT = 40;
 const PRODUCTS = Array.from({ length: PRODUCT_COUNT }, (_, i) => ({ id: 'p' + i, name: 'Product ' + (i + 1) }));
 const SIMULATED_ROW_WORK_MS = 1.2;
 
-function ProductRowInner({ product, onSelect, simulateWork, commitLogRef }) {
+// Hoisted once, at module scope - this is "the fix" for the inline-object
+// scenario below. Because it's created exactly once, ever, every row that
+// receives it sees the identical reference on every render, no matter how
+// many times the parent re-renders.
+const STABLE_ROW_STYLE = { opacity: 1 };
+
+function ProductRowInner({ product, onSelect, rowStyle, simulateWork, commitLogRef }) {
     const prevPropsRef = useRef(null);
     const prev = prevPropsRef.current;
     const changed = [];
     if (prev) {
         if (!Object.is(prev.product, product)) changed.push('product');
         if (!Object.is(prev.onSelect, onSelect)) changed.push('onSelect');
+        if (!Object.is(prev.rowStyle, rowStyle)) changed.push('rowStyle');
     } else {
         changed.push('initial mount');
     }
-    prevPropsRef.current = { product, onSelect };
+    prevPropsRef.current = { product, onSelect, rowStyle };
 
     if (simulateWork) {
         const start = performance.now();
@@ -192,14 +374,14 @@ function ProductRowInner({ product, onSelect, simulateWork, commitLogRef }) {
     // i.e. React.memo did NOT bail this row out of the commit.
     commitLogRef.current.set(product.id, changed);
 
-    return <li className="row">{product.name}</li>;
+    return <li className="row" style={rowStyle}>{product.name}</li>;
 }
 const ProductRow = memo(ProductRowInner);
 
-function TrackedRow({ product, onSelect, simulateWork, commitLogRef, onRowRender }) {
+function TrackedRow({ product, onSelect, rowStyle, simulateWork, commitLogRef, onRowRender }) {
     return (
         <Profiler id={product.id} onRender={(id, phase, actualDuration) => onRowRender(product.id, actualDuration)}>
-            <ProductRow product={product} onSelect={onSelect} simulateWork={simulateWork} commitLogRef={commitLogRef} />
+            <ProductRow product={product} onSelect={onSelect} rowStyle={rowStyle} simulateWork={simulateWork} commitLogRef={commitLogRef} />
         </Profiler>
     );
 }
@@ -235,6 +417,7 @@ const Demo = memo(function Demo({ onReport }) {
     const [, forceTick] = useState(0);
     const [useFix, setUseFix] = useState(false);
     const [simulateWork, setSimulateWork] = useState(true);
+    const [inlineStyle, setInlineStyle] = useState(false);
 
     const commitLogRef = useRef(new Map());
     const rowDurationsRef = useRef(new Map());
@@ -244,6 +427,12 @@ const Demo = memo(function Demo({ onReport }) {
     const onSelectBuggy = (id) => { /* demo: selection intentionally not wired up */ };
     const onSelectFixed = useCallback((id) => { /* demo: selection intentionally not wired up */ }, []);
     const onSelect = useFix ? onSelectFixed : onSelectBuggy;
+
+    // Scenario B (inline object prop): checked = a brand-new object literal
+    // every render, exactly the shape of `style={{opacity: 1}}` written
+    // directly in JSX. Unchecked = the module-scoped constant above - same
+    // fields, same values, but one single stable reference forever.
+    const rowStyle = inlineStyle ? { opacity: 1 } : STABLE_ROW_STYLE;
 
     function finalizeReport() {
         scheduledRef.current = false;
@@ -317,6 +506,10 @@ const Demo = memo(function Demo({ onReport }) {
                         <input type="checkbox" checked={simulateWork} onChange={e => setSimulateWork(e.target.checked)} />
                         Simulate ~1.2ms of render work per row
                     </label>
+                    <label>
+                        <input type="checkbox" checked={inlineStyle} onChange={e => setInlineStyle(e.target.checked)} />
+                        Pass an inline <code>style</code> object (Scenario B, below)
+                    </label>
                 </div>
             </div>
 
@@ -327,6 +520,7 @@ const Demo = memo(function Demo({ onReport }) {
                             key={p.id}
                             product={p}
                             onSelect={onSelect}
+                            rowStyle={rowStyle}
                             simulateWork={simulateWork}
                             commitLogRef={commitLogRef}
                             onRowRender={handleRowRender}
@@ -394,6 +588,141 @@ function ReportPanel({ report }) {
 }
 
 ReactDOM.createRoot(document.getElementById('react-root')).render(<Root />);
+
+/* ============================================================
+   Scenario: Unmemoized Context Value Re-renders Every Consumer
+
+   Deliberately NOT solved with useMemo alone: if ClockWidget's `seconds`
+   stayed bundled into the same context object UserPanel/SettingsPanel read,
+   useMemo's own dependency array would still include `seconds` and produce
+   a new reference every tick regardless - proving useMemo can't fix a
+   context that mixes a fast-changing concern with a slow-changing one. The
+   only real fix is splitting into two contexts, so that's what "the fix"
+   toggle below actually does.
+   ============================================================ */
+const LegacyContext = React.createContext({ theme: 'dark', seconds: 0 }); // stable default, never overwritten when this branch isn't mounted
+const ThemeContext = React.createContext('dark');
+const TimeContext = React.createContext(0);
+
+// Each consumer is its OWN named component (not one generic component reused
+// three times with a `name` prop) specifically so the real React DevTools
+// extension shows three genuinely distinct component names - "ClockWidget",
+// "UserPanel", "SettingsPanel" - in its tree, Flamegraph, and Ranked views,
+// exactly like the instructions above describe.
+//
+// Critical detail: each consumer calls useContext exactly ONCE, on whichever
+// single context object it actually needs (chosen via `pickContext`, which
+// varies only by the `combined` prop - still one useContext call per render,
+// so this doesn't break the Rules of Hooks). Merely CALLING useContext on a
+// context subscribes you to its updates even if you never read the result -
+// so a first draft of this demo that called useContext on all three contexts
+// "just in case" ended up subscribing every widget to the fast-changing
+// TimeContext regardless of whether it used the value, silently defeating
+// the entire split. This is the same class of bug the scenario teaches.
+function makeConsumer(displayName, pickContext, formatValue) {
+    function Consumer({ renderCountRef, combined }) {
+        const ctx = React.useContext(pickContext(combined));
+        // Same pattern as ProductRowInner above: mutate a ref during render.
+        // This only runs at all when this component actually renders, so a
+        // memoized bail-out (or a context this component isn't subscribed
+        // to changing) leaves the count frozen - no extra state anywhere.
+        const nextCount = (renderCountRef.current.get(displayName) || 0) + 1;
+        renderCountRef.current.set(displayName, nextCount);
+        return (
+            <div className="context-widget">
+                <strong>{displayName}</strong>
+                <span className="context-count">renders: {nextCount}</span>
+                <span className="context-display">{formatValue(ctx, combined)}</span>
+            </div>
+        );
+    }
+    Consumer.displayName = displayName;
+    return memo(Consumer);
+}
+
+const ClockWidget = makeConsumer(
+    'ClockWidget',
+    combined => combined ? LegacyContext : TimeContext,
+    (ctx, combined) => `${combined ? ctx.seconds : ctx}s`
+);
+const UserPanel = makeConsumer(
+    'UserPanel',
+    combined => combined ? LegacyContext : ThemeContext,
+    (ctx, combined) => `theme: ${combined ? ctx.theme : ctx}`
+);
+const SettingsPanel = makeConsumer(
+    'SettingsPanel',
+    combined => combined ? LegacyContext : ThemeContext,
+    (ctx, combined) => `theme: ${combined ? ctx.theme : ctx}`
+);
+
+function ContextDemo() {
+    const [seconds, setSeconds] = useState(0);
+    const [theme, setTheme] = useState('dark');
+    const [ticking, setTicking] = useState(false);
+    const [split, setSplit] = useState(false);
+    const [resetKey, setResetKey] = useState(0);
+    const renderCountRef = useRef(new Map());
+
+    React.useEffect(() => {
+        if (!ticking) return;
+        const id = setInterval(() => setSeconds(s => s + 1), 1000);
+        return () => clearInterval(id);
+    }, [ticking]);
+
+    function resetCounters() {
+        renderCountRef.current = new Map();
+        // Bumping the key remounts the widgets below, forcing a fresh render
+        // on ALL of them - including ones a memoized bail-out would otherwise
+        // leave frozen showing a stale pre-reset number. Without this, a
+        // widget that (correctly) stops re-rendering after the fix is applied
+        // would keep displaying whatever count it last rendered, forever,
+        // which reads as "Reset did nothing" even though it worked.
+        setResetKey(k => k + 1);
+    }
+
+    const widgets = (combined) => (
+        <div className="context-widgets" key={resetKey}>
+            <ClockWidget renderCountRef={renderCountRef} combined={combined} />
+            <UserPanel renderCountRef={renderCountRef} combined={combined} />
+            <SettingsPanel renderCountRef={renderCountRef} combined={combined} />
+        </div>
+    );
+
+    return (
+        <div>
+            <div className="demo-controls">
+                <div className="btn-row">
+                    <button onClick={() => setTicking(t => !t)}>{ticking ? 'Stop ticking' : 'Start ticking'}</button>
+                    <button className="secondary" onClick={resetCounters}>Reset counters</button>
+                    <button className="secondary" onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}>Toggle theme ({theme})</button>
+                </div>
+                <div className="toggle-row">
+                    <label>
+                        <input type="checkbox" checked={split} onChange={e => setSplit(e.target.checked)} />
+                        Split into two contexts (the real fix)
+                    </label>
+                </div>
+            </div>
+            {split ? (
+                <ThemeContext.Provider value={theme}>
+                    <TimeContext.Provider value={seconds}>
+                        {widgets(false)}
+                    </TimeContext.Provider>
+                </ThemeContext.Provider>
+            ) : (
+                <LegacyContext.Provider value={{ theme, seconds }}>
+                    {widgets(true)}
+                </LegacyContext.Provider>
+            )}
+            <p className="jank-explanation">
+                {ticking ? 'Ticking every second...' : 'Click "Start ticking" to begin.'} With the fix off, all three "renders" counts climb together. With it on, only ClockWidget's does.
+            </p>
+        </div>
+    );
+}
+
+ReactDOM.createRoot(document.getElementById('react-root-context')).render(<ContextDemo />);
 </script>
 
 <style>
@@ -408,6 +737,22 @@ ReactDOM.createRoot(document.getElementById('react-root')).render(<Root />);
     .flame-fill.rendered { background: linear-gradient(90deg, #f08d49, #f87171); }
     .flame-fill.bailed { background: #444; }
     .flame-duration { width: 60px; text-align: right; flex-shrink: 0; color: #999; }
+    .context-widgets { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 1rem; }
+    .context-widget {
+        flex: 1;
+        min-width: 160px;
+        background: rgba(0,0,0,0.3);
+        border: 1.5px solid #444;
+        border-radius: 8px;
+        padding: 0.9rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 0.85rem;
+    }
+    .context-widget strong { color: var(--primary); }
+    .context-count { font-family: "Fira Code", monospace; color: var(--accent); }
+    .context-display { color: #ccc; font-family: "Fira Code", monospace; }
 </style>
 
 </body>
