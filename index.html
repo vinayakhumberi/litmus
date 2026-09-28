@@ -364,6 +364,71 @@
     cursor: pointer;
   }
 
+  /* Column visibility control */
+  .columns-control {
+    position: relative;
+  }
+
+  .columns-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    z-index: 50;
+    min-width: 170px;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  }
+
+  .columns-menu.open {
+    display: flex;
+  }
+
+  .columns-menu-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+
+  .columns-menu label.col-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .columns-menu label.col-option:hover {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+
+  .columns-menu label.col-option input {
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+
+  table.hide-col-status [data-col="status"],
+  table.hide-col-difficulty [data-col="difficulty"],
+  table.hide-col-priority [data-col="priority"],
+  table.hide-col-availability [data-col="availability"],
+  table.hide-col-week [data-col="week"],
+  table.hide-col-actions [data-col="actions"] {
+    display: none;
+  }
+
   /* Week Filter Styles */
   .week-filters {
     display: flex;
@@ -441,12 +506,21 @@
   thead th.sorted::after { content: ' ↓'; }
   thead th.sorted.asc::after { content: ' ↑'; }
 
+  .cat-row {
+    cursor: pointer;
+  }
+
   .cat-row td {
     padding: 14px 16px;
     background: var(--accent-dim);
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
     border-left: 4px solid var(--accent);
+    transition: background 0.1s;
+  }
+
+  .cat-row:hover td {
+    filter: brightness(1.15);
   }
 
   .cat-label {
@@ -460,6 +534,19 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
+  }
+
+  .cat-label-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .cat-toggle-icon {
+    display: inline-block;
+    font-size: 10px;
+    width: 10px;
+    transition: transform 0.15s;
   }
 
   .cat-count {
@@ -828,6 +915,18 @@
       <option value="priority">Sort: Priority</option>
       <option value="difficulty">Sort: Difficulty</option>
     </select>
+    <div class="columns-control">
+      <button class="filter-btn" id="columns-toggle-btn" type="button">⚙ Columns</button>
+      <div class="columns-menu" id="columns-menu">
+        <div class="columns-menu-label">Show columns</div>
+        <label class="col-option"><input type="checkbox" data-col-key="status" checked> Status</label>
+        <label class="col-option"><input type="checkbox" data-col-key="difficulty" checked> Difficulty</label>
+        <label class="col-option"><input type="checkbox" data-col-key="priority" checked> Priority</label>
+        <label class="col-option"><input type="checkbox" data-col-key="availability" checked> Availability</label>
+        <label class="col-option"><input type="checkbox" data-col-key="week" checked> Week</label>
+        <label class="col-option"><input type="checkbox" data-col-key="actions" checked> Actions</label>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -837,16 +936,16 @@
 </div>
 
 <div class="table-wrap">
-  <table>
+  <table id="topic-table">
     <thead>
       <tr>
         <th style="width:34%">Topic</th>
-        <th>Status</th>
-        <th>Difficulty</th>
-        <th>Priority</th>
-        <th style="text-align:center;">Availability</th>
-        <th>Week</th>
-        <th>Actions</th>
+        <th data-col="status">Status</th>
+        <th data-col="difficulty">Difficulty</th>
+        <th data-col="priority">Priority</th>
+        <th data-col="availability" style="text-align:center;">Availability</th>
+        <th data-col="week">Week</th>
+        <th data-col="actions">Actions</th>
       </tr>
     </thead>
     <tbody id="topic-table-body">
@@ -939,6 +1038,9 @@ let selectedPriorities = new Set();
 let selectedWeeks = new Set();
 let searchQuery = '';
 let sortMode = 'default';
+let collapsedCategories = new Set();
+const DEFAULT_COLUMN_PREFS = { status: true, difficulty: true, priority: true, availability: true, week: true, actions: true };
+let columnPrefs = { ...DEFAULT_COLUMN_PREFS };
 
 // ─── Data loading ─────────────────────────────────────────────────────────────
 async function loadData() {
@@ -953,6 +1055,13 @@ async function loadData() {
 
     const savedWeeks = JSON.parse(localStorage.getItem('selected_weeks') || '[]');
     selectedWeeks = new Set(savedWeeks);
+
+    const savedCollapsed = JSON.parse(localStorage.getItem('collapsed_categories') || '[]');
+    collapsedCategories = new Set(savedCollapsed);
+
+    const savedColumnPrefs = JSON.parse(localStorage.getItem('column_prefs') || 'null');
+    columnPrefs = { ...DEFAULT_COLUMN_PREFS, ...(savedColumnPrefs || {}) };
+    applyColumnPrefs();
 
     // 2. Fetch base files
     const [planRes, scheduleRes] = await Promise.all([
@@ -1182,6 +1291,19 @@ function getFilteredTopics() {
   return list;
 }
 
+// ─── Column visibility ────────────────────────────────────────────────────────
+function applyColumnPrefs() {
+  const table = document.getElementById('topic-table');
+  if (!table) return;
+  table.className = Object.keys(columnPrefs)
+    .filter(key => !columnPrefs[key])
+    .map(key => 'hide-col-' + key)
+    .join(' ');
+  document.querySelectorAll('#columns-menu input[data-col-key]').forEach(cb => {
+    cb.checked = columnPrefs[cb.dataset.colKey] !== false;
+  });
+}
+
 // ─── Render ───────────────────────────────────────────────────────────────────
 function renderAll() {
   renderCountdown();
@@ -1211,8 +1333,11 @@ function renderTable() {
     catOrder.forEach(catId => {
       const cat = grouped[catId];
       const completedInCat = cat.topics.filter(t => t.status === 'completed').length;
-      html += `<tr class="cat-row"><td colspan="7"><span class="cat-label">${escHtml(cat.name)} <span class="cat-count">${completedInCat}/${cat.topics.length} done</span></span></td></tr>`;
-      cat.topics.forEach(t => { html += renderTopicRow(t); });
+      const isCollapsed = collapsedCategories.has(catId);
+      html += `<tr class="cat-row" data-cat-id="${escAttr(catId)}"><td colspan="7"><span class="cat-label"><span class="cat-label-left"><span class="cat-toggle-icon">${isCollapsed ? '▸' : '▾'}</span>${escHtml(cat.name)}</span> <span class="cat-count">${completedInCat}/${cat.topics.length} done</span></span></td></tr>`;
+      if (!isCollapsed) {
+        cat.topics.forEach(t => { html += renderTopicRow(t); });
+      }
     });
   } else {
     filtered.forEach(t => { html += renderTopicRow(t); });
@@ -1251,12 +1376,12 @@ function renderTopicRow(t) {
       <a class="topic-name" href="topic-detail.html?id=${topicId}" target="_blank" rel="noopener">${escHtml(t.name)}</a>
       <div class="tags-list">${tagsHtml}</div>
     </td>
-    <td>${statusSelect}</td>
-    <td><span class="badge ${diffClass}">${escHtml(t.difficulty || 'Medium')}</span></td>
-    <td><span class="badge ${prioClass}">${escHtml(t.priority || 'Medium')}</span></td>
-    <td style="text-align:center;">${availabilityHtml}</td>
-    <td><span class="week-badge${t.actualWeek === 'deferred' ? ' week-badge-deferred' : ''}">${escHtml(weekLabel)}</span></td>
-    <td>
+    <td data-col="status">${statusSelect}</td>
+    <td data-col="difficulty"><span class="badge ${diffClass}">${escHtml(t.difficulty || 'Medium')}</span></td>
+    <td data-col="priority"><span class="badge ${prioClass}">${escHtml(t.priority || 'Medium')}</span></td>
+    <td data-col="availability" style="text-align:center;">${availabilityHtml}</td>
+    <td data-col="week"><span class="week-badge${t.actualWeek === 'deferred' ? ' week-badge-deferred' : ''}">${escHtml(weekLabel)}</span></td>
+    <td data-col="actions">
       <div class="actions">
         <a class="action-btn dive" data-tip="Study Course" href="topic-detail.html?id=${topicId}" target="_blank" style="text-decoration:none">
           📖
@@ -1359,6 +1484,38 @@ document.getElementById('sort-select').addEventListener('change', e => {
   sortMode = e.target.value;
   renderTable();
 });
+
+// Category row collapse/expand (event delegation — tbody element persists across re-renders)
+document.getElementById('topic-table-body').addEventListener('click', e => {
+  const catRow = e.target.closest('.cat-row');
+  if (!catRow) return;
+  const catId = catRow.dataset.catId;
+  if (collapsedCategories.has(catId)) collapsedCategories.delete(catId);
+  else collapsedCategories.add(catId);
+  localStorage.setItem('collapsed_categories', JSON.stringify(Array.from(collapsedCategories)));
+  renderTable();
+});
+
+// Column visibility menu
+const columnsToggleBtn = document.getElementById('columns-toggle-btn');
+const columnsMenu = document.getElementById('columns-menu');
+
+columnsToggleBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  columnsMenu.classList.toggle('open');
+});
+
+columnsMenu.addEventListener('click', e => e.stopPropagation());
+
+columnsMenu.addEventListener('change', e => {
+  const key = e.target.dataset.colKey;
+  if (!key) return;
+  columnPrefs[key] = e.target.checked;
+  localStorage.setItem('column_prefs', JSON.stringify(columnPrefs));
+  applyColumnPrefs();
+});
+
+document.addEventListener('click', () => columnsMenu.classList.remove('open'));
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function escHtml(s) {
