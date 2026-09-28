@@ -113,21 +113,21 @@ const Page = React.lazy(() =>
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"background":"transparent","primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#64748b","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontFamily":"\"Plus Jakarta Sans\", sans-serif","fontSize":"14px"}}}%%
 flowchart TD
-    A(["📁 Source Modules"]) --> B["🔍 Static Analysis<br>(scan for import() calls)"]
+    A(["📁 Source Modules"]) --> B["🔍 Static Analysis (scan for import() calls)"]
 
-    B --> C{"🔀 Dynamic import()<br>Boundary Found?"}
-    C -- "No" --> D["📦 Bundle into<br>Parent Chunk"]
-    C -- "Yes" --> E["🌳 Build Sub-Graph<br>from that Boundary"]
+    B --> C{"🔀 Dynamic import() Boundary Found?"}
+    C -- "No" --> D["📦 Bundle into Parent Chunk"]
+    C -- "Yes" --> E["🌳 Build Sub-Graph from that Boundary"]
 
-    E --> F{"♻️ Module Shared by<br>Multiple Chunks?"}
-    F -- "Yes" --> G["🧩 Extract to<br>Common/Vendor Chunk"]
-    F -- "No" --> H["📄 Include in<br>Owning Chunk Only"]
+    E --> F{"♻️ Module Shared by Multiple Chunks?"}
+    F -- "Yes" --> G["🧩 Extract to Common/Vendor Chunk"]
+    F -- "No" --> H["📄 Include in Owning Chunk Only"]
 
-    D --> I["🗂️ Chunk Manifest<br>(chunk id → filename + hash)"]
+    D --> I["🗂️ Chunk Manifest (chunk id → filename + hash)"]
     G --> I
     H --> I
 
-    I --> J(["✅ Emit Chunk Files<br>to Build Output"])
+    I --> J(["✅ Emit Chunk Files to Build Output"])
 
     classDef sourceStage fill:#0369a1,stroke:#7dd3fc,color:#f0f9ff,stroke-width:1.5px;
     classDef analyzeStage fill:#475569,stroke:#cbd5e1,color:#f8fafc,stroke-width:1.5px;

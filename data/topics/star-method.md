@@ -87,17 +87,17 @@ The fix is preparing the follow-up layer, not just the headline story — know t
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"lineColor": "#a0aec0", "edgeLabelBackground": "#2d3748", "textColor": "#f7fafc"}}}%%
 graph TD
-    A["Interviewer asks a behavioral question"] --> B{"Which story in the bank<br>best matches this competency?"}
-    B -- "No good match" --> C["Adapt the closest story honestly -<br>don't force a bad fit"]
-    B -- "Good match found" --> D["Situation: ~15% of time -<br>just enough context to orient"]
+    A["Interviewer asks a behavioral question"] --> B{"Which story in the bank best matches this competency?"}
+    B -- "No good match" --> C["Adapt the closest story honestly - don't force a bad fit"]
+    B -- "Good match found" --> D["Situation: ~15% of time - just enough context to orient"]
     C --> D
-    D --> E["Task: ~10% of time -<br>name the concrete goal"]
-    E --> F["Action: ~55-60% of time -<br>specific 'I' decisions and tradeoffs"]
-    F --> G["Result: ~15-20% of time -<br>quantify, then name lasting change"]
-    G --> H{"Does Result pass the<br>'so what' test?"}
-    H -- "No - outcome stated,<br>no lasting effect named" --> I["Add the durable-change line -<br>what's different now"]
+    D --> E["Task: ~10% of time - name the concrete goal"]
+    E --> F["Action: ~55-60% of time - specific 'I' decisions and tradeoffs"]
+    F --> G["Result: ~15-20% of time - quantify, then name lasting change"]
+    G --> H{"Does Result pass the 'so what' test?"}
+    H -- "No - outcome stated, no lasting effect named" --> I["Add the durable-change line - what's different now"]
     I --> G
-    H -- "Yes" --> J["Answer delivered -<br>ready for follow-up drilling"]
+    H -- "Yes" --> J["Answer delivered - ready for follow-up drilling"]
 
     classDef stage fill:#2b6cb0,stroke:#90cdf4,color:#f7fafc
     classDef decision fill:#805ad5,stroke:#d6bcfa,color:#f7fafc
@@ -127,7 +127,7 @@ sequenceDiagram
         I-->>C: "Story holds up - strong signal"
     else "Candidate only prepared the headline story"
         C->>I: "Vague or inconsistent detail"
-        I-->>C: "Story reads as exaggerated - weak signal,<br>regardless of how good the headline sounded"
+        I-->>C: "Story reads as exaggerated - weak signal, regardless of how good the headline sounded"
     end
 ```
 

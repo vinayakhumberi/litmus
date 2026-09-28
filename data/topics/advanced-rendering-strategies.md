@@ -107,16 +107,16 @@ The five strategies above aren't mutually exclusive at the application level —
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"lineColor": "#a0aec0", "edgeLabelBackground": "#2d3748", "textColor": "#f7fafc"}}}%%
 graph TD
-    A["New route being built"] --> B{"Does it need to rank<br>in search engines?"}
-    B -- "No" --> C{"Personalized/authenticated<br>content only?"}
+    A["New route being built"] --> B{"Does it need to rank in search engines?"}
+    B -- "No" --> C{"Personalized/authenticated content only?"}
     C -- "Yes" --> D["CSR"]
-    C -- "No" --> E{"Content identical<br>for every visitor?"}
+    C -- "No" --> E{"Content identical for every visitor?"}
     B -- "Yes" --> E
     E -- "Yes, and rarely changes" --> F["SSG"]
     E -- "Yes, but changes periodically" --> G["ISR"]
-    E -- "No - must be fresh<br>on every request" --> H{"Is there one slow<br>data source blocking<br>an otherwise-fast page?"}
+    E -- "No - must be fresh on every request" --> H{"Is there one slow data source blocking an otherwise-fast page?"}
     H -- "No" --> I["SSR"]
-    H -- "Yes" --> J["Streaming SSR<br>with Suspense boundaries"]
+    H -- "Yes" --> J["Streaming SSR with Suspense boundaries"]
 
     classDef stage fill:#2b6cb0,stroke:#90cdf4,color:#f7fafc
     classDef decision fill:#805ad5,stroke:#d6bcfa,color:#f7fafc
@@ -137,18 +137,18 @@ sequenceDiagram
 
     Note over S,B: "Blocking SSR"
     U->>S: "Requests page"
-    S->>S: "Renders shell AND slow<br>recommendations widget together"
-    S-->>B: "Sends complete HTML<br>only once everything is ready"
-    B-->>U: "First paint - delayed by<br>the slowest data source"
+    S->>S: "Renders shell AND slow recommendations widget together"
+    S-->>B: "Sends complete HTML only once everything is ready"
+    B-->>U: "First paint - delayed by the slowest data source"
 
     Note over S,B: "Streaming SSR"
     U->>S: "Requests page"
     S->>S: "Renders fast shell immediately"
     S-->>B: "Streams shell HTML right away"
-    B-->>U: "First paint - fast,<br>shell visible and interactive"
+    B-->>U: "First paint - fast, shell visible and interactive"
     S->>S: "Recommendations data resolves"
-    S-->>B: "Streams the completed<br>widget chunk"
-    B-->>U: "Widget appears in place,<br>no full re-render needed"
+    S-->>B: "Streams the completed widget chunk"
+    B-->>U: "Widget appears in place, no full re-render needed"
 ```
 
 ## 🏢 Interview Context & FAANG Signals

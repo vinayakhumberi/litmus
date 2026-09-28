@@ -82,19 +82,19 @@ Stage 5 above is where most otherwise-strong answers lose points, because these 
 
 ```mermaid
 graph TD
-    A["Interviewer poses an open-ended prompt<br>e.g. 'design a notifications feed'"] --> B["Scope the prompt<br>(2-3 min)"]
-    B --> C{"Requirements still<br>ambiguous?"}
+    A["Interviewer poses an open-ended prompt e.g. 'design a notifications feed'"] --> B["Scope the prompt (2-3 min)"]
+    B --> C{"Requirements still ambiguous?"}
     C -- "Yes" --> B
-    C -- "No: scope is bounded" --> D["Gather functional +<br>non-functional requirements"]
-    D --> E["Sketch high-level architecture:<br>component tree + data flow"]
-    E --> F{"Interviewer probes<br>a specific area?"}
+    C -- "No: scope is bounded" --> D["Gather functional + non-functional requirements"]
+    D --> E["Sketch high-level architecture: component tree + data flow"]
+    E --> F{"Interviewer probes a specific area?"}
     F -- "Yes" --> G["Deep dive into that sub-problem"]
     F -- "No: candidate chooses" --> G
-    G --> H{"Deep dive reveals a flaw<br>in the high-level design?"}
+    G --> H{"Deep dive reveals a flaw in the high-level design?"}
     H -- "Yes: revise out loud" --> E
-    H -- "No" --> I["Name cross-cutting concerns:<br>perf, a11y, security, testing"]
-    I --> J["Narrate trade-offs and<br>alternatives considered"]
-    J --> K["Wrap up: summarize,<br>state what you'd revisit"]
+    H -- "No" --> I["Name cross-cutting concerns: perf, a11y, security, testing"]
+    I --> J["Narrate trade-offs and alternatives considered"]
+    J --> K["Wrap up: summarize, state what you'd revisit"]
 
     classDef stage fill:#2b6cb0,stroke:#90cdf4,color:#fff
     classDef decision fill:#805ad5,stroke:#d6bcfa,color:#fff

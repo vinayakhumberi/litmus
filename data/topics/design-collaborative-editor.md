@@ -84,20 +84,20 @@ The fix is representing the document as a structured, mergeable model rather tha
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"lineColor": "#a0aec0", "edgeLabelBackground": "#2d3748", "textColor": "#f7fafc"}}}%%
 graph TD
-    A["Designing the editor's conflict-resolution architecture"] --> B{"Does the product need robust<br>offline editing with long disconnects?"}
-    B -- "Yes" --> C["Favor a CRDT-based data model<br>(sequence CRDT for content)"]
-    B -- "No, mostly-online usage" --> D{"Is a centralized server<br>already part of the architecture?"}
-    D -- "Yes" --> E["OT is viable: server<br>arbitrates operation order"]
+    A["Designing the editor's conflict-resolution architecture"] --> B{"Does the product need robust offline editing with long disconnects?"}
+    B -- "Yes" --> C["Favor a CRDT-based data model (sequence CRDT for content)"]
+    B -- "No, mostly-online usage" --> D{"Is a centralized server already part of the architecture?"}
+    D -- "Yes" --> E["OT is viable: server arbitrates operation order"]
     D -- "No / want peer-to-peer" --> C
-    C --> F{"Does content include rich<br>formatting, not just plain text?"}
+    C --> F{"Does content include rich formatting, not just plain text?"}
     E --> F
-    F -- "Yes" --> G["Separate content ops from<br>attribute/formatting ops, each<br>with independent merge logic"]
+    F -- "Yes" --> G["Separate content ops from attribute/formatting ops, each with independent merge logic"]
     F -- "No" --> H["Single sequence op type is sufficient"]
-    G --> I["Local edit applied optimistically<br>to local document immediately"]
+    G --> I["Local edit applied optimistically to local document immediately"]
     H --> I
-    I --> J["Operation broadcast to other clients<br>(ordered/reliable channel)"]
-    J --> K["Remote clients transform or merge<br>the incoming operation"]
-    K --> L["All replicas converge to the<br>same final document"]
+    I --> J["Operation broadcast to other clients (ordered/reliable channel)"]
+    J --> K["Remote clients transform or merge the incoming operation"]
+    K --> L["All replicas converge to the same final document"]
 
     classDef decision fill:#805ad5,stroke:#d6bcfa,color:#f7fafc
     classDef result fill:#2f855a,stroke:#9ae6b4,color:#f7fafc

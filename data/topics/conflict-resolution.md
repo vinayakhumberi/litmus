@@ -102,23 +102,23 @@ Most conflicts that go badly in a live conversation go badly because the group j
 
 ```mermaid
 graph TD
-    A["Conflict identified"] --> B{"Is this a disagreement<br>on facts/approach, with<br>both sides sharing a goal?"}
-    B -- "Yes" --> C["Technical disagreement:<br>structured debate, data,<br>decision record, time-box"]
-    B -- "No" --> D{"Is it about competing<br>tradeoffs or resourcing,<br>both sides 'right' given<br>their own constraints?"}
-    D -- "Yes" --> E["Priority/resourcing conflict:<br>make tradeoff explicit,<br>surface to the tradeoff owner"]
-    D -- "No" --> F{"Is it a mismatch in style,<br>pace, or working norms<br>rather than the work itself?"}
-    F -- "Yes" --> G["Interpersonal conflict:<br>direct 1:1, name the pattern,<br>set a working agreement"]
-    F -- "No" --> H["Cross-team ownership conflict:<br>clarify ownership explicitly,<br>in writing, with binding authority"]
+    A["Conflict identified"] --> B{"Is this a disagreement on facts/approach, with both sides sharing a goal?"}
+    B -- "Yes" --> C["Technical disagreement: structured debate, data, decision record, time-box"]
+    B -- "No" --> D{"Is it about competing tradeoffs or resourcing, both sides 'right' given their own constraints?"}
+    D -- "Yes" --> E["Priority/resourcing conflict: make tradeoff explicit, surface to the tradeoff owner"]
+    D -- "No" --> F{"Is it a mismatch in style, pace, or working norms rather than the work itself?"}
+    F -- "Yes" --> G["Interpersonal conflict: direct 1:1, name the pattern, set a working agreement"]
+    F -- "No" --> H["Cross-team ownership conflict: clarify ownership explicitly, in writing, with binding authority"]
 
-    C --> I{"Is there a real power/<br>seniority imbalance between<br>the two sides?"}
+    C --> I{"Is there a real power/ seniority imbalance between the two sides?"}
     E --> I
     G --> I
     H --> I
-    I -- "Yes" --> J["Lead actively levels the forum:<br>invite the junior view directly,<br>name the imbalance if needed"]
-    I -- "No" --> K{"Resolvable within the<br>parties' own authority?"}
+    I -- "Yes" --> J["Lead actively levels the forum: invite the junior view directly, name the imbalance if needed"]
+    I -- "No" --> K{"Resolvable within the parties' own authority?"}
     J --> K
-    K -- "No" --> L["Escalate: authority gap,<br>repeated pattern, or<br>time-box already failed"]
-    K -- "Yes" --> M["Resolve directly using the<br>mediation structure"]
+    K -- "No" --> L["Escalate: authority gap, repeated pattern, or time-box already failed"]
+    K -- "Yes" --> M["Resolve directly using the mediation structure"]
 
     classDef start fill:#2b6cb0,stroke:#90cdf4,color:#fff
     classDef decision fill:#805ad5,stroke:#d6bcfa,color:#fff
@@ -139,21 +139,21 @@ sequenceDiagram
     participant Lead as "Lead (mediator)"
     participant Sr as "Senior engineer"
 
-    Jr->>Lead: "Flags disagreement with senior's<br>technical approach"
-    Lead->>Jr: "Asks for the interest behind the<br>position, not just the position"
+    Jr->>Lead: "Flags disagreement with senior's technical approach"
+    Lead->>Jr: "Asks for the interest behind the position, not just the position"
     Lead->>Sr: "Asks the same of the senior's view"
-    Sr-->>Lead: "States the underlying concern<br>(e.g. migration risk)"
-    Jr-->>Lead: "States the underlying concern<br>(e.g. long-term maintainability)"
-    Lead->>Lead: "Restates both constraints aloud,<br>confirms each side agrees"
+    Sr-->>Lead: "States the underlying concern (e.g. migration risk)"
+    Jr-->>Lead: "States the underlying concern (e.g. long-term maintainability)"
+    Lead->>Lead: "Restates both constraints aloud, confirms each side agrees"
     alt "Junior has stopped pushing back"
-        Lead->>Jr: "Explicitly re-invites the argument<br>on its own merits"
+        Lead->>Jr: "Explicitly re-invites the argument on its own merits"
     end
-    Lead->>Jr: "Proposes decision mechanism:<br>data test, decider, or consensus"
-    Lead->>Sr: "Confirms mechanism is accepted<br>by both sides"
+    Lead->>Jr: "Proposes decision mechanism: data test, decider, or consensus"
+    Lead->>Sr: "Confirms mechanism is accepted by both sides"
     alt "Junior's argument holds up on the merits"
-        Lead-->>Jr: "Names it directly: 'I think you're<br>right here, let's go with this'"
+        Lead-->>Jr: "Names it directly: 'I think you're right here, let's go with this'"
     else "Senior's argument holds up"
-        Lead-->>Sr: "Proceeds with senior's approach,<br>documents why for the junior"
+        Lead-->>Sr: "Proceeds with senior's approach, documents why for the junior"
     end
 ```
 

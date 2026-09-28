@@ -86,16 +86,16 @@ This also applies to JSX passed as `children`: `<MemoLayout>{someJsx}</MemoLayou
 
 ```mermaid
 graph TD
-    A["Considering useMemo, useCallback,<br>or React.memo"] --> B{"Have you measured this<br>as actually expensive?"}
-    B -- "No" --> C["Don't memoize yet<br>Profile first"]
+    A["Considering useMemo, useCallback, or React.memo"] --> B{"Have you measured this as actually expensive?"}
+    B -- "No" --> C["Don't memoize yet Profile first"]
     B -- "Yes" --> D{"What are you caching?"}
     D -- "A computed value" --> E["useMemo"]
-    D -- "A function reference" --> F{"Is it passed to a memoized<br>child, or used as a dependency<br>elsewhere?"}
+    D -- "A function reference" --> F{"Is it passed to a memoized child, or used as a dependency elsewhere?"}
     F -- "Yes" --> G["useCallback"]
-    F -- "No" --> H["Skip it — nothing downstream<br>benefits from reference stability"]
-    D -- "A whole component's render output" --> I{"Are its props already<br>reference-stable end-to-end?"}
+    F -- "No" --> H["Skip it — nothing downstream benefits from reference stability"]
+    D -- "A whole component's render output" --> I{"Are its props already reference-stable end-to-end?"}
     I -- "Yes" --> J["React.memo"]
-    I -- "No" --> K["Fix prop stability upstream first<br>(memo will silently do nothing)"]
+    I -- "No" --> K["Fix prop stability upstream first (memo will silently do nothing)"]
 
     classDef stop fill:#c53030,stroke:#feb2b2,color:#fff
     classDef go fill:#2f855a,stroke:#9ae6b4,color:#fff

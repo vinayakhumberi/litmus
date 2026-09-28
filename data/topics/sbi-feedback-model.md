@@ -90,17 +90,17 @@ This also means tracking patterns across time, not just single incidents: is thi
 
 ```mermaid
 graph TD
-    A["Notice something worth<br>giving feedback on"] --> B{"Urgent or<br>safety-impacting?"}
-    B -- "Yes" --> C["Deliver real-time,<br>in the moment"]
-    B -- "No" --> D["Hold it for the next<br>scheduled 1:1"]
-    C --> E["Anchor a specific Situation:<br>a named moment, not 'you always'"]
+    A["Notice something worth giving feedback on"] --> B{"Urgent or safety-impacting?"}
+    B -- "Yes" --> C["Deliver real-time, in the moment"]
+    B -- "No" --> D["Hold it for the next scheduled 1:1"]
+    C --> E["Anchor a specific Situation: a named moment, not 'you always'"]
     D --> E
-    E --> F["State the observed Behavior:<br>an action, not a character label"]
-    F --> G["Name the concrete Impact:<br>on a person, the team, or the project"]
-    G --> H{"Praise or<br>corrective?"}
-    H -- "Praise" --> I["Reinforce: name exactly<br>what to keep doing"]
-    H -- "Corrective" --> J["Pause, invite their view,<br>agree on a next step"]
-    I --> K["Log the pattern for<br>the next 1:1 cadence"]
+    E --> F["State the observed Behavior: an action, not a character label"]
+    F --> G["Name the concrete Impact: on a person, the team, or the project"]
+    G --> H{"Praise or corrective?"}
+    H -- "Praise" --> I["Reinforce: name exactly what to keep doing"]
+    H -- "Corrective" --> J["Pause, invite their view, agree on a next step"]
+    I --> K["Log the pattern for the next 1:1 cadence"]
     J --> K
 
     classDef stage fill:#2b6cb0,stroke:#90cdf4,color:#fff
@@ -121,17 +121,17 @@ sequenceDiagram
     participant Lead as "Frontend Lead"
     participant Eng as "Engineer"
 
-    Lead->>Eng: "Opens 1:1: 'Want to talk through<br>something from this week'"
+    Lead->>Eng: "Opens 1:1: 'Want to talk through something from this week'"
     Eng-->>Lead: "Okay, sure"
-    Lead->>Eng: "Situation: 'In yesterday's standup,<br>when Priya was explaining the auth bug'"
-    Lead->>Eng: "Behavior: 'you cut her off twice<br>before she finished'"
-    Lead->>Eng: "Impact: 'we lost the root cause,<br>and spent 20 extra minutes debugging the wrong thing'"
+    Lead->>Eng: "Situation: 'In yesterday's standup, when Priya was explaining the auth bug'"
+    Lead->>Eng: "Behavior: 'you cut her off twice before she finished'"
+    Lead->>Eng: "Impact: 'we lost the root cause, and spent 20 extra minutes debugging the wrong thing'"
     Eng-->>Lead: "I didn't realize I was doing that"
-    Lead->>Eng: "Pauses, asks: 'What's going on<br>for you in those moments?'"
-    Eng-->>Lead: "Explains: feeling pressure<br>to move the discussion faster"
-    Lead->>Eng: "Proposes: 'Let's try letting people<br>finish, then reflect it back'"
+    Lead->>Eng: "Pauses, asks: 'What's going on for you in those moments?'"
+    Eng-->>Lead: "Explains: feeling pressure to move the discussion faster"
+    Lead->>Eng: "Proposes: 'Let's try letting people finish, then reflect it back'"
     Eng-->>Lead: "Agrees, commits to trying it"
-    Lead->>Lead: "Logs the pattern to<br>check in on next 1:1"
+    Lead->>Lead: "Logs the pattern to check in on next 1:1"
 ```
 
 ## 🏢 Interview Context & FAANG Signals

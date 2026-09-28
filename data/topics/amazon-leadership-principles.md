@@ -136,17 +136,17 @@ That last connective sentence is easy to skip and costs little to add, but it's 
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"lineColor": "#a0aec0", "edgeLabelBackground": "#2d3748", "textColor": "#f7fafc"}}}%%
 graph TD
-    A["14 Leadership Principles"] --> B["Group into thematic clusters<br>using the pairing table"]
-    B --> C["Scan your own career for<br>6-8 real candidate stories"]
-    C --> D{"Does this story have real<br>specifics: numbers, quotes,<br>a concrete decision?"}
-    D -- "No" --> E["Discard, or dig for the<br>real specifics before using it"]
+    A["14 Leadership Principles"] --> B["Group into thematic clusters using the pairing table"]
+    B --> C["Scan your own career for 6-8 real candidate stories"]
+    C --> D{"Does this story have real specifics: numbers, quotes, a concrete decision?"}
+    D -- "No" --> E["Discard, or dig for the real specifics before using it"]
     E --> C
-    D -- "Yes" --> F["Tag it with the 2-3 principles<br>it honestly supports"]
-    F --> G["Map the tagged bank<br>against all 14 principles"]
-    G --> H{"Any principle with<br>zero coverage?"}
-    H -- "Yes" --> I["Find or develop one<br>targeted story for the gap"]
+    D -- "Yes" --> F["Tag it with the 2-3 principles it honestly supports"]
+    F --> G["Map the tagged bank against all 14 principles"]
+    G --> H{"Any principle with zero coverage?"}
+    H -- "Yes" --> I["Find or develop one targeted story for the gap"]
     I --> G
-    H -- "No" --> J["Story bank ready:<br>structure each with STAR,<br>Result names the principle"]
+    H -- "No" --> J["Story bank ready: structure each with STAR, Result names the principle"]
 
     classDef stage fill:#2b6cb0,stroke:#90cdf4,color:#f7fafc
     classDef decision fill:#805ad5,stroke:#d6bcfa,color:#f7fafc
@@ -169,7 +169,7 @@ sequenceDiagram
     participant P as "Interviewer: Peer"
     participant BR as "Bar Raiser"
 
-    HM->>C: "Tell me about a time you disagreed<br>with a decision (Have Backbone, Disagree and Commit)"
+    HM->>C: "Tell me about a time you disagreed with a decision (Have Backbone, Disagree and Commit)"
     C->>HM: "Tells story from the bank"
     HM->>C: "What exactly did you say in that meeting?"
     C->>HM: "Gives a specific quote and outcome"
@@ -179,14 +179,14 @@ sequenceDiagram
         HM->>BR: "Independent write-up: unsubstantiated"
     end
 
-    P->>C: "Tell me about a problem you fixed<br>that wasn't assigned to you (Ownership + Bias for Action)"
+    P->>C: "Tell me about a problem you fixed that wasn't assigned to you (Ownership + Bias for Action)"
     C->>P: "Tells a different story from the bank"
     P->>C: "What was the actual data that told you it was a problem?"
     C->>P: "Gives the specific number"
     P->>BR: "Independent write-up: strong Dive Deep signal too"
 
-    BR->>BR: "Cross-references all independent<br>write-ups across the loop"
-    BR-->>C: "Loop decision requires consistent,<br>specific LP signal across interviewers,<br>not just a strong technical bar"
+    BR->>BR: "Cross-references all independent write-ups across the loop"
+    BR-->>C: "Loop decision requires consistent, specific LP signal across interviewers, not just a strong technical bar"
 ```
 
 ## 🏢 Interview Context & FAANG Signals

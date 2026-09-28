@@ -99,17 +99,17 @@ Say a Lead has to pick a state-management approach for a new product surface, wi
 
 ```mermaid
 graph TD
-    A["Ambiguous decision surfaces,<br>information is incomplete"] --> B{"One-way door or<br>two-way door?"}
-    B -- "One-way door<br>(irreversible or costly to undo later)" --> C["Escalate / broaden input,<br>invest in reducing uncertainty first"]
-    B -- "Two-way door<br>(cheap to reverse)" --> D["State the assumption explicitly"]
-    D --> E["Define falsifiable evidence<br>that would change the call"]
-    E --> F["Set a cheap checkpoint<br>to revisit"]
-    F --> G["Write a lightweight<br>decision record"]
-    G --> H["Communicate with useful confidence:<br>known vs. assumed vs. trigger"]
-    H --> I{"Checkpoint reached or<br>trigger fires?"}
+    A["Ambiguous decision surfaces, information is incomplete"] --> B{"One-way door or two-way door?"}
+    B -- "One-way door (irreversible or costly to undo later)" --> C["Escalate / broaden input, invest in reducing uncertainty first"]
+    B -- "Two-way door (cheap to reverse)" --> D["State the assumption explicitly"]
+    D --> E["Define falsifiable evidence that would change the call"]
+    E --> F["Set a cheap checkpoint to revisit"]
+    F --> G["Write a lightweight decision record"]
+    G --> H["Communicate with useful confidence: known vs. assumed vs. trigger"]
+    H --> I{"Checkpoint reached or trigger fires?"}
     I -- "No" --> H
-    I -- "Yes, evidence held" --> J["Keep the decision,<br>note it in the record"]
-    I -- "Yes, evidence contradicted it" --> K["Revisit the decision,<br>treat it as new information, not failure"]
+    I -- "Yes, evidence held" --> J["Keep the decision, note it in the record"]
+    I -- "Yes, evidence contradicted it" --> K["Revisit the decision, treat it as new information, not failure"]
 
     classDef start fill:#2b6cb0,stroke:#90cdf4,color:#fff
     classDef decision fill:#805ad5,stroke:#d6bcfa,color:#fff
@@ -132,16 +132,16 @@ sequenceDiagram
     participant Data as "Future evidence"
 
     Stake->>Lead: "Requests a direction, requirements still incomplete"
-    Lead->>Lead: "Classifies: two-way door,<br>reversible at bounded cost"
-    Lead->>Lead: "States assumption + falsifiable trigger<br>+ checkpoint date"
-    Lead->>Team: "Communicates decision with useful confidence:<br>what's known, what's assumed, what would change it"
-    Team->>Team: "Proceeds, knowing the bet<br>and the trigger to watch for"
+    Lead->>Lead: "Classifies: two-way door, reversible at bounded cost"
+    Lead->>Lead: "States assumption + falsifiable trigger + checkpoint date"
+    Lead->>Team: "Communicates decision with useful confidence: what's known, what's assumed, what would change it"
+    Team->>Team: "Proceeds, knowing the bet and the trigger to watch for"
     Data-->>Lead: "Checkpoint arrives"
     alt "Assumption held"
         Lead->>Stake: "Confirms decision, updates decision record"
     else "Assumption contradicted"
-        Lead->>Team: "Revisits decision openly,<br>frames it as planned, not a failure"
-        Lead->>Stake: "Reports the change and why,<br>citing the original stated trigger"
+        Lead->>Team: "Revisits decision openly, frames it as planned, not a failure"
+        Lead->>Stake: "Reports the change and why, citing the original stated trigger"
     end
 ```
 

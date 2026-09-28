@@ -106,14 +106,14 @@ A stalled mentoring relationship is diagnostic information, not evidence that me
 
 ```mermaid
 graph TD
-    A["New task assigned to junior"] --> B{"What's their actual skill<br>+ confidence on THIS task?"}
-    B -- "Low skill, low confidence" --> C["Stage 1: Direction —<br>specify what and how,<br>check in frequently"]
-    B -- "Growing skill, variable confidence" --> D["Stage 2: Coaching —<br>explain the why,<br>invite their input"]
-    B -- "Competent, confidence lags" --> E["Stage 3: Support —<br>give space, be a sounding board"]
-    B -- "Fully capable, confident" --> F["Stage 4: Delegation —<br>hand over full ownership"]
+    A["New task assigned to junior"] --> B{"What's their actual skill + confidence on THIS task?"}
+    B -- "Low skill, low confidence" --> C["Stage 1: Direction — specify what and how, check in frequently"]
+    B -- "Growing skill, variable confidence" --> D["Stage 2: Coaching — explain the why, invite their input"]
+    B -- "Competent, confidence lags" --> E["Stage 3: Support — give space, be a sounding board"]
+    B -- "Fully capable, confident" --> F["Stage 4: Delegation — hand over full ownership"]
 
-    E --> G{"Lead still specifying<br>the how, out of habit?"}
-    G -- "Yes" --> H["Over-managing —<br>caps growth, invisible to the Lead"]
+    E --> G{"Lead still specifying the how, out of habit?"}
+    G -- "Yes" --> H["Over-managing — caps growth, invisible to the Lead"]
     G -- "No" --> I["Correctly calibrated"]
 
     classDef stage fill:#2b6cb0,stroke:#90cdf4,color:#fff
@@ -136,20 +136,20 @@ sequenceDiagram
     participant Jr as "Junior engineer"
     participant Sys as "System (flagged/reviewed)"
 
-    Lead->>Lead: "Sizes assignment just past<br>current comfort"
-    Lead->>Jr: "Assigns task, scoped behind<br>a safety net (flag/review gate)"
-    Jr->>Sys: "Attempts the task, makes a<br>real design decision"
+    Lead->>Lead: "Sizes assignment just past current comfort"
+    Lead->>Jr: "Assigns task, scoped behind a safety net (flag/review gate)"
+    Jr->>Sys: "Attempts the task, makes a real design decision"
     alt "Decision holds up"
         Sys-->>Jr: "Succeeds"
         Jr->>Lead: "Reports outcome"
-        Lead->>Jr: "Reviews briefly, confirms<br>the judgment used"
+        Lead->>Jr: "Reviews briefly, confirms the judgment used"
     else "Decision fails, safely contained"
         Sys-->>Jr: "Fails, but blast radius bounded"
         Jr->>Lead: "Surfaces the failure"
-        Lead->>Jr: "Structured review: why did the<br>wrong path look right? What signal<br>would've caught it earlier?"
+        Lead->>Jr: "Structured review: why did the wrong path look right? What signal would've caught it earlier?"
         Jr->>Jr: "Extracts transferable lesson"
     end
-    Lead->>Lead: "Notes signal for next<br>stage-calibration decision"
+    Lead->>Lead: "Notes signal for next stage-calibration decision"
 ```
 
 ## 🏢 Interview Context & FAANG Signals

@@ -86,19 +86,19 @@ Visual regression testing (Chromatic, Percy, or an equivalent pinned against a S
 
 ```mermaid
 graph TD
-    A["Designing a new component's API"] --> B{"Does behavior need to be reused<br>across different visual treatments?"}
-    B -- "Yes" --> C["Extract a headless hook/state machine<br>(behavior + ARIA, no styling)"]
-    B -- "No" --> D["Couple behavior and styling<br>in one component"]
-    C --> E{"Does the consumer need deep<br>structural customization?"}
-    E -- "Yes" --> F["Compound component API<br>e.g. Select with Select.Option"]
-    E -- "No" --> G["Monolithic prop-driven API<br>e.g. Select with an options prop"]
+    A["Designing a new component's API"] --> B{"Does behavior need to be reused across different visual treatments?"}
+    B -- "Yes" --> C["Extract a headless hook/state machine (behavior + ARIA, no styling)"]
+    B -- "No" --> D["Couple behavior and styling in one component"]
+    C --> E{"Does the consumer need deep structural customization?"}
+    E -- "Yes" --> F["Compound component API e.g. Select with Select.Option"]
+    E -- "No" --> G["Monolithic prop-driven API e.g. Select with an options prop"]
     D --> G
-    F --> H{"Might it need to render<br>as a different element?"}
+    F --> H{"Might it need to render as a different element?"}
     G --> H
-    H -- "Yes: e.g. a Button that must<br>sometimes render an anchor" --> I["Polymorphic 'as'/'asChild' prop"]
-    H -- "No" --> J{"Will some consumers need to<br>manage state externally?"}
+    H -- "Yes: e.g. a Button that must sometimes render an anchor" --> I["Polymorphic 'as'/'asChild' prop"]
+    H -- "No" --> J{"Will some consumers need to manage state externally?"}
     I --> J
-    J -- "Yes" --> K["Support both controlled and<br>uncontrolled modes"]
+    J -- "Yes" --> K["Support both controlled and uncontrolled modes"]
     J -- "No" --> L["Uncontrolled only - simpler API"]
 
     classDef decision fill:#805ad5,stroke:#d6bcfa,color:#fff

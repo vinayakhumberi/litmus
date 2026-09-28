@@ -117,19 +117,19 @@ A second race worth naming: a user cancels one question and immediately asks ano
 
 ```mermaid
 graph TD
-    A["fetch(promptUrl, { method: 'POST', signal })"] --> B["Get reader from response.body<br>(ReadableStream)"]
+    A["fetch(promptUrl, { method: 'POST', signal })"] --> B["Get reader from response.body (ReadableStream)"]
     B --> C["reader.read()"]
     C --> D{"done === true?"}
-    D -- "Yes" --> E["Stream complete<br>finalize rendered message"]
+    D -- "Yes" --> E["Stream complete finalize rendered message"]
     D -- "No" --> F["TextDecoder.decode(chunk, { stream: true })"]
-    F --> G["Append decoded text<br>to pending buffer"]
-    G --> H{"Buffer contains a<br>complete SSE event<br>(double-newline boundary)?"}
+    F --> G["Append decoded text to pending buffer"]
+    G --> H{"Buffer contains a complete SSE event (double-newline boundary)?"}
     H -- "No" --> C
-    H -- "Yes" --> I["Extract and parse<br>the complete event(s)"]
-    I --> J["Append parsed token(s)<br>to accumulated message"]
-    J --> K{"Is a render already<br>scheduled this frame?"}
+    H -- "Yes" --> I["Extract and parse the complete event(s)"]
+    I --> J["Append parsed token(s) to accumulated message"]
+    J --> K{"Is a render already scheduled this frame?"}
     K -- "Yes" --> C
-    K -- "No" --> L["Schedule render via<br>requestAnimationFrame"]
+    K -- "No" --> L["Schedule render via requestAnimationFrame"]
     L --> C
 
     classDef decision fill:#805ad5,stroke:#d6bcfa,color:#fff

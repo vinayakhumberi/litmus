@@ -259,34 +259,34 @@ React 18 does not render "fully concurrently" by default — most updates still 
 
 ```mermaid
 graph TD
-    A["setState / useState dispatch"] --> B{"Scheduler: enqueue update<br>assign Lane priority"}
+    A["setState / useState dispatch"] --> B{"Scheduler: enqueue update assign Lane priority"}
     B --> C["performConcurrentWorkOnRoot"]
-    C --> D["Render Phase<br>Interruptible"]
+    C --> D["Render Phase Interruptible"]
     
-    D --> E["beginWork: FunctionComponent<br>call hooks, compute new VDOM"]
-    E --> F{"reconcileChildFibers<br>diff old vs new children"}
+    D --> E["beginWork: FunctionComponent call hooks, compute new VDOM"]
+    E --> F{"reconcileChildFibers diff old vs new children"}
     
-    F --> G{"Element type<br>changed?"}
-    G -- Yes --> H["Delete entire subtree<br>Mount fresh fiber tree"]
+    F --> G{"Element type changed?"}
+    G -- Yes --> H["Delete entire subtree Mount fresh fiber tree"]
     G -- No --> I{"Keys provided?"}
     
-    I -- Yes --> J["Map-based identity lookup<br>O(n) move/update matching"]
-    I -- No --> K["Index-based matching<br>O(n) but unstable identity"]
+    I -- Yes --> J["Map-based identity lookup O(n) move/update matching"]
+    I -- No --> K["Index-based matching O(n) but unstable identity"]
     
-    J --> L["Tag effects:<br>Placement / Update / Deletion"]
+    J --> L["Tag effects: Placement / Update / Deletion"]
     K --> L
     H --> L
     
-    L --> M{"More work?<br>Higher priority update?"}
-    M -- Yes, preempt --> N["Abandon WIP tree<br>Process urgent update<br>Restart deferred work"]
-    M -- No --> O["completeWork:<br>build effect list"]
+    L --> M{"More work? Higher priority update?"}
+    M -- Yes, preempt --> N["Abandon WIP tree Process urgent update Restart deferred work"]
+    M -- No --> O["completeWork: build effect list"]
     
-    O --> P["Commit Phase<br>Synchronous"]
-    P --> Q["Pass 1: Before Mutation<br>getSnapshotBeforeUpdate<br>useEffect cleanups scheduled"]
-    Q --> R["Pass 2: Mutation<br>Apply DOM changes<br>insertBefore / removeChild / patch"]
-    R --> S["Pass 3: Layout<br>useLayoutEffect<br>componentDidMount / DidUpdate"]
-    S --> T["Schedule useEffect callbacks<br>via MessageChannel / postTask"]
-    T --> U["Current tree ← WIP tree<br>Double-buffer swap"]
+    O --> P["Commit Phase Synchronous"]
+    P --> Q["Pass 1: Before Mutation getSnapshotBeforeUpdate useEffect cleanups scheduled"]
+    Q --> R["Pass 2: Mutation Apply DOM changes insertBefore / removeChild / patch"]
+    R --> S["Pass 3: Layout useLayoutEffect componentDidMount / DidUpdate"]
+    S --> T["Schedule useEffect callbacks via MessageChannel / postTask"]
+    T --> U["Current tree ← WIP tree Double-buffer swap"]
 
     %% Class Definitions for Elegant Styling
     classDef default fill:#f9f9fa,stroke:#cbd5e1,stroke-width:1px,color:#334155,font-family:sans-serif;

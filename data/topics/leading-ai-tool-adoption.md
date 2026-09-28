@@ -101,14 +101,14 @@ This is the actual behavioral-round answer, and it holds together best in four p
 
 ```mermaid
 graph TD
-    A["Individual experimentation:<br>engineers use AI tools informally"] --> B{"Is there real signal<br>this is helping?"}
+    A["Individual experimentation: engineers use AI tools informally"] --> B{"Is there real signal this is helping?"}
     B -- "No / unclear" --> A
-    B -- "Yes" --> C["Documented team pilot:<br>shared config, explicit scope,<br>success criteria defined upfront"]
-    C --> D{"Did the pilot meet its<br>defined success criteria?"}
-    D -- "No" --> E["Diagnose and adjust scope<br>before scaling further"]
+    B -- "Yes" --> C["Documented team pilot: shared config, explicit scope, success criteria defined upfront"]
+    C --> D{"Did the pilot meet its defined success criteria?"}
+    D -- "No" --> E["Diagnose and adjust scope before scaling further"]
     E --> C
-    D -- "Yes" --> F["Org-wide standard:<br>shared conventions, uniform<br>review standards, central tooling"]
-    F --> G["Continuous governance:<br>guardrails run in CI,<br>metrics tracked, standards revisited"]
+    D -- "Yes" --> F["Org-wide standard: shared conventions, uniform review standards, central tooling"]
+    F --> G["Continuous governance: guardrails run in CI, metrics tracked, standards revisited"]
 
     classDef stage fill:#2b6cb0,stroke:#90cdf4,color:#fff
     classDef decision fill:#805ad5,stroke:#d6bcfa,color:#fff
@@ -133,14 +133,14 @@ sequenceDiagram
     Dev->>AI: "Generates a feature change"
     AI-->>Dev: "Produces a diff"
     Dev->>CI: "Opens a PR"
-    CI->>CI: "Runs dependency-existence check,<br>secret scan, convention lint"
+    CI->>CI: "Runs dependency-existence check, secret scan, convention lint"
     alt "Guardrail check fails"
         CI-->>Dev: "Blocks merge, reports the specific failure"
     else "Guardrails pass"
         CI->>Rev: "Routes PR for review"
-        Rev->>Rev: "Classifies risk tier:<br>low / medium / high"
+        Rev->>Rev: "Classifies risk tier: low / medium / high"
         alt "High-risk change"
-            Rev->>Dev: "Requires a walkthrough of every<br>external call or dependency claimed"
+            Rev->>Dev: "Requires a walkthrough of every external call or dependency claimed"
         end
         Rev-->>CI: "Approves"
         CI-->>Dev: "Merges"

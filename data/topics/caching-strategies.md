@@ -110,24 +110,24 @@ A single request can pass through several independently-invalidated caches: brow
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"background":"transparent","primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#64748b","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontFamily":"\"Plus Jakarta Sans\", sans-serif","fontSize":"14px"}}}%%
 flowchart TD
-    A(["📥 Request Made"]) --> B{"🗄️ Cached Entry<br>Exists?"}
+    A(["📥 Request Made"]) --> B{"🗄️ Cached Entry Exists?"}
 
     B -- "No" --> C["🌐 Fetch from Network"]
-    B -- "Yes" --> D{"🚫 no-store<br>on Cached Entry?"}
+    B -- "Yes" --> D{"🚫 no-store on Cached Entry?"}
 
     D -- "Yes" --> C
-    D -- "No" --> E{"⏱️ Within max-age<br>Freshness Window?"}
+    D -- "No" --> E{"⏱️ Within max-age Freshness Window?"}
 
-    E -- "Yes" --> F{"♾️ immutable<br>Flag Set?"}
-    F -- "Yes or Normal Reload" --> G["✅ Serve from Cache<br>(no network needed)"]
+    E -- "Yes" --> F{"♾️ immutable Flag Set?"}
+    F -- "Yes or Normal Reload" --> G["✅ Serve from Cache (no network needed)"]
 
-    E -- "No" --> H{"🎫 Has Validator?<br>(ETag / Last-Modified)"}
+    E -- "No" --> H{"🎫 Has Validator? (ETag / Last-Modified)"}
     H -- "No" --> C
-    H -- "Yes" --> I["📡 Send Conditional Request<br>(If-None-Match)"]
+    H -- "Yes" --> I["📡 Send Conditional Request (If-None-Match)"]
 
-    I --> J{"❓ Origin Confirms<br>Unchanged?"}
+    I --> J{"❓ Origin Confirms Unchanged?"}
     J -- "304 Not Modified" --> G
-    J -- "200 with New Body" --> K["♻️ Update Cache<br>with Fresh Response"]
+    J -- "200 with New Body" --> K["♻️ Update Cache with Fresh Response"]
 
     C --> K
     K --> L(["🖼️ Response Delivered"])

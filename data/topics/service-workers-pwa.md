@@ -142,20 +142,20 @@ Neither of these is "a service worker feature" in the sense of always being avai
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#94a3b8","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontSize":"16px"}}}%%
 flowchart TD
-    A["Page calls<br>register()"] --> B["Install event<br>precache app shell"]
-    B --> C{"skipWaiting<br>called?"}
-    C -- "No" --> D["Waiting —<br>old clients still open"]
-    D --> E["Old clients<br>all close"]
-    C -- "Yes" --> F["Activate event<br>clean up old caches"]
+    A["Page calls register()"] --> B["Install event precache app shell"]
+    B --> C{"skipWaiting called?"}
+    C -- "No" --> D["Waiting — old clients still open"]
+    D --> E["Old clients all close"]
+    C -- "Yes" --> F["Activate event clean up old caches"]
     E --> F
-    F --> G{"clients.claim<br>called?"}
-    G -- "No" --> H["Controls only<br>future page loads"]
-    G -- "Yes" --> I["Controls open<br>pages immediately"]
-    H --> J["Idle —<br>waiting for events"]
+    F --> G{"clients.claim called?"}
+    G -- "No" --> H["Controls only future page loads"]
+    G -- "Yes" --> I["Controls open pages immediately"]
+    H --> J["Idle — waiting for events"]
     I --> J
-    J --> K["fetch / push /<br>sync event fires"]
+    J --> K["fetch / push / sync event fires"]
     K --> J
-    J --> L["Browser terminates<br>idle worker"]
+    J --> L["Browser terminates idle worker"]
     L --> K
 
     classDef start fill:#0369a1,stroke:#7dd3fc,color:#f0f9ff,stroke-width:1.5px
@@ -176,13 +176,13 @@ flowchart TD
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#94a3b8","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontSize":"16px"}}}%%
 flowchart TD
-    A["fetch event<br>intercepted"] --> B{"Versioned static<br>asset?"}
-    B -- "Yes" --> C["Cache First —<br>serve cache, skip network"]
-    B -- "No" --> D{"Freshness<br>critical?"}
-    D -- "Yes" --> E["Network First —<br>fall back to cache offline"]
-    D -- "No" --> F{"Instant response<br>matters most?"}
-    F -- "Yes" --> G["Stale-While-Revalidate —<br>serve cache, refresh in background"]
-    F -- "No" --> H["Network Only —<br>never cache this"]
+    A["fetch event intercepted"] --> B{"Versioned static asset?"}
+    B -- "Yes" --> C["Cache First — serve cache, skip network"]
+    B -- "No" --> D{"Freshness critical?"}
+    D -- "Yes" --> E["Network First — fall back to cache offline"]
+    D -- "No" --> F{"Instant response matters most?"}
+    F -- "Yes" --> G["Stale-While-Revalidate — serve cache, refresh in background"]
+    F -- "No" --> H["Network Only — never cache this"]
 
     classDef start fill:#0369a1,stroke:#7dd3fc,color:#f0f9ff,stroke-width:1.5px
     classDef decision fill:#4338ca,stroke:#c4b5fd,color:#f5f3ff,stroke-width:1.5px

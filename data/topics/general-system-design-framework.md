@@ -111,22 +111,22 @@ A concrete pattern: "I haven't operated a sharded cluster's rebalancing directly
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"lineColor": "#a0aec0", "edgeLabelBackground": "#2d3748", "textColor": "#f7fafc"}}}%%
 graph TD
-    A["Interviewer poses an open-ended prompt<br>e.g. 'design a URL shortener'"] --> B["Scope the prompt<br>(2-3 min)"]
-    B --> C["Gather functional +<br>non-functional requirements<br>(scale, latency, consistency)"]
-    C --> D["Back-of-envelope capacity estimate:<br>QPS, storage, bandwidth"]
-    D --> E{"Numbers plausible for a<br>single-region, simple design?"}
-    E -- "Yes" --> F["High-level architecture:<br>API contract + data model + components"]
-    E -- "No: scale demands it" --> G["Note sharding/replication/caching<br>needs explicitly before proceeding"]
+    A["Interviewer poses an open-ended prompt e.g. 'design a URL shortener'"] --> B["Scope the prompt (2-3 min)"]
+    B --> C["Gather functional + non-functional requirements (scale, latency, consistency)"]
+    C --> D["Back-of-envelope capacity estimate: QPS, storage, bandwidth"]
+    D --> E{"Numbers plausible for a single-region, simple design?"}
+    E -- "Yes" --> F["High-level architecture: API contract + data model + components"]
+    E -- "No: scale demands it" --> G["Note sharding/replication/caching needs explicitly before proceeding"]
     G --> F
-    F --> H{"Interviewer signals interest<br>in a specific component?"}
+    F --> H{"Interviewer signals interest in a specific component?"}
     H -- "Yes" --> I["Deep dive on that component"]
     H -- "No: candidate chooses" --> I
-    I --> J{"Component is outside<br>candidate's real depth?"}
-    J -- "Yes" --> K["Name the boundary explicitly,<br>reason from principles anyway"]
+    I --> J{"Component is outside candidate's real depth?"}
+    J -- "Yes" --> K["Name the boundary explicitly, reason from principles anyway"]
     J -- "No" --> L["Go deep with real detail"]
-    K --> M["Narrate trade-offs:<br>SQL/NoSQL, consistency, sync/async"]
+    K --> M["Narrate trade-offs: SQL/NoSQL, consistency, sync/async"]
     L --> M
-    M --> N["Wrap up: summarize,<br>state what you'd revisit"]
+    M --> N["Wrap up: summarize, state what you'd revisit"]
 
     classDef stage fill:#2b6cb0,stroke:#90cdf4,color:#f7fafc
     classDef decision fill:#805ad5,stroke:#d6bcfa,color:#f7fafc

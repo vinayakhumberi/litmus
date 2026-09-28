@@ -158,19 +158,19 @@ This gives a genuine single source of truth — one store, standard Redux DevToo
 
 ```mermaid
 graph TD
-    A["Component calls useQuery(['order', id])"] --> B{"Cache entry exists<br>for this exact key?"}
-    B -- "No" --> C["Fetch from network<br>(mark query as loading)"]
+    A["Component calls useQuery(['order', id])"] --> B{"Cache entry exists for this exact key?"}
+    B -- "No" --> C["Fetch from network (mark query as loading)"]
     C --> D["Write response into cache"]
-    B -- "Yes" --> E{"Is the cached entry<br>still fresh (within staleTime)?"}
-    E -- "Yes" --> F["Return cached data immediately<br>no network request"]
-    E -- "No (stale)" --> G["Return stale cached data immediately<br>(stale-while-revalidate)"]
+    B -- "Yes" --> E{"Is the cached entry still fresh (within staleTime)?"}
+    E -- "Yes" --> F["Return cached data immediately no network request"]
+    E -- "No (stale)" --> G["Return stale cached data immediately (stale-while-revalidate)"]
     G --> H["Trigger a background refetch"]
-    H --> I{"Is an identical request<br>already in flight?"}
-    I -- "Yes" --> J["Attach to the existing<br>in-flight promise (dedup)"]
+    H --> I{"Is an identical request already in flight?"}
+    I -- "Yes" --> J["Attach to the existing in-flight promise (dedup)"]
     I -- "No" --> K["Issue a new network request"]
     J --> D
     K --> D
-    D --> L["Notify every component<br>subscribed to this key"]
+    D --> L["Notify every component subscribed to this key"]
     F --> L
 
     classDef decision fill:#805ad5,stroke:#d6bcfa,color:#fff

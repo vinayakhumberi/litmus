@@ -472,10 +472,10 @@ graph TD
     D --> E["Element Render Delay"]
     E --> F["LCP Timestamp"]
 
-    B -- "Fix: CDN, Edge SSR,<br>HTTP/3, Early Hints (103)" --> B
-    C -- "Fix: Remove render-blocking<br>scripts/stylesheets,<br>preload LCP resource" --> C
-    D -- "Fix: Image CDN,<br>WebP/AVIF, fetchpriority=high,<br>Reduce image byte size" --> D
-    E -- "Fix: Reduce JS execution<br>before paint, avoid<br>late hydration on LCP element" --> E
+    B -- "Fix: CDN, Edge SSR, HTTP/3, Early Hints (103)" --> B
+    C -- "Fix: Remove render-blocking scripts/stylesheets, preload LCP resource" --> C
+    D -- "Fix: Image CDN, WebP/AVIF, fetchpriority=high, Reduce image byte size" --> D
+    E -- "Fix: Reduce JS execution before paint, avoid late hydration on LCP element" --> E
 
     classDef start fill:#0369a1,stroke:#7dd3fc,color:#f0f9ff,stroke-width:1.5px;
     classDef subpart fill:#4338ca,stroke:#c4b5fd,color:#f5f3ff,stroke-width:1.5px;
@@ -517,17 +517,17 @@ sequenceDiagram
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"background":"transparent","primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#64748b","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontFamily":"\"Plus Jakarta Sans\", sans-serif","fontSize":"14px"}}}%%
 graph LR
-    A["Shift 1<br>t=0.5s<br>score=0.04"] --> W1["Session Window 1"]
-    B["Shift 2<br>t=1.2s<br>score=0.06"] --> W1
-    C["Shift 3<br>t=2.8s<br>score=0.02"] --> W1
+    A["Shift 1 t=0.5s score=0.04"] --> W1["Session Window 1"]
+    B["Shift 2 t=1.2s score=0.06"] --> W1
+    C["Shift 3 t=2.8s score=0.02"] --> W1
     D["Gap > 1s"] --> E["New Window Opens"]
     E --> W2["Session Window 2"]
-    F["Shift 4<br>t=5.0s<br>score=0.12"] --> W2
-    G["Shift 5<br>t=5.8s<br>score=0.07"] --> W2
+    F["Shift 4 t=5.0s score=0.12"] --> W2
+    G["Shift 5 t=5.8s score=0.07"] --> W2
 
     W1 -- "Sum = 0.12" --> CLS_CALC["CLS = max window score"]
     W2 -- "Sum = 0.19" --> CLS_CALC
-    CLS_CALC --> RESULT["Reported CLS = 0.19<br>(largest window wins)"]
+    CLS_CALC --> RESULT["Reported CLS = 0.19 (largest window wins)"]
 
     classDef shift fill:#0369a1,stroke:#7dd3fc,color:#f0f9ff,stroke-width:1.5px;
     classDef window fill:#475569,stroke:#cbd5e1,color:#f8fafc,stroke-width:1.5px;

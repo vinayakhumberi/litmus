@@ -129,15 +129,15 @@ A small, real, end-to-end prototype demonstrating the reasoning/tool-call/observ
 
 ```mermaid
 graph TD
-    A["User sends a goal/prompt to the agent"] --> B["Reasoning step:<br>LLM decides what to do next"]
-    B --> C{"Does the model choose<br>to call a tool, or give<br>a final answer?"}
-    C -- "Final answer" --> D["Return final answer to user<br>loop ends"]
-    C -- "Tool call" --> E["Execute the requested tool<br>with the model's chosen arguments"]
-    E --> F["Capture the tool's result<br>(the 'observation')"]
-    F --> G["Append observation to<br>the conversation/context"]
-    G --> H{"Reached max steps<br>or a stop condition?"}
+    A["User sends a goal/prompt to the agent"] --> B["Reasoning step: LLM decides what to do next"]
+    B --> C{"Does the model choose to call a tool, or give a final answer?"}
+    C -- "Final answer" --> D["Return final answer to user loop ends"]
+    C -- "Tool call" --> E["Execute the requested tool with the model's chosen arguments"]
+    E --> F["Capture the tool's result (the 'observation')"]
+    F --> G["Append observation to the conversation/context"]
+    G --> H{"Reached max steps or a stop condition?"}
     H -- "No" --> B
-    H -- "Yes" --> I["Force a final answer, or<br>surface an explicit 'incomplete' state"]
+    H -- "Yes" --> I["Force a final answer, or surface an explicit 'incomplete' state"]
 
     classDef decision fill:#805ad5,stroke:#d6bcfa,color:#fff
     classDef action fill:#2b6cb0,stroke:#90cdf4,color:#fff

@@ -109,15 +109,15 @@ Track a baseline *before* the paydown work starts — the same discipline as any
 
 ```mermaid
 graph TD
-    A["New debt item identified<br>or nominated for this cycle"] --> B{"Classify: deliberate,<br>accidental/environmental,<br>bit rot, or reckless?"}
-    B --> C["Estimate blast radius ×<br>probability of incident"]
-    C --> D{"Does upcoming roadmap work<br>touch this same area?"}
-    D -- "Yes" --> E["Strong candidate:<br>fix-now cost is lower than<br>fix-after-building-on-top cost"]
-    D -- "No" --> F{"Is the cost-now vs.<br>cost-later gap widening?"}
+    A["New debt item identified or nominated for this cycle"] --> B{"Classify: deliberate, accidental/environmental, bit rot, or reckless?"}
+    B --> C["Estimate blast radius × probability of incident"]
+    C --> D{"Does upcoming roadmap work touch this same area?"}
+    D -- "Yes" --> E["Strong candidate: fix-now cost is lower than fix-after-building-on-top cost"]
+    D -- "No" --> F{"Is the cost-now vs. cost-later gap widening?"}
     F -- "Yes, steeply" --> E
-    F -- "No / stable" --> G["Defer — track it,<br>revisit next cycle"]
+    F -- "No / stable" --> G["Defer — track it, revisit next cycle"]
     E --> H["Goes into this cycle's 30%"]
-    G --> I["Stays in backlog,<br>re-scored next cycle"]
+    G --> I["Stays in backlog, re-scored next cycle"]
 
     classDef input fill:#2b6cb0,stroke:#90cdf4,color:#fff
     classDef decision fill:#805ad5,stroke:#d6bcfa,color:#fff
@@ -139,13 +139,13 @@ sequenceDiagram
     participant Exec as "Leadership"
     participant Team as "Team"
 
-    PM->>Lead: "Deadline is tight — can we borrow<br>the 30% reserve this cycle?"
-    Lead->>Lead: "Names the specific debt items<br>that would slip, and their compounding cost"
-    Lead->>Exec: "Presents the trade-off explicitly:<br>ship date vs. quantified deferred cost"
+    PM->>Lead: "Deadline is tight — can we borrow the 30% reserve this cycle?"
+    Lead->>Lead: "Names the specific debt items that would slip, and their compounding cost"
+    Lead->>Exec: "Presents the trade-off explicitly: ship date vs. quantified deferred cost"
     alt "Leadership approves the trade"
         Exec-->>Lead: "Approves, with eyes open"
         Lead->>Team: "Reallocates capacity to 100% feature work"
-        Lead->>Lead: "Schedules makeup cycle<br>(e.g. 40% debt next cycle)"
+        Lead->>Lead: "Schedules makeup cycle (e.g. 40% debt next cycle)"
     else "Leadership declines"
         Exec-->>Lead: "Reserve stays protected"
         Lead->>PM: "Deadline gets renegotiated instead"
