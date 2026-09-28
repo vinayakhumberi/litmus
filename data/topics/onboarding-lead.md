@@ -102,18 +102,18 @@ The selection criteria for these early contributions matter: they should be smal
 
 ```mermaid
 graph TD
-    A["Day 1: join a new team as Lead"] --> B["Phase 1 (Days 1-30):<br>Listen & map — team, codebase,<br>stakeholders, pain points"]
-    B --> C{"Found something that<br>looks wrong?"}
-    C -- "Yes" --> D["Apply Chesterton's Fence:<br>ask WHY it's built this way first"]
+    A["Day 1: join a new team as Lead"] --> B["Phase 1 (Days 1-30): Listen & map — team, codebase, stakeholders, pain points"]
+    B --> C{"Found something that looks wrong?"}
+    C -- "Yes" --> D["Apply Chesterton's Fence: ask WHY it's built this way first"]
     D --> E{"Is it actually load-bearing?"}
     E -- "Yes, it's load-bearing" --> B
-    E -- "No real reason found" --> F["Note it for Phase 3,<br>don't act yet"]
+    E -- "No real reason found" --> F["Note it for Phase 3, don't act yet"]
     F --> B
-    C -- "No / still mapping" --> G["Phase 2 (Days 30-60):<br>Build trust via 1-2 small,<br>visible, well-executed wins"]
-    G --> H{"Is credibility with<br>the team established?"}
+    C -- "No / still mapping" --> G["Phase 2 (Days 30-60): Build trust via 1-2 small, visible, well-executed wins"]
+    G --> H{"Is credibility with the team established?"}
     H -- "Not yet" --> G
-    H -- "Yes" --> I["Phase 3 (Days 60-90):<br>Drive direction using<br>earned credibility"]
-    I --> J["Propose grounded changes:<br>'here's how' now follows<br>a real 'here's why'"]
+    H -- "Yes" --> I["Phase 3 (Days 60-90): Drive direction using earned credibility"]
+    I --> J["Propose grounded changes: 'here's how' now follows a real 'here's why'"]
 
     classDef phase fill:#2b6cb0,stroke:#90cdf4,color:#fff
     classDef decision fill:#805ad5,stroke:#d6bcfa,color:#fff
@@ -132,20 +132,20 @@ graph TD
 sequenceDiagram
     participant Lead as "New Lead"
     participant Eng as "Team engineer"
-    participant PrevLead as "Departed / prior lead<br>(or team memory)"
+    participant PrevLead as "Departed / prior lead (or team memory)"
     participant Stake as "Stakeholder"
 
     Lead->>Eng: "1:1: what's working, what's not?"
     Eng-->>Lead: "Flags an odd process as painful"
     Lead->>Lead: "Resist proposing a fix immediately"
     Lead->>PrevLead: "Asks: why was this built this way?"
-    PrevLead-->>Lead: "Explains original constraint<br>(may still apply, may not)"
-    Lead->>Stake: "Cross-checks: does this constraint<br>still hold from your side?"
+    PrevLead-->>Lead: "Explains original constraint (may still apply, may not)"
+    Lead->>Stake: "Cross-checks: does this constraint still hold from your side?"
     Stake-->>Lead: "Confirms or contradicts"
     alt "Constraint no longer applies"
-        Lead->>Lead: "Logs as a Phase 3 candidate,<br>not an immediate change"
+        Lead->>Lead: "Logs as a Phase 3 candidate, not an immediate change"
     else "Constraint still applies"
-        Lead->>Lead: "Norm is load-bearing —<br>adapt to it, don't fight it"
+        Lead->>Lead: "Norm is load-bearing — adapt to it, don't fight it"
     end
 ```
 

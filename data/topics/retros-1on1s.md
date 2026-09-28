@@ -118,15 +118,15 @@ None of these signals is actionable from a single data point; they're only visib
 
 ```mermaid
 graph TD
-    A["Retro opens:<br>review last retro's action items"] --> B{"Were they<br>completed?"}
-    B -- "No" --> C["Surface why not,<br>reassign or re-scope"]
-    C --> D["Structured discussion:<br>written input + round-robin"]
+    A["Retro opens: review last retro's action items"] --> B{"Were they completed?"}
+    B -- "No" --> C["Surface why not, reassign or re-scope"]
+    C --> D["Structured discussion: written input + round-robin"]
     B -- "Yes" --> D
-    D --> E["New action items:<br>owner + deadline assigned"]
-    E --> F{"Same format run<br>3+ times in a row?"}
-    F -- "Yes" --> G["Rotate format next time:<br>start/stop/continue, themed retro"]
+    D --> E["New action items: owner + deadline assigned"]
+    E --> F{"Same format run 3+ times in a row?"}
+    F -- "Yes" --> G["Rotate format next time: start/stop/continue, themed retro"]
     F -- "No" --> H["Keep standard format"]
-    G --> I["Action items tracked visibly<br>until next retro opens"]
+    G --> I["Action items tracked visibly until next retro opens"]
     H --> I
 
     classDef stage fill:#2b6cb0,stroke:#90cdf4,color:#fff

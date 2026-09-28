@@ -110,11 +110,11 @@ Two more concerns round out the scaling story. Rate-limiting URL creation (per I
 graph TD
     A["Client: POST long URL"] --> B["API layer"]
     B --> C{"Custom alias requested?"}
-    C -- "Yes" --> D["Check alias uniqueness<br>in datastore"]
+    C -- "Yes" --> D["Check alias uniqueness in datastore"]
     D -- "Taken" --> E["Return 409 Conflict"]
-    D -- "Available" --> F["Claim key from<br>pre-generated key pool"]
+    D -- "Available" --> F["Claim key from pre-generated key pool"]
     C -- "No" --> F
-    F --> G[("Datastore: write<br>short code to long URL")]
+    F --> G[("Datastore: write short code to long URL")]
     G --> H["Return short URL to client"]
 
     I["Client: GET short URL"] --> J["API layer"]
@@ -150,7 +150,7 @@ sequenceDiagram
 
     W->>W: "Generates base62 candidate codes"
     W->>P: "Bulk-inserts unused, validated codes"
-    Note over W,P: "Runs continuously in the background,<br>decoupled from the write path"
+    Note over W,P: "Runs continuously in the background, decoupled from the write path"
 
     API->>P: "Atomically claims one unused code"
     P-->>API: "Returns claimed short code"

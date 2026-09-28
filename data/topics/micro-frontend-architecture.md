@@ -120,14 +120,14 @@ One detail worth knowing cold: federation is **symmetric**. Any app can be host 
 
 ```mermaid
 graph TD
-    A["Host app: import('remoteApp/Button')"] --> B{"Is remoteApp's container<br>already loaded?"}
-    B -- "No" --> C["Fetch remoteEntry.js<br>(small manifest, not the full bundle)"]
-    C --> D["Execute remoteEntry.js,<br>register container globally"]
+    A["Host app: import('remoteApp/Button')"] --> B{"Is remoteApp's container already loaded?"}
+    B -- "No" --> C["Fetch remoteEntry.js (small manifest, not the full bundle)"]
+    C --> D["Execute remoteEntry.js, register container globally"]
     B -- "Yes" --> E
     D --> E["Call container.init(hostShareScope)"]
-    E --> F{"Shared dep version compatible<br>with what's already in scope?"}
-    F -- "Yes (singleton satisfied)" --> G["Reuse existing shared module<br>(one React instance)"]
-    F -- "No / strictVersion mismatch" --> H["Warn, or eager-load a<br>duplicate copy of the dependency"]
+    E --> F{"Shared dep version compatible with what's already in scope?"}
+    F -- "Yes (singleton satisfied)" --> G["Reuse existing shared module (one React instance)"]
+    F -- "No / strictVersion mismatch" --> H["Warn, or eager-load a duplicate copy of the dependency"]
     G --> I["Call container.get('./Button')"]
     H --> I
     I --> J["Execute the returned factory function"]

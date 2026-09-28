@@ -165,13 +165,13 @@ Each `await` suspends the async function and enqueues a microtask continuation. 
    flowchart TD
     %% ===== Main Loop =====
     A(["🚀 Script / Macrotask Starts"])
-        --> B["📦 Push Execution Context<br/>onto Call Stack"]
+        --> B["📦 Push Execution Context onto Call Stack"]
 
     B --> C["⚙️ Execute Top Frame"]
 
-    C --> D{"🔍 Initiates<br/>Async Operation?"}
+    C --> D{"🔍 Initiates Async Operation?"}
 
-    D -- "✅ Yes" --> E["🌐 Register with<br/>Web API / C++ Binding"]
+    D -- "✅ Yes" --> E["🌐 Register with Web API / C++ Binding"]
 
     D -- "❌ No" --> F{"📚 Call Stack Empty?"}
 
@@ -182,17 +182,17 @@ Each `await` suspends the async function and enqueues a microtask continuation. 
     %% ===== Microtask Phase =====
     F -- "✅ Yes" --> G{"🧠 Microtask Queue Empty?"}
 
-    G -- "❌ No" --> H["⚡ Dequeue & Execute<br/>Microtask"]
+    G -- "❌ No" --> H["⚡ Dequeue & Execute Microtask"]
 
-    H --> I{"➕ New Microtasks<br/>Queued?"}
+    H --> I{"➕ New Microtasks Queued?"}
 
     I -- "✅ Yes" --> H
     I -- "❌ No" --> G
 
     %% ===== Render Phase =====
-    G -- "✅ Yes" --> J{"🎨 Render Frame Due?<br/>(~16.6ms vsync)"}
+    G -- "✅ Yes" --> J{"🎨 Render Frame Due? (~16.6ms vsync)"}
 
-    J -- "✅ Yes" --> K["🖼️ Run requestAnimationFrame<br/>Callbacks"]
+    J -- "✅ Yes" --> K["🖼️ Run requestAnimationFrame Callbacks"]
 
     K --> L["🎨 Style → Layout → Paint → Composite"]
 
@@ -231,7 +231,7 @@ Each `await` suspends the async function and enqueues a microtask continuation. 
 sequenceDiagram
     autonumber
 
-    participant Script as "🧠 JS Engine<br/>(Call Stack)"
+    participant Script as "🧠 JS Engine (Call Stack)"
     participant MQ as "⚡ Microtask Queue"
     participant RAF as "🎞️ rAF Queue"
     participant Render as "🎨 Render Pipeline"

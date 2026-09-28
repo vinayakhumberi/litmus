@@ -100,17 +100,17 @@ This breaks the assumption that "page 2" always means the same 20 items across r
 graph TD
     A["User scrolls near bottom"] --> B["Prefetch next page via cursor"]
     B --> C["Paginated items arrive"]
-    D["WebSocket/SSE pushes new post"] --> E["Held in pending buffer,<br>not rendered yet"]
+    D["WebSocket/SSE pushes new post"] --> E["Held in pending buffer, not rendered yet"]
     E --> F["'N new posts' banner shown"]
     F -- "User taps banner" --> G["Pending buffer released into feed"]
-    H["User submits a post"] --> I["Optimistic item rendered<br>with temp client ID"]
+    H["User submits a post"] --> I["Optimistic item rendered with temp client ID"]
     I --> J["Server confirms with real ID"]
-    J --> K["Temp item swapped for<br>confirmed item by ID mapping"]
+    J --> K["Temp item swapped for confirmed item by ID mapping"]
 
-    C --> L["Reconciliation layer:<br>dedup by post ID, sort by cursor"]
+    C --> L["Reconciliation layer: dedup by post ID, sort by cursor"]
     G --> L
     K --> L
-    L --> M["Virtualized rendered list<br>(windowed, variable-height)"]
+    L --> M["Virtualized rendered list (windowed, variable-height)"]
 
     classDef source fill:#2b6cb0,stroke:#90cdf4,color:#f7fafc
     classDef buffer fill:#805ad5,stroke:#d6bcfa,color:#f7fafc
@@ -138,12 +138,12 @@ sequenceDiagram
     WS->>C: "Pushes new post payload"
     C->>C: "Dedup check against rendered list by post ID"
     C->>UI: "Increments pending count, shows 'N new posts' banner"
-    Note over UI: "Rendered list stays frozen -<br>scroll position untouched"
+    Note over UI: "Rendered list stays frozen - scroll position untouched"
     U->>UI: "Taps 'N new posts' banner"
     UI->>C: "Requests release of pending buffer"
     C->>UI: "Merges buffered items, sorted by cursor, deduped"
     UI->>UI: "Scrolls to top and renders new items"
-    Note over C: "If connection drops mid-session,<br>reconnect triggers a cursor-based<br>catch-up fetch instead of trusting the socket"
+    Note over C: "If connection drops mid-session, reconnect triggers a cursor-based catch-up fetch instead of trusting the socket"
 ```
 
 ## 🏢 Interview Context & FAANG Signals

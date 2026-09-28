@@ -262,33 +262,33 @@ The diagram in the earlier section was the simplified version. This one unpacks 
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"background":"transparent","primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#64748b","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontFamily":"\"Plus Jakarta Sans\", sans-serif","fontSize":"14px"}}}%%
 graph TD
-    Start(["Task on the call stack completes"]) --> MC["Microtask checkpoint:<br>drain the Promise .then() queue"]
-    MC --> MO["Run MutationObserver callbacks<br>(ONE batched callback per checkpoint)"]
-    MO --> RQ{"Is this a rendering<br>opportunity?<br>(browser decides, ~once per refresh)"}
+    Start(["Task on the call stack completes"]) --> MC["Microtask checkpoint: drain the Promise .then() queue"]
+    MC --> MO["Run MutationObserver callbacks (ONE batched callback per checkpoint)"]
+    MO --> RQ{"Is this a rendering opportunity? (browser decides, ~once per refresh)"}
 
     RQ -- "No" --> IdleGate
-    RQ -- "Yes" --> RAF["Run requestAnimationFrame callbacks<br>(and requestVideoFrameCallback)"]
-    RAF --> SL["Recalculate style + run Layout<br>(computed lazily, only when something needs it)"]
-    SL --> RC{"Did any observed element's<br>box size change?"}
+    RQ -- "Yes" --> RAF["Run requestAnimationFrame callbacks (and requestVideoFrameCallback)"]
+    RAF --> SL["Recalculate style + run Layout (computed lazily, only when something needs it)"]
+    SL --> RC{"Did any observed element's box size change?"}
 
-    RC -- "Yes" --> RO["Run ResizeObserver callbacks<br>(post-layout, pre-paint)"]
-    RO --> RL{"Did a callback<br>trigger another resize?"}
+    RC -- "Yes" --> RO["Run ResizeObserver callbacks (post-layout, pre-paint)"]
+    RO --> RL{"Did a callback trigger another resize?"}
     RL -- "Yes (bounded retries)" --> SL
     RL -- "No, converged" --> Scroll
-    RC -- "No" --> Scroll["Run scroll steps,<br>update animations & media queries"]
+    RC -- "No" --> Scroll["Run scroll steps, update animations & media queries"]
 
-    Scroll --> IO["Run IntersectionObserver callbacks<br>(update intersection observations)"]
+    Scroll --> IO["Run IntersectionObserver callbacks (update intersection observations)"]
     IO --> Paint["Paint"]
     Paint --> Composite["Composite"]
-    Composite --> IdleGate{"Time remaining<br>before the next task is due?"}
+    Composite --> IdleGate{"Time remaining before the next task is due?"}
 
-    IdleGate -- "Yes" --> RIC["Run requestIdleCallback callbacks<br>(deadline.timeRemaining() greater than 0)"]
-    IdleGate -- "No" --> SkipRIC["Skipped this cycle<br>(reschedule via timeout if set)"]
+    IdleGate -- "Yes" --> RIC["Run requestIdleCallback callbacks (deadline.timeRemaining() greater than 0)"]
+    IdleGate -- "No" --> SkipRIC["Skipped this cycle (reschedule via timeout if set)"]
     RIC --> Next(["Next event loop iteration"])
     SkipRIC --> Next
 
-    TQ["Ordinary task queue<br>— entirely separate from rendering"] -.-> PO["PerformanceObserver callbacks<br>queued whenever entries are buffered"]
-    TQ -.-> RepO["ReportingObserver callbacks<br>queued, low priority"]
+    TQ["Ordinary task queue — entirely separate from rendering"] -.-> PO["PerformanceObserver callbacks queued whenever entries are buffered"]
+    TQ -.-> RepO["ReportingObserver callbacks queued, low priority"]
 
     classDef microtask fill:#4338ca,stroke:#c4b5fd,color:#f5f3ff,stroke-width:1.5px;
     classDef render fill:#047857,stroke:#6ee7b7,color:#ecfdf5,stroke-width:1.5px;
@@ -316,19 +316,19 @@ The condensed version of Diagram 1 — useful for reciting the ordering quickly 
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"background":"transparent","primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#64748b","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontFamily":"\"Plus Jakarta Sans\", sans-serif","fontSize":"14px"}}}%%
 graph TD
-    A["Macrotask executes<br>(script, timer, event handler)"] --> B["Drain microtask queue"]
-    B --> C["MutationObserver callback<br>fires HERE (batched, as a microtask)"]
-    C --> D{"Is this a<br>render opportunity?"}
+    A["Macrotask executes (script, timer, event handler)"] --> B["Drain microtask queue"]
+    B --> C["MutationObserver callback fires HERE (batched, as a microtask)"]
+    C --> D{"Is this a render opportunity?"}
     D -- "Yes (~once per frame)" --> E["requestAnimationFrame callbacks run"]
     E --> F["Style + Layout"]
-    F --> F2["ResizeObserver callbacks<br>(post-layout, pre-paint)"]
+    F --> F2["ResizeObserver callbacks (post-layout, pre-paint)"]
     F2 --> H["Paint"]
     H --> I["Composite"]
-    I --> J["IntersectionObserver callbacks<br>delivered around this point (async, batched)"]
+    I --> J["IntersectionObserver callbacks delivered around this point (async, batched)"]
     D -- "No" --> K["Skip straight to idle check"]
     J --> K
-    K --> L{"Time remaining before<br>next task is due?"}
-    L -- "Yes" --> M["requestIdleCallback callbacks run<br>(deadline.timeRemaining() greater than 0)"]
+    K --> L{"Time remaining before next task is due?"}
+    L -- "Yes" --> M["requestIdleCallback callbacks run (deadline.timeRemaining() greater than 0)"]
     L -- "No" --> N["Skip — reschedule via timeout if set"]
     M --> O["Next event loop iteration"]
     N --> O
@@ -358,14 +358,14 @@ sequenceDiagram
     participant RIC as "requestIdleCallback"
     participant DOM as "DOM"
 
-    U->>IO: "Scrolls sentinel element into<br>rootMargin: 200px buffer zone"
+    U->>IO: "Scrolls sentinel element into rootMargin: 200px buffer zone"
     IO->>Net: "isIntersecting: true → fetch next page"
     Net-->>IO: "Page data resolves"
     IO->>RAF: "Schedule DOM insertion for next frame"
     RAF->>DOM: "Insert new items (batched, pre-paint)"
     DOM->>U: "New items rendered, no jank"
-    RAF->>RIC: "Schedule non-critical work<br>(e.g. analytics, image dimension precompute)"
-    Note over RIC: "Runs ONLY if the main thread<br>has idle time before next task"
+    RAF->>RIC: "Schedule non-critical work (e.g. analytics, image dimension precompute)"
+    Note over RIC: "Runs ONLY if the main thread has idle time before next task"
     RIC->>Net: "Send batched scroll-depth analytics"
 ```
 

@@ -48,14 +48,14 @@ Every time JavaScript runs a function (or the global program, or `eval`), the en
 graph LR
     subgraph CP["Creation Phase — before any code runs"]
         A["var x → undefined"]
-        B["function f() → [Function f]<br>fully callable"]
-        C["let y → TDZ<br>(uninitialized)"]
-        D["const z → TDZ<br>(uninitialized)"]
+        B["function f() → [Function f] fully callable"]
+        C["let y → TDZ (uninitialized)"]
+        D["const z → TDZ (uninitialized)"]
     end
     subgraph EP["Execution Phase — line by line"]
-        E["x = 5<br>(assignment)"]
-        F["f()<br>already callable, no error"]
-        G["y = 10<br>TDZ ends here"]
+        E["x = 5 (assignment)"]
+        F["f() already callable, no error"]
+        G["y = 10 TDZ ends here"]
     end
 
     A -.->|"assigned"| E
@@ -209,18 +209,18 @@ The more common, more real leak: **long-lived closures attached to persistent ob
 graph TD
     A["Engine enters a new scope"] --> B["Creation Phase begins"]
     B --> C{"Declaration type?"}
-    C -- "var" --> D["Bind name<br>Initialize to undefined"]
-    C -- "function decl" --> E["Bind name<br>Assign full function object"]
-    C -- "let / const / class" --> F["Bind name only<br>Mark as TDZ (uninitialized)"]
+    C -- "var" --> D["Bind name Initialize to undefined"]
+    C -- "function decl" --> E["Bind name Assign full function object"]
+    C -- "let / const / class" --> F["Bind name only Mark as TDZ (uninitialized)"]
     D --> G["Creation Phase complete"]
     E --> G
     F --> G
-    G --> H["Execution Phase begins<br>(code runs line by line)"]
-    H --> I{"Access binding before<br>its declaration line?"}
-    I -- "var (was undefined)" --> J["Returns undefined<br>(no error)"]
-    I -- "function decl" --> K["Fully callable<br>(no error)"]
-    I -- "let / const / class (in TDZ)" --> L["Throws ReferenceError:<br>Cannot access before initialization"]
-    H --> M["Declaration line reached →<br>value assigned, TDZ ends"]
+    G --> H["Execution Phase begins (code runs line by line)"]
+    H --> I{"Access binding before its declaration line?"}
+    I -- "var (was undefined)" --> J["Returns undefined (no error)"]
+    I -- "function decl" --> K["Fully callable (no error)"]
+    I -- "let / const / class (in TDZ)" --> L["Throws ReferenceError: Cannot access before initialization"]
+    H --> M["Declaration line reached → value assigned, TDZ ends"]
 
     classDef phase fill:#0369a1,stroke:#7dd3fc,color:#f0f9ff,stroke-width:1.5px;
     classDef safe fill:#047857,stroke:#6ee7b7,color:#ecfdf5,stroke-width:1.5px;

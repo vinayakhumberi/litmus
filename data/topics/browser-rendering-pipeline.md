@@ -119,17 +119,17 @@ graph TD
     B --> C["DOM Tree"]
     D["CSS bytes"] --> E["CSS Parser"]
     E --> F["CSSOM Tree"]
-    C --> G["Style Recalculation<br>(cascade + specificity + inheritance)"]
+    C --> G["Style Recalculation (cascade + specificity + inheritance)"]
     F --> G
-    G --> H["Render/Layout Tree<br>(display:none nodes excluded)"]
-    H --> I{"Did geometry change?<br>(width, height, position, font-size...)"}
-    I -- "Yes: Layout (Reflow)" --> J["Compute geometry<br>x, y, width, height per node"]
+    G --> H["Render/Layout Tree (display:none nodes excluded)"]
+    H --> I{"Did geometry change? (width, height, position, font-size...)"}
+    I -- "Yes: Layout (Reflow)" --> J["Compute geometry x, y, width, height per node"]
     I -- "No: skip layout" --> K
-    J --> K{"Did pixels change?<br>(color, shadow, background...)"}
-    K -- "Yes: Paint" --> L["Rasterize into layers<br>(paint records / display lists)"]
+    J --> K{"Did pixels change? (color, shadow, background...)"}
+    K -- "Yes: Paint" --> L["Rasterize into layers (paint records / display lists)"]
     K -- "No: skip paint" --> M
     L --> M["Compositor Thread"]
-    M --> N["Composite layers<br>(GPU: transform, opacity, z-order)"]
+    M --> N["Composite layers (GPU: transform, opacity, z-order)"]
     N --> O["Pixels on screen"]
 
     classDef parse fill:#4a5568,stroke:#cbd5e0,color:#fff
@@ -155,22 +155,22 @@ graph TD
     end
 
     subgraph CSSOM["CSSOM Tree"]
-        C1[".card<br>width:280px<br>padding:16px<br>background:#fff3e0"]
-        C2[".title<br>font-size:18px<br>font-weight:600"]
-        C3[".price<br>color:#d84315"]
+        C1[".card width:280px padding:16px background:#fff3e0"]
+        C2[".title font-size:18px font-weight:600"]
+        C3[".price color:#d84315"]
     end
 
     D1 -.->|"matches"| C1
     D2 -.->|"matches"| C2
     D3 -.->|"matches"| C3
 
-    C1 --> R1["Render node: div.card<br>computed style resolved"]
-    C2 --> R2["Render node: h2.title<br>computed style resolved"]
-    C3 --> R3["Render node: p.price<br>computed style resolved"]
+    C1 --> R1["Render node: div.card computed style resolved"]
+    C2 --> R2["Render node: h2.title computed style resolved"]
+    C3 --> R3["Render node: p.price computed style resolved"]
 
-    R1 --> L1["Layout box<br>x=8 y=8, 312 wide"]
-    R2 --> L2["Layout box<br>x=24 y=24, 280x24"]
-    R3 --> L3["Layout box<br>x=24 y=56, 280x18"]
+    R1 --> L1["Layout box x=8 y=8, 312 wide"]
+    R2 --> L2["Layout box x=24 y=24, 280x24"]
+    R3 --> L3["Layout box x=24 y=56, 280x18"]
 
     classDef domNode fill:#4a5568,stroke:#cbd5e0,color:#fff
     classDef cssomNode fill:#805ad5,stroke:#d6bcfa,color:#fff

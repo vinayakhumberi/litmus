@@ -102,17 +102,17 @@ function removeHeader() {
 
 ```mermaid
 graph TD
-    A["GC cycle triggered<br>allocation threshold reached"] --> B{"Young or old<br>generation collection?"}
-    B -- "Young gen: Scavenger<br>frequent, cheap" --> C["Walk roots: globals, call stack,<br>closures, currently referenced objects"]
-    C --> D["Copy live objects from active<br>semi-space to inactive semi-space"]
-    D --> E{"Object has survived<br>2+ scavenges?"}
-    E -- "Yes" --> F["Promote object<br>to old generation"]
-    E -- "No" --> G["Stays in young gen,<br>eligible for next scavenge"]
-    D --> H["Anything not copied is<br>implicitly freed - no sweep needed"]
-    B -- "Old gen: Major GC<br>infrequent, expensive" --> I["Mark phase: traverse from roots,<br>mark every reachable object"]
-    I --> J["Sweep phase: free every<br>unmarked, unreachable object"]
-    J --> K{"Heap meaningfully<br>fragmented?"}
-    K -- "Yes" --> L["Compact: move live objects<br>together to reduce fragmentation"]
+    A["GC cycle triggered allocation threshold reached"] --> B{"Young or old generation collection?"}
+    B -- "Young gen: Scavenger frequent, cheap" --> C["Walk roots: globals, call stack, closures, currently referenced objects"]
+    C --> D["Copy live objects from active semi-space to inactive semi-space"]
+    D --> E{"Object has survived 2+ scavenges?"}
+    E -- "Yes" --> F["Promote object to old generation"]
+    E -- "No" --> G["Stays in young gen, eligible for next scavenge"]
+    D --> H["Anything not copied is implicitly freed - no sweep needed"]
+    B -- "Old gen: Major GC infrequent, expensive" --> I["Mark phase: traverse from roots, mark every reachable object"]
+    I --> J["Sweep phase: free every unmarked, unreachable object"]
+    J --> K{"Heap meaningfully fragmented?"}
+    K -- "Yes" --> L["Compact: move live objects together to reduce fragmentation"]
     K -- "No" --> M["Cycle complete"]
     L --> M
 

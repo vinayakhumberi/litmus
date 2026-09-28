@@ -97,9 +97,9 @@ boxes.forEach((box, i) => { box.style.height = `${heights[i] + 10}px`; }); // al
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"background":"transparent","primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#64748b","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontFamily":"\"Plus Jakarta Sans\", sans-serif","fontSize":"14px"}}}%%
 flowchart TD
-    A(["🌐 HTML Bytes Arrive"]) --> B["📄 HTML Parser<br>(incremental, streaming)"]
+    A(["🌐 HTML Bytes Arrive"]) --> B["📄 HTML Parser (incremental, streaming)"]
 
-    B --> C{"🔍 Synchronous<br>&lt;script&gt; Encountered?"}
+    B --> C{"🔍 Synchronous &lt;script&gt; Encountered?"}
     C -- "Yes" --> D{"🎨 CSSOM Ready?"}
     D -- "No" --> E["⏸️ Block: Wait for CSSOM"]
     E --> F["▶️ Execute Script"]
@@ -107,16 +107,16 @@ flowchart TD
     F --> B
     C -- "No" --> G["🌳 DOM Tree"]
 
-    H(["🎨 CSS Bytes Arrive"]) --> I["📐 CSS Parser<br>(atomic, all-or-nothing)"]
+    H(["🎨 CSS Bytes Arrive"]) --> I["📐 CSS Parser (atomic, all-or-nothing)"]
     I --> J["🧮 CSSOM Tree"]
 
-    G --> K{"✅ DOM + CSSOM<br>Both Ready?"}
+    G --> K{"✅ DOM + CSSOM Both Ready?"}
     J --> K
 
-    K -- "Yes" --> L["🖼️ Render Tree<br>(visible nodes only)"]
-    L --> M["📏 Layout<br>(compute geometry)"]
-    M --> N["🖌️ Paint<br>(fill pixels per layer)"]
-    N --> O["🧩 Composite<br>(GPU merges layers)"]
+    K -- "Yes" --> L["🖼️ Render Tree (visible nodes only)"]
+    L --> M["📏 Layout (compute geometry)"]
+    M --> N["🖌️ Paint (fill pixels per layer)"]
+    N --> O["🧩 Composite (GPU merges layers)"]
     O --> P(["⚡ Pixels on Screen"])
 
     classDef networkStage fill:#0369a1,stroke:#7dd3fc,color:#f0f9ff,stroke-width:1.5px;

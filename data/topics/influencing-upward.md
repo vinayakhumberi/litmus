@@ -101,18 +101,18 @@ This is what a scoped, anchored, quantified business case looks like written out
 
 ```mermaid
 graph TD
-    A["Identify a technical risk<br>or cost worth raising"] --> B["Translate to business language:<br>mechanism + consequence in<br>stakeholder's own currency"]
-    B --> C{"Can I anchor this to an<br>OKR, incident, or competitor<br>the stakeholder already tracks?"}
-    C -- "No anchor found" --> D["Weak case — keep gathering<br>evidence before pitching"]
-    C -- "Yes" --> E["Scope a narrow, time-boxed ask<br>with a quantified (even rough) estimate"]
+    A["Identify a technical risk or cost worth raising"] --> B["Translate to business language: mechanism + consequence in stakeholder's own currency"]
+    B --> C{"Can I anchor this to an OKR, incident, or competitor the stakeholder already tracks?"}
+    C -- "No anchor found" --> D["Weak case — keep gathering evidence before pitching"]
+    C -- "Yes" --> E["Scope a narrow, time-boxed ask with a quantified (even rough) estimate"]
     E --> F{"How high are the stakes?"}
     F -- "Low" --> G["Hallway / async message"]
-    F -- "Medium/High" --> H["Written case circulated ahead,<br>then live discussion"]
+    F -- "Medium/High" --> H["Written case circulated ahead, then live discussion"]
     G --> I{"Decision?"}
     H --> I
-    I -- "Approved" --> J["Execute against the scoped,<br>time-boxed plan"]
-    I -- "Declined, risk bounded<br>and fully informed" --> K["Accept gracefully,<br>document the risk in writing"]
-    I -- "Declined, risk severe or<br>decision under-informed" --> L["Escalate with new<br>information, not just disagreement"]
+    I -- "Approved" --> J["Execute against the scoped, time-boxed plan"]
+    I -- "Declined, risk bounded and fully informed" --> K["Accept gracefully, document the risk in writing"]
+    I -- "Declined, risk severe or decision under-informed" --> L["Escalate with new information, not just disagreement"]
 
     classDef start fill:#2b6cb0,stroke:#90cdf4,color:#fff
     classDef decision fill:#805ad5,stroke:#d6bcfa,color:#fff
@@ -133,19 +133,19 @@ sequenceDiagram
     participant PM as "PM / Product"
     participant Dir as "Director"
 
-    Eng->>Eng: "Draft translation table:<br>risk in business language,<br>anchored + quantified"
-    Eng->>PM: "Shares written case ahead of meeting,<br>anchored to existing OKR"
-    PM-->>Eng: "Raises concerns about<br>roadmap tradeoff"
-    Eng->>PM: "Addresses tradeoff directly,<br>reaffirms scoped time box"
-    Eng->>Dir: "Presents scoped ask live,<br>references prior incident data"
+    Eng->>Eng: "Draft translation table: risk in business language, anchored + quantified"
+    Eng->>PM: "Shares written case ahead of meeting, anchored to existing OKR"
+    PM-->>Eng: "Raises concerns about roadmap tradeoff"
+    Eng->>PM: "Addresses tradeoff directly, reaffirms scoped time box"
+    Eng->>Dir: "Presents scoped ask live, references prior incident data"
     alt "Approved"
         Dir-->>Eng: "Approves bounded time allocation"
         Eng->>Eng: "Executes against defined done-state"
     else "Declined, informed and bounded"
         Dir-->>Eng: "Declines, cites competing priority"
-        Eng->>Eng: "Documents risk + decision in writing,<br>moves on without relitigating"
+        Eng->>Eng: "Documents risk + decision in writing, moves on without relitigating"
     else "Declined, but new severe risk emerges later"
-        Eng->>Dir: "Escalates with new incident data,<br>not just repeated disagreement"
+        Eng->>Dir: "Escalates with new incident data, not just repeated disagreement"
     end
 ```
 

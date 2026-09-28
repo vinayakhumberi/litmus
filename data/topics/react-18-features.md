@@ -121,13 +121,13 @@ Suspense boundaries also drive **streaming SSR**: `renderToPipeableStream`/`rend
 ```mermaid
 graph TD
     A["Need to prioritize a UI update?"] --> B{"Do you own the setState call?"}
-    B -- "Yes" --> C{"Does it control what's directly<br>typed or displayed right now?"}
-    C -- "Yes: keep it urgent" --> D["Do NOT wrap in startTransition<br>Split into a second state variable instead"]
-    C -- "No: it's a derived/expensive update" --> E["Wrap the setState call in startTransition<br>(or useTransition for an isPending flag)"]
-    B -- "No: value comes from<br>props, context, or a store" --> F["Wrap the VALUE in useDeferredValue"]
+    B -- "Yes" --> C{"Does it control what's directly typed or displayed right now?"}
+    C -- "Yes: keep it urgent" --> D["Do NOT wrap in startTransition Split into a second state variable instead"]
+    C -- "No: it's a derived/expensive update" --> E["Wrap the setState call in startTransition (or useTransition for an isPending flag)"]
+    B -- "No: value comes from props, context, or a store" --> F["Wrap the VALUE in useDeferredValue"]
     F --> G{"Need a loading indicator?"}
-    G -- "Yes" --> H["Compare deferredValue !== value<br>to detect staleness"]
-    G -- "No" --> I["Just render deferredValue<br>React lags it automatically"]
+    G -- "Yes" --> H["Compare deferredValue !== value to detect staleness"]
+    G -- "No" --> I["Just render deferredValue React lags it automatically"]
 
     classDef urgent fill:#c53030,stroke:#feb2b2,color:#fff
     classDef deferred fill:#2b6cb0,stroke:#90cdf4,color:#fff
@@ -172,10 +172,10 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    J["Subtree needs async data<br>or a lazy import"] --> K["Wrap it in Suspense fallback"]
-    K --> L{"Is the triggering update<br>wrapped in startTransition?"}
-    L -- "Yes" --> M["Old UI stays visible<br>isPending=true, no fallback flash"]
-    L -- "No" --> N["Fallback flashes immediately<br>the instant it suspends"]
+    J["Subtree needs async data or a lazy import"] --> K["Wrap it in Suspense fallback"]
+    K --> L{"Is the triggering update wrapped in startTransition?"}
+    L -- "Yes" --> M["Old UI stays visible isPending=true, no fallback flash"]
+    L -- "No" --> N["Fallback flashes immediately the instant it suspends"]
 
     classDef good fill:#2f855a,stroke:#9ae6b4,color:#fff
     classDef bad fill:#c53030,stroke:#feb2b2,color:#fff

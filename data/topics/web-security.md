@@ -93,27 +93,27 @@ The same discipline extends to the other sinks in this topic — SSR state seria
 
 ```mermaid
 graph TD
-    A["Untrusted data enters the system"] --> B{"Where does the data<br>originate?"}
-    B -- "Server-side storage<br>(DB, comment, bio)" --> C["Stored XSS risk"]
-    B -- "Current request<br>(query param, form field)" --> D["Reflected XSS risk"]
-    B -- "Client-side only<br>(location.hash, postMessage,<br>document.referrer)" --> E["DOM-based XSS risk"]
+    A["Untrusted data enters the system"] --> B{"Where does the data originate?"}
+    B -- "Server-side storage (DB, comment, bio)" --> C["Stored XSS risk"]
+    B -- "Current request (query param, form field)" --> D["Reflected XSS risk"]
+    B -- "Client-side only (location.hash, postMessage, document.referrer)" --> E["DOM-based XSS risk"]
 
     C --> F{"Where does it get rendered?"}
     D --> F
     E --> F
 
-    F -- "Text content<br>via textContent/JSX interpolation" --> G["Auto-escaped by framework<br>Low risk if no escape hatch used"]
-    F -- "innerHTML / v-html /<br>dangerouslySetInnerHTML" --> H["High risk:<br>requires sanitizer (DOMPurify)"]
-    F -- "URL / href / src attribute" --> I["Check for javascript: URLs<br>Context-sensitive escaping required"]
-    F -- "Inline script or eval-family sink" --> J["Blocked only if CSP script-src<br>lacks 'unsafe-inline'/'unsafe-eval'"]
+    F -- "Text content via textContent/JSX interpolation" --> G["Auto-escaped by framework Low risk if no escape hatch used"]
+    F -- "innerHTML / v-html / dangerouslySetInnerHTML" --> H["High risk: requires sanitizer (DOMPurify)"]
+    F -- "URL / href / src attribute" --> I["Check for javascript: URLs Context-sensitive escaping required"]
+    F -- "Inline script or eval-family sink" --> J["Blocked only if CSP script-src lacks 'unsafe-inline'/'unsafe-eval'"]
 
-    K["State-changing request<br>(POST/PUT/DELETE)"] --> L{"Auth carried via<br>cookie or bearer token?"}
-    L -- "Cookie (ambient)" --> M["CSRF risk:<br>browser auto-attaches credentials"]
-    L -- "Bearer token (explicit JS attach)" --> N["CSRF-immune:<br>attacker cannot read/attach token"]
+    K["State-changing request (POST/PUT/DELETE)"] --> L{"Auth carried via cookie or bearer token?"}
+    L -- "Cookie (ambient)" --> M["CSRF risk: browser auto-attaches credentials"]
+    L -- "Bearer token (explicit JS attach)" --> N["CSRF-immune: attacker cannot read/attach token"]
 
     M --> O{"SameSite attribute set?"}
-    O -- "Strict or Lax" --> P["Cross-site POST blocked<br>by browser default"]
-    O -- "None or unset (legacy)" --> Q["Requires CSRF token<br>+ custom header defense"]
+    O -- "Strict or Lax" --> P["Cross-site POST blocked by browser default"]
+    O -- "None or unset (legacy)" --> Q["Requires CSRF token + custom header defense"]
 
     classDef risk fill:#c53030,stroke:#feb2b2,color:#fff
     classDef safe fill:#2f855a,stroke:#9ae6b4,color:#fff
@@ -129,30 +129,30 @@ graph TD
 ```mermaid
 sequenceDiagram
     participant U as "Attacker"
-    participant S as "Server<br>(input validation)"
+    participant S as "Server (input validation)"
     participant DB as "Database"
     participant V as "Victim's Browser"
     participant B as "Browser CSP Engine"
 
-    U->>S: "POST /comments<br>body: '&lt;script&gt;steal()&lt;/script&gt;'"
-    S->>S: "Validate/sanitize input<br>(defense layer 1)"
+    U->>S: "POST /comments body: '&lt;script&gt;steal()&lt;/script&gt;'"
+    S->>S: "Validate/sanitize input (defense layer 1)"
     alt "Sanitization fails or is bypassed"
         S->>DB: "Store raw payload"
         Note over S,DB: "Stored XSS now persisted"
         V->>S: "GET /post/123"
         S->>DB: "Fetch comments"
         DB-->>S: "Return stored payload"
-        S-->>V: "HTML response<br>with unescaped payload<br>+ CSP header: script-src 'self' 'nonce-abc123'"
-        V->>B: "Parse HTML, encounter<br>injected &lt;script&gt; tag"
-        B->>B: "Check nonce on injected tag<br>(defense layer 2)"
+        S-->>V: "HTML response with unescaped payload + CSP header: script-src 'self' 'nonce-abc123'"
+        V->>B: "Parse HTML, encounter injected &lt;script&gt; tag"
+        B->>B: "Check nonce on injected tag (defense layer 2)"
         alt "Injected script has no valid nonce"
-            B--xV: "Script execution blocked<br>CSP violation reported"
-            B->>S: "POST /csp-report<br>violation details"
+            B--xV: "Script execution blocked CSP violation reported"
+            B->>S: "POST /csp-report violation details"
         else "CSP misconfigured with 'unsafe-inline'"
-            B->>V: "Script executes:<br>document.cookie read"
-            Note over V: "Defense layer 3: HttpOnly cookie<br>prevents document.cookie access"
+            B->>V: "Script executes: document.cookie read"
+            Note over V: "Defense layer 3: HttpOnly cookie prevents document.cookie access"
         end
-    else "Sanitization succeeds<br>(defense layer 1 holds)"
+    else "Sanitization succeeds (defense layer 1 holds)"
         S->>DB: "Store escaped/neutralized payload"
         Note over S,DB: "Attack neutralized at origin"
     end

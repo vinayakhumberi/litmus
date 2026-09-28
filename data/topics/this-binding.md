@@ -109,17 +109,17 @@ A method passed directly as a callback (`setTimeout(obj.method, 1000)`, `<button
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#94a3b8","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontSize":"16px"}}}%%
 graph TD
-    A["A function is called.<br>What is this?"] --> B{"Arrow function?"}
-    B -- "Yes" --> C["Lexical this —<br>inherited from enclosing<br>scope, fixed forever"]
+    A["A function is called. What is this?"] --> B{"Arrow function?"}
+    B -- "Yes" --> C["Lexical this — inherited from enclosing scope, fixed forever"]
     B -- "No" --> D{"Called with new?"}
-    D -- "Yes" --> E["new binding —<br>this = the new object"]
+    D -- "Yes" --> E["new binding — this = the new object"]
     D -- "No" --> F{"call / apply / bind?"}
-    F -- "Yes" --> G["Explicit binding —<br>this = whatever was passed"]
+    F -- "Yes" --> G["Explicit binding — this = whatever was passed"]
     F -- "No" --> H{"Called as obj.method()?"}
-    H -- "Yes" --> I["Implicit binding —<br>this = object left of the dot"]
+    H -- "Yes" --> I["Implicit binding — this = object left of the dot"]
     H -- "No, bare call" --> J{"Strict mode?"}
     J -- "Yes" --> K["this is undefined"]
-    J -- "No" --> L["Default binding —<br>this = global object"]
+    J -- "No" --> L["Default binding — this = global object"]
 
     classDef start fill:#0369a1,stroke:#7dd3fc,color:#f0f9ff,stroke-width:1.5px
     classDef decision fill:#4338ca,stroke:#c4b5fd,color:#f5f3ff,stroke-width:1.5px
@@ -145,10 +145,10 @@ sequenceDiagram
     Dev->>Btn: "addEventListener('click', obj.handleClick)"
     Note over Btn: "handleClick is now a bare function reference"
     Btn->>Btn: "User clicks the button"
-    Btn-->>Dev: "Bug - this is undefined or the wrong object,<br>default binding applied at the real call site"
+    Btn-->>Dev: "Bug - this is undefined or the wrong object, default binding applied at the real call site"
     Dev->>Btn: "addEventListener('click', obj.handleClick.bind(obj))"
     Btn->>Btn: "User clicks the button again"
-    Btn-->>Dev: "Works - bind produced a hard-bound function,<br>immune to how the browser calls it"
+    Btn-->>Dev: "Works - bind produced a hard-bound function, immune to how the browser calls it"
 ```
 
 **→ Play with it:** [`resources/this-binding-playground.html`](resources/this-binding-playground.html) runs every rule above against real, live JavaScript — the four binding rules, a `call`/`apply`/`bind` sandbox, the arrow-function exemption, the lost-`this` bug and its fixes, and the `new`-escapes-a-hard-binding precedence showdown. Predict each result before clicking Run.
@@ -197,12 +197,32 @@ A **Staff/Lead** response can state the full precedence order unprompted, explai
 
 ### Scenario 1 — Predicting `this` Across Four Call Styles
 
-Given a single method defined once, predict what `this` resolves to when it's called as `obj.method()`, `const fn = obj.method; fn()`, `obj.method.call(otherObj)`, and `new obj.method()` (assuming it's written as a regular function).
+**Problem:**
+```javascript
+const obj = {
+  name: 'obj',
+  method: function () {
+    return this;
+  },
+};
+
+console.log(obj.method().name);              // ?
+const fn = obj.method;
+console.log(fn().name);                      // ?  ("use strict" at the top would change this)
+console.log(obj.method.call({ name: 'other' }).name); // ?
+console.log(new obj.method().name);           // ?
+```
+
+Predict what `this` resolves to for each of the four calls, and name which binding rule produced each answer.
 
 <details>
 <summary>Staff-Level Solution</summary>
 
-Walk through each using the precedence table directly: `obj.method()` is implicit binding, `this` is `obj`. `const fn = obj.method; fn()` is a bare call with no implicit or explicit binding in play, so it's default binding — `this` is the global object in non-strict mode, `undefined` in strict mode. `obj.method.call(otherObj)` is explicit binding, `this` is `otherObj` regardless of how `method` is normally attached. `new obj.method()` is `new` binding, the highest-precedence rule — a fresh object is created and `this` is bound to it, completely ignoring both the `obj.` prefix and anything explicit binding would have set.
+Walk through each using the precedence table directly:
+- `obj.method()` → **implicit binding** → `this` is `obj`, logs `'obj'`.
+- `fn()` → a bare call with no implicit or explicit binding in play → **default binding** → `this` is the global object in non-strict mode (logs `undefined`, since the global object has no `name` property set here), or throws when reading `.name` off `undefined` in strict mode.
+- `obj.method.call({ name: 'other' })` → **explicit binding** → `this` is `{ name: 'other' }` regardless of how `method` is normally attached, logs `'other'`.
+- `new obj.method()` → **`new` binding**, the highest-precedence rule → a fresh object is created and `this` is bound to it, completely ignoring both the `obj.` prefix and anything explicit binding would have set. Since the fresh object has no `name` property, this logs `undefined`.
 
 The key point to state explicitly: the same function produces four different `this` values purely based on call syntax, which is exactly the "call-site, not definition-site" rule in action.
 
@@ -210,7 +230,16 @@ The key point to state explicitly: the same function produces four different `th
 
 ### Scenario 2 — Implementing `bind` From Scratch
 
-Implement `Function.prototype.myBind` without using the native `.bind()`.
+**Problem:**
+```javascript
+function greet(greeting, punctuation) {
+  return `${greeting}, ${this.name}${punctuation}`;
+}
+
+// Implement Function.prototype.myBind so this works identically to the native .bind():
+const boundGreet = greet.myBind({ name: 'Ada' }, 'Hello');
+console.log(boundGreet('!')); // "Hello, Ada!"
+```
 
 <details>
 <summary>Staff-Level Solution</summary>
@@ -230,64 +259,175 @@ This captures the original function via `this` inside `myBind` itself (since `my
 
 ### Scenario 3 — Debugging a React Class Component's Lost `this`
 
-`<button onClick={this.handleClick}>` throws `Cannot read properties of undefined` inside `handleClick` when it tries to read `this.state`.
+**Problem:**
+```javascript
+class Toggle extends React.Component {
+  state = { on: false };
+
+  handleClick() {
+    this.setState({ on: !this.state.on }); // TypeError: Cannot read properties of undefined (reading 'state')
+  }
+
+  render() {
+    return <button onClick={this.handleClick}>Toggle</button>;
+  }
+}
+```
+
+Clicking the button throws inside `handleClick`. Diagnose and fix it.
 
 <details>
 <summary>Staff-Level Solution</summary>
 
-`this.handleClick` is a bare function reference by the time it's passed as a prop — extracting it from `this.handleClick()` (an implicit-binding call) loses that binding entirely, and React invokes it later with no `this` context at all, triggering default binding (`undefined` in the class body's implicit strict mode).
+`this.handleClick` is a bare function reference by the time it's passed as the `onClick` prop — extracting it out of `this.handleClick()` (an implicit-binding call) loses that binding entirely, and React invokes it later with no `this` context at all, triggering default binding (`undefined` in the class body's implicit strict mode). `this.setState` then fails because `this` is `undefined`, not the component instance.
 
-Fix with one of three standard options: bind in the constructor (`this.handleClick = this.handleClick.bind(this)`, runs once per instance), define `handleClick` as an arrow function class field (`handleClick = () => {...}`, captures `this` lexically at construction, no separate bind step needed), or wrap it inline at the JSX call site (`onClick={() => this.handleClick()}`, works but allocates a new function every render, worth flagging as the weaker option in a render-frequency-sensitive tree).
+Fix with one of three standard options:
+```javascript
+// Option 1: bind in the constructor — runs once per instance
+constructor(props) {
+  super(props);
+  this.handleClick = this.handleClick.bind(this);
+}
+
+// Option 2: arrow function class field — captures `this` lexically, no bind step needed
+handleClick = () => {
+  this.setState({ on: !this.state.on });
+};
+
+// Option 3: wrap inline at the JSX call site — works, but allocates a new
+// function every render, worth flagging as the weaker option in a
+// render-frequency-sensitive tree
+render() {
+  return <button onClick={() => this.handleClick()}>Toggle</button>;
+}
+```
 
 </details>
 
 ### Scenario 4 — Explaining Why an Arrow Function Method Doesn't Work
 
-A teammate writes `const obj = { label: 'x', getLabel: () => this.label }` and is confused why `obj.getLabel()` doesn't return `'x'`.
+**Problem:**
+```javascript
+const obj = {
+  label: 'x',
+  getLabel: () => this.label,
+};
+
+console.log(obj.getLabel()); // undefined — not 'x'
+```
+
+A teammate is confused why `obj.getLabel()` doesn't return `'x'`. Explain why, and fix it.
 
 <details>
 <summary>Staff-Level Solution</summary>
 
-Explain that arrow functions have no implicit-binding mechanism at all — `getLabel` being defined inside an object literal doesn't give it that object as `this`, because object literals don't create a scope. The arrow function instead captures whatever `this` was already in scope at the point the object literal itself was written — typically the enclosing module or function scope, not `obj`.
+Arrow functions have no implicit-binding mechanism at all — `getLabel` being defined inside an object literal doesn't give it that object as `this`, because object literals don't create a scope. The arrow function instead captures whatever `this` was already in scope at the point the object literal itself was written — typically the enclosing module or function scope (`undefined` in a module, or the global object in a non-strict script), not `obj`.
 
-The fix is using an ordinary method shorthand instead (`getLabel() { return this.label; }`), which participates in implicit binding normally, since `obj.getLabel()` is a genuine `obj.method()` call. Reserve arrow functions for cases that specifically want the *enclosing* scope's `this` — inside a class method or another function — not as a general-purpose method-definition shorthand.
+```javascript
+// Fix: ordinary method shorthand participates in implicit binding normally,
+// since obj.getLabel() is a genuine obj.method() call.
+const obj = {
+  label: 'x',
+  getLabel() {
+    return this.label;
+  },
+};
+
+console.log(obj.getLabel()); // 'x'
+```
+
+Reserve arrow functions for cases that specifically want the *enclosing* scope's `this` — inside a class method or another function — not as a general-purpose method-definition shorthand.
 
 </details>
 
 ### Scenario 5 — A Hard-Bound Function Being "Re-bound" Has No Effect
 
-Code calls `boundFn.call(differentObj)` expecting `this` to change, but it doesn't — `boundFn` was created via `.bind()` earlier in a different file.
+**Problem:**
+```javascript
+// fileA.js
+function greet() {
+  return `Hello, ${this.name}`;
+}
+const boundFn = greet.bind({ name: 'Alice' });
+
+// fileB.js, later
+console.log(boundFn.call({ name: 'Bob' })); // still "Hello, Alice" — not "Hello, Bob"
+```
+
+The call to `.call()` was expected to override `this` to `{ name: 'Bob' }`. It didn't. Explain why, and identify the actual fix.
 
 <details>
 <summary>Staff-Level Solution</summary>
 
 This is expected behavior, not a bug: a function produced by `.bind()` is hard-bound, and neither `.call()` nor `.apply()` can override the `this` it was created with — only `new`-ing it (which the spec special-cases to construct a fresh object regardless) escapes the hard binding.
 
-The actual fix depends on intent: if `this` genuinely needs to vary per call, the original function shouldn't have been pre-bound at all — pass `this` explicitly via `.call()`/`.apply()` at each call site instead of binding it once upstream. If the binding was intentional and this is a design conflict, trace back to why the code two layers away expected to be able to override it, since that assumption is what's actually wrong.
+The actual fix depends on intent: if `this` genuinely needs to vary per call, the original function shouldn't have been pre-bound at all —
+
+```javascript
+function greet() {
+  return `Hello, ${this.name}`;
+}
+
+// Pass `this` explicitly at each call site instead of binding it once upstream:
+console.log(greet.call({ name: 'Alice' })); // "Hello, Alice"
+console.log(greet.call({ name: 'Bob' }));   // "Hello, Bob"
+```
+
+If the binding was intentional and this is a design conflict, trace back to why the code two layers away expected to be able to override it, since that assumption is what's actually wrong.
 
 </details>
 
 ### Scenario 6 — Diagnosing a Silent Global Variable Leak
 
-A production bug traces back to a global variable that nobody intentionally created, eventually found to originate from `this.count++` inside a function.
+**Problem:**
+```javascript
+function Counter() {
+  this.count = 0;
+  return {
+    increment: function () {
+      this.count++; // no error, no warning — but does this actually increment the counter?
+    },
+  };
+}
+
+const counter = Counter();
+const increment = counter.increment; // extracted and called bare elsewhere in the codebase
+increment();
+increment();
+console.log(counter.count); // still 0 — but `count` now exists somewhere else entirely
+```
+
+A production bug traces back to a global variable nobody intentionally created, eventually found to originate from this code. Diagnose.
 
 <details>
 <summary>Staff-Level Solution</summary>
 
-This is the non-strict default-binding gotcha: the function was called bare at some point (likely extracted from its object and passed as a callback, then invoked without any implicit or explicit binding), so `this` defaulted to the global object instead of throwing. `this.count++` on the global object silently created (or incremented) a global `count` property — no error, no warning, just quiet corruption.
+This is the non-strict default-binding gotcha: `increment` was extracted from `counter` and called bare, so it has no implicit or explicit binding — `this` defaults to the global object instead of throwing. `this.count++` on the global object silently created (and then incremented) a global `count` property — no error, no warning, just quiet corruption, while `counter.count` itself never moves.
 
-Fix the immediate bug the same way as any lost-`this` case — trace the actual call site and restore correct binding. As a systemic fix, ensure the codebase runs in strict mode everywhere (ES modules are strict by default; verify any non-module scripts or eval'd code aren't opting out), so the same mistake fails loudly with `this === undefined` instead of silently polluting global state.
+Fix the immediate bug the same way as any lost-`this` case — trace the actual call site and restore correct binding (bind `increment` to `counter`, or call it as `counter.increment()`). As a systemic fix, ensure the codebase runs in strict mode everywhere (ES modules are strict by default; verify any non-module scripts or eval'd code aren't opting out), so the same mistake fails loudly with `this === undefined` — `this.count++` would throw immediately — instead of silently polluting global state.
 
 </details>
 
 ### Scenario 7 — `call` vs `apply`: Choosing the Right One
 
-Given a function that needs to be invoked with `this` set to a specific object and an array of arguments whose length isn't known in advance, choose between `call` and `apply` and justify it.
+**Problem:**
+```javascript
+function sum(...nums) {
+  return nums.reduce((a, b) => a + b, 0);
+}
+
+const numbers = getNumbersFromSomewhere(); // an array, length not known in advance
+const thisArg = null; // sum doesn't use `this`, but call/apply both require a first argument
+
+// Which of these is the better fit, and why?
+sum.call(thisArg, ...numbers);
+sum.apply(thisArg, numbers);
+```
 
 <details>
 <summary>Staff-Level Solution</summary>
 
-`apply` is the correct choice specifically because the arguments already exist as an array of unknown length — `call` requires each argument listed individually, which would require spreading the array anyway (`fn.call(thisArg, ...argsArray)`), making `apply` the more direct fit for this exact shape of input.
+`apply` is the correct choice specifically because the arguments already exist as an array of unknown length — `call` requires each argument listed individually, which here would require spreading the array anyway (`sum.call(thisArg, ...numbers)`), making `apply` the more direct fit for this exact shape of input: `sum.apply(thisArg, numbers)` passes the array straight through with no intermediate step.
 
 Note that with the rest/spread operator available in modern JavaScript, `fn.call(thisArg, ...argsArray)` and `fn.apply(thisArg, argsArray)` are functionally interchangeable today — `apply`'s historical advantage (avoiding manual argument-list construction before spread existed) is less decisive than it used to be, but reaching for `apply` when an array is already on hand is still the more direct, readable choice.
 
@@ -295,13 +435,38 @@ Note that with the rest/spread operator available in modern JavaScript, `fn.call
 
 ### Scenario 8 — Predicting Output With Nested Regular and Arrow Functions
 
-Given a method containing a nested regular function and a nested arrow function, both reading `this.value`, predict which one logs the correct value and which doesn't, and why.
+**Problem:**
+```javascript
+const obj = {
+  value: 42,
+  regularMethod: function () {
+    function nestedRegular() {
+      console.log('regular:', this?.value);
+    }
+    const nestedArrow = () => {
+      console.log('arrow:', this.value);
+    };
+    nestedRegular();
+    nestedArrow();
+  },
+};
+
+obj.regularMethod();
+// regular: ?
+// arrow: ?
+```
 
 <details>
 <summary>Staff-Level Solution</summary>
 
-The nested regular function, if called bare inside the method (not as someone's method call), gets default binding — it was never eligible for implicit binding just by virtue of being physically nested inside another function, since nesting has no effect on binding rules; only the call syntax does. It logs `undefined` (or throws, in strict mode, if `.value` is then accessed on `undefined`).
+**Output:**
+```
+regular: undefined
+arrow: 42
+```
 
-The nested arrow function has no default-binding fallback to fall into at all — it lexically captures the enclosing method's `this` at definition time, so it correctly logs the actual value. This is precisely why arrow functions became the standard fix for the pre-ES6 `const self = this` workaround: they structurally can't lose the binding the way a nested regular function can.
+`nestedRegular` is called bare inside the method (not as someone's method call), so it gets default binding — it was never eligible for implicit binding just by virtue of being physically nested inside another function, since nesting has no effect on binding rules; only the call syntax does. `this` is `undefined` in strict mode (or the global object otherwise), so `this?.value` reads as `undefined`.
+
+`nestedArrow` has no default-binding fallback to fall into at all — it lexically captures the enclosing method's `this` at definition time (which is `obj`, since `regularMethod` was called as `obj.regularMethod()`), so it correctly logs `42`. This is precisely why arrow functions became the standard fix for the pre-ES6 `const self = this` workaround: they structurally can't lose the binding the way a nested regular function can.
 
 </details>

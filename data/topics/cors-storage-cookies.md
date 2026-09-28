@@ -105,18 +105,18 @@ Any JavaScript running on the page — including an attacker's, injected via an 
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#94a3b8","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontSize":"16px"}}}%%
 flowchart TD
-    A["Cross-origin<br>fetch() call"] --> B{"Same origin as<br>the page?"}
-    B -- "Yes" --> C["No CORS involved —<br>request proceeds normally"]
-    B -- "No" --> D{"Method is GET,<br>HEAD, or POST?"}
-    D -- "No" --> E["Preflight required —<br>browser sends OPTIONS first"]
-    D -- "Yes" --> F{"Only simple<br>headers set?"}
+    A["Cross-origin fetch() call"] --> B{"Same origin as the page?"}
+    B -- "Yes" --> C["No CORS involved — request proceeds normally"]
+    B -- "No" --> D{"Method is GET, HEAD, or POST?"}
+    D -- "No" --> E["Preflight required — browser sends OPTIONS first"]
+    D -- "Yes" --> F{"Only simple headers set?"}
     F -- "No" --> E
-    F -- "Yes" --> G{"Content-Type is<br>form/text/plain?"}
+    F -- "Yes" --> G{"Content-Type is form/text/plain?"}
     G -- "No" --> E
-    G -- "Yes" --> H["Simple request —<br>sent directly, no preflight"]
-    E --> I{"Server's OPTIONS<br>response allows it?"}
-    I -- "Yes" --> J["Real request sent —<br>response readable by JS"]
-    I -- "No" --> K["Blocked —<br>JS never sees the response"]
+    G -- "Yes" --> H["Simple request — sent directly, no preflight"]
+    E --> I{"Server's OPTIONS response allows it?"}
+    I -- "Yes" --> J["Real request sent — response readable by JS"]
+    I -- "No" --> K["Blocked — JS never sees the response"]
 
     classDef start fill:#0369a1,stroke:#7dd3fc,color:#f0f9ff,stroke-width:1.5px
     classDef decision fill:#4338ca,stroke:#c4b5fd,color:#f5f3ff,stroke-width:1.5px
@@ -134,11 +134,11 @@ flowchart TD
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#94a3b8","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontSize":"16px"}}}%%
 flowchart TD
-    A["Where should<br>this data live?"] --> B{"Must the server<br>see it automatically?"}
-    B -- "Yes" --> C["Cookie —<br>set HttpOnly + SameSite"]
-    B -- "No" --> D{"Only needed for<br>this one tab?"}
+    A["Where should this data live?"] --> B{"Must the server see it automatically?"}
+    B -- "Yes" --> C["Cookie — set HttpOnly + SameSite"]
+    B -- "No" --> D{"Only needed for this one tab?"}
     D -- "Yes" --> E["sessionStorage"]
-    D -- "No" --> F{"Large, structured,<br>or needed in a<br>Service Worker?"}
+    D -- "No" --> F{"Large, structured, or needed in a Service Worker?"}
     F -- "Yes" --> G["IndexedDB"]
     F -- "No" --> H["localStorage"]
 

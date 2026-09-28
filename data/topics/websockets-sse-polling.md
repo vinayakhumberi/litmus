@@ -106,13 +106,13 @@ Directionality is the filter to apply first, before infra cost, browser limits, 
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"lineColor": "#a0aec0", "edgeLabelBackground": "#2d3748", "textColor": "#f7fafc"}}}%%
 graph TD
-    A["New real-time feature"] --> B{"Does the client need to<br>send data back over the<br>same channel?"}
+    A["New real-time feature"] --> B{"Does the client need to send data back over the same channel?"}
     B -- "Yes" --> C["WebSockets"]
-    B -- "No, server push only" --> D{"Is near-real-time push<br>needed, with automatic<br>reconnection?"}
+    B -- "No, server push only" --> D{"Is near-real-time push needed, with automatic reconnection?"}
     D -- "Yes" --> E["SSE"]
-    D -- "No - infra for WS/SSE<br>not available or worth it" --> F{"Is update frequency<br>low and latency<br>tolerance loose?"}
+    D -- "No - infra for WS/SSE not available or worth it" --> F{"Is update frequency low and latency tolerance loose?"}
     F -- "Yes" --> G["Short polling"]
-    F -- "No, needs to feel<br>near-real-time" --> H["Long polling"]
+    F -- "No, needs to feel near-real-time" --> H["Long polling"]
 
     classDef stage fill:#2b6cb0,stroke:#90cdf4,color:#f7fafc
     classDef decision fill:#805ad5,stroke:#d6bcfa,color:#f7fafc
@@ -138,15 +138,15 @@ sequenceDiagram
     C->>S1: "EventSource connects"
     S1-->>C: "Streams events"
     S1--xC: "Connection drops"
-    C->>S1: "Auto-reconnects with<br>Last-Event-ID header"
-    S1-->>C: "Resumes stream from<br>that event onward"
+    C->>S1: "Auto-reconnects with Last-Event-ID header"
+    S1-->>C: "Resumes stream from that event onward"
 
     Note over C,PS: "WebSocket - fan-out across instances"
     C->>LB: "Upgrade request"
-    LB->>S1: "Routes to Server A,<br>connection pinned here"
-    S2->>PS: "Publishes message for<br>a user connected to Server A"
+    LB->>S1: "Routes to Server A, connection pinned here"
+    S2->>PS: "Publishes message for a user connected to Server A"
     PS-->>S1: "Delivers via backplane"
-    S1-->>C: "Forwards over the<br>pinned WebSocket"
+    S1-->>C: "Forwards over the pinned WebSocket"
 ```
 
 ## 🏢 Interview Context & FAANG Signals

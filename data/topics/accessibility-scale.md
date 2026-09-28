@@ -123,17 +123,17 @@ sequenceDiagram
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"lineColor": "#a0aec0", "edgeLabelBackground": "#2d3748", "textColor": "#f7fafc"}}}%%
 graph TD
-    A["New or changed interactive component"] --> B{"Automated CI check<br>(axe-core)"}
-    B -- "Fails" --> C["Blocked at merge:<br>contrast, missing labels, invalid ARIA"]
-    B -- "Passes" --> D{"Lightweight review gate:<br>focus mgmt, keyboard, ARIA state sync"}
-    D -- "Issues found" --> E["Reviewer requests changes<br>before merge"]
+    A["New or changed interactive component"] --> B{"Automated CI check (axe-core)"}
+    B -- "Fails" --> C["Blocked at merge: contrast, missing labels, invalid ARIA"]
+    B -- "Passes" --> D{"Lightweight review gate: focus mgmt, keyboard, ARIA state sync"}
+    D -- "Issues found" --> E["Reviewer requests changes before merge"]
     D -- "Passes" --> F["Merged"]
     F --> G["Accumulates into shipped app"]
-    G --> H{"Quarterly manual audit<br>with real screen reader"}
-    H -- "Finds issues automation missed<br>(~60-70% of real issues)" --> I["Prioritized fix backlog"]
+    G --> H{"Quarterly manual audit with real screen reader"}
+    H -- "Finds issues automation missed (~60-70% of real issues)" --> I["Prioritized fix backlog"]
     H -- "Clean" --> J["Confirmed AA conformance"]
     I --> A
-    J --> K["Feeds into legal/compliance<br>sign-off as needed"]
+    J --> K["Feeds into legal/compliance sign-off as needed"]
 
     classDef gate fill:#805ad5,stroke:#d6bcfa,color:#f7fafc
     classDef risk fill:#c53030,stroke:#feb2b2,color:#f7fafc

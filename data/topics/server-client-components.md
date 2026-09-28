@@ -109,28 +109,28 @@ async function Page() {
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"background":"transparent","primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#64748b","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontFamily":"\"Plus Jakarta Sans\", sans-serif","fontSize":"14px"}}}%%
 flowchart TD
-    A(["🌐 Browser Request"]) --> B["🖥️ Next.js Server<br>Begins Rendering Tree"]
+    A(["🌐 Browser Request"]) --> B["🖥️ Next.js Server Begins Rendering Tree"]
 
     B --> C{"📄 Component Type?"}
 
-    C -- "Server Component" --> D["⚙️ Execute on Server<br>(await fetch/DB directly)"]
-    C -- "Client Component" --> E["📦 Mark as Reference<br>(don't execute yet)"]
+    C -- "Server Component" --> D["⚙️ Execute on Server (await fetch/DB directly)"]
+    C -- "Client Component" --> E["📦 Mark as Reference (don't execute yet)"]
 
     D --> F{"👶 Has Children?"}
     F -- "Yes" --> C
-    F -- "No" --> G["✅ Output Added to<br>RSC Payload"]
+    F -- "No" --> G["✅ Output Added to RSC Payload"]
 
     E --> G
 
-    G --> H["📡 Stream RSC Payload<br>+ Initial HTML to Browser"]
+    G --> H["📡 Stream RSC Payload + Initial HTML to Browser"]
 
     H --> I["🧩 Browser Parses Payload"]
 
-    I --> J["🖼️ Paint Server-Rendered HTML<br>(fast, no JS needed yet)"]
+    I --> J["🖼️ Paint Server-Rendered HTML (fast, no JS needed yet)"]
 
-    I --> K["⬇️ Fetch JS for<br>Client Component References"]
+    I --> K["⬇️ Fetch JS for Client Component References"]
 
-    K --> L["💧 Hydrate Client Components<br>(attach event handlers, init state)"]
+    K --> L["💧 Hydrate Client Components (attach event handlers, init state)"]
 
     L --> M(["⚡ Page Fully Interactive"])
     J -.->|"Visible before hydration completes"| M

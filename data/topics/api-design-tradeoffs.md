@@ -82,13 +82,13 @@ These three styles aren't mutually exclusive at the product level — a real sys
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"lineColor": "#a0aec0", "edgeLabelBackground": "#2d3748", "textColor": "#f7fafc"}}}%%
 graph TD
-    A["New API surface being designed"] --> B{"Will this be consumed<br>by external/third-party<br>or non-TypeScript clients?"}
+    A["New API surface being designed"] --> B{"Will this be consumed by external/third-party or non-TypeScript clients?"}
     B -- "Yes" --> C["REST"]
-    B -- "No - internal only" --> D{"Same team owns<br>both client and server,<br>full TypeScript stack?"}
+    B -- "No - internal only" --> D{"Same team owns both client and server, full TypeScript stack?"}
     D -- "Yes" --> E["tRPC"]
-    D -- "No" --> F{"Multiple client types<br>with genuinely different<br>data needs (web/iOS/Android)?"}
+    D -- "No" --> F{"Multiple client types with genuinely different data needs (web/iOS/Android)?"}
     F -- "Yes" --> G["GraphQL"]
-    F -- "No - single client,<br>simple data needs" --> C
+    F -- "No - single client, simple data needs" --> C
 
     classDef stage fill:#2b6cb0,stroke:#90cdf4,color:#f7fafc
     classDef decision fill:#805ad5,stroke:#d6bcfa,color:#f7fafc
@@ -116,12 +116,12 @@ sequenceDiagram
 
     Note over C,S: "GraphQL - one round trip, exact shape"
     C->>S: "query { user(id: 42) { name, orders { id, items { name } } } }"
-    S->>S: "Resolvers batch-fetch<br>user, orders, items"
+    S->>S: "Resolvers batch-fetch user, orders, items"
     S-->>C: "Exactly the requested shape, single response"
 
     Note over C,S: "tRPC - typed procedure call"
     C->>S: "trpc.user.getWithOrders.query(42)"
-    S-->>C: "Typed result - shape checked<br>at compile time, no query string"
+    S-->>C: "Typed result - shape checked at compile time, no query string"
 ```
 
 ## 🏢 Interview Context & FAANG Signals

@@ -122,23 +122,23 @@ It is unambiguously bad on the LCP candidate. The preload scanner still discover
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"background":"transparent","primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#64748b","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontFamily":"\"Plus Jakarta Sans\", sans-serif","fontSize":"14px"}}}%%
 flowchart TD
-    A(["🔍 Preload Scanner<br>Discovers &lt;picture&gt;/&lt;img&gt;"]) --> B{"🖼️ Has &lt;picture&gt;<br>with &lt;source&gt; Elements?"}
+    A(["🔍 Preload Scanner Discovers &lt;picture&gt;/&lt;img&gt;"]) --> B{"🖼️ Has &lt;picture&gt; with &lt;source&gt; Elements?"}
 
-    B -- "Yes" --> C["🧪 Check Each Source's<br>type in Document Order"]
-    C --> D{"✅ Format<br>Supported?"}
+    B -- "Yes" --> C["🧪 Check Each Source's type in Document Order"]
+    C --> D{"✅ Format Supported?"}
     D -- "No" --> C
-    D -- "Yes" --> E["📌 Select this Source's<br>srcset Candidates"]
-    B -- "No" --> F["📌 Use &lt;img&gt;'s<br>srcset Candidates"]
+    D -- "Yes" --> E["📌 Select this Source's srcset Candidates"]
+    B -- "No" --> F["📌 Use &lt;img&gt;'s srcset Candidates"]
 
-    E --> G["📐 Read sizes Attribute<br>(claimed render width)"]
+    E --> G["📐 Read sizes Attribute (claimed render width)"]
     F --> G
 
-    G --> H["🧮 Combine with Device<br>Pixel Ratio (DPR)"]
-    H --> I["🎯 Pick Smallest Candidate<br>Meeting Effective Pixel Need"]
+    G --> H["🧮 Combine with Device Pixel Ratio (DPR)"]
+    H --> I["🎯 Pick Smallest Candidate Meeting Effective Pixel Need"]
 
     I --> J{"⏳ loading=lazy?"}
-    J -- "Yes" --> K["⏸️ Defer Fetch Until<br>Near Viewport"]
-    J -- "No" --> L["🚀 Fetch Immediately<br>at fetchpriority Level"]
+    J -- "Yes" --> K["⏸️ Defer Fetch Until Near Viewport"]
+    J -- "No" --> L["🚀 Fetch Immediately at fetchpriority Level"]
 
     K --> M(["🖼️ Image Rendered"])
     L --> M

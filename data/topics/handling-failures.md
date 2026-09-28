@@ -107,15 +107,15 @@ The answer has to close with the concrete, lasting change — not "I learned to 
 
 ```mermaid
 graph TD
-    A["Project failed or<br>deadline missed"] --> B{"Was scope/complexity<br>underestimated at planning time?"}
-    B -- "Yes" --> C["Estimation failure:<br>fix the discovery/spike process"]
-    B -- "No" --> D{"Did the plan break down<br>during execution?"}
-    D -- "Yes" --> E["Execution failure:<br>fix delivery tracking & checkpoints"]
-    D -- "No" --> F{"Were stakeholders<br>surprised by the outcome?"}
-    F -- "Yes" --> G["Communication failure:<br>fix the status-update cadence"]
-    F -- "No" --> H{"Did an external dependency<br>or requirement change underneath it?"}
-    H -- "Yes" --> I["External failure:<br>fix cross-team risk buffers"]
-    H -- "No" --> J["Re-examine — a real failure<br>usually fits one of these four"]
+    A["Project failed or deadline missed"] --> B{"Was scope/complexity underestimated at planning time?"}
+    B -- "Yes" --> C["Estimation failure: fix the discovery/spike process"]
+    B -- "No" --> D{"Did the plan break down during execution?"}
+    D -- "Yes" --> E["Execution failure: fix delivery tracking & checkpoints"]
+    D -- "No" --> F{"Were stakeholders surprised by the outcome?"}
+    F -- "Yes" --> G["Communication failure: fix the status-update cadence"]
+    F -- "No" --> H{"Did an external dependency or requirement change underneath it?"}
+    H -- "Yes" --> I["External failure: fix cross-team risk buffers"]
+    H -- "No" --> J["Re-examine — a real failure usually fits one of these four"]
     J --> B
 
     classDef start fill:#2b6cb0,stroke:#90cdf4,color:#fff
@@ -138,17 +138,17 @@ sequenceDiagram
     participant Stake as "Stakeholder"
     participant PM as "Post-mortem"
 
-    Team->>Lead: "Velocity trend declining<br>over 3 sprints, scope unchanged"
-    Lead->>Lead: "Confirms this is a real risk,<br>not a one-sprint blip"
-    Lead->>Stake: "Raises risk early, with a<br>revised plan and named options"
+    Team->>Lead: "Velocity trend declining over 3 sprints, scope unchanged"
+    Lead->>Lead: "Confirms this is a real risk, not a one-sprint blip"
+    Lead->>Stake: "Raises risk early, with a revised plan and named options"
     alt "Options: cut scope / extend / add resources"
-        Stake->>Lead: "Chooses an option,<br>tradeoff accepted knowingly"
+        Stake->>Lead: "Chooses an option, tradeoff accepted knowingly"
     end
-    Note over Team,Stake: "Deadline outcome is now<br>a known, chosen tradeoff — not a surprise"
+    Note over Team,Stake: "Deadline outcome is now a known, chosen tradeoff — not a surprise"
     Lead->>PM: "Runs post-mortem after delivery"
-    PM->>PM: "Separates: what happened →<br>why did process allow it →<br>what concretely changes"
-    PM-->>Lead: "Owned, tracked action item<br>(not a vague resolution)"
-    Lead->>Team: "Verifies the change is still<br>in use weeks/months later"
+    PM->>PM: "Separates: what happened → why did process allow it → what concretely changes"
+    PM-->>Lead: "Owned, tracked action item (not a vague resolution)"
+    Lead->>Team: "Verifies the change is still in use weeks/months later"
 ```
 
 ## 🏢 Interview Context & FAANG Signals

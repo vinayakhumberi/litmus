@@ -157,14 +157,14 @@ class Button {
 ```mermaid
 %%{init: {"theme": "base", "themeVariables": {"primaryColor":"#334155","primaryTextColor":"#f1f5f9","primaryBorderColor":"#64748b","lineColor":"#94a3b8","edgeLabelBackground":"#1e293b","textColor":"#f1f5f9","fontSize":"16px"}}}%%
 graph TD
-    A["obj.prop is accessed"] --> B{"Own property<br>'prop'?"}
-    B -- "Yes" --> C["Found — return<br>obj's own value"]
-    B -- "No" --> D{"Has a [[Prototype]]<br>link?"}
-    D -- "No, reached null" --> E["Not found —<br>return undefined"]
-    D -- "Yes" --> F["Move to<br>obj.[[Prototype]]"]
-    F --> G{"Own property<br>'prop'?"}
-    G -- "Yes" --> H["Found — return<br>this value"]
-    G -- "No" --> I{"Further<br>[[Prototype]] link?"}
+    A["obj.prop is accessed"] --> B{"Own property 'prop'?"}
+    B -- "Yes" --> C["Found — return obj's own value"]
+    B -- "No" --> D{"Has a [[Prototype]] link?"}
+    D -- "No, reached null" --> E["Not found — return undefined"]
+    D -- "Yes" --> F["Move to obj.[[Prototype]]"]
+    F --> G{"Own property 'prop'?"}
+    G -- "Yes" --> H["Found — return this value"]
+    G -- "No" --> I{"Further [[Prototype]] link?"}
     I -- "Yes" --> F
     I -- "No, reached the end" --> E
 

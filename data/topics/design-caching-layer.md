@@ -104,18 +104,18 @@ Versioning the key scheme itself — for example `user:v2:123` instead of `user:
 %%{init: {"theme": "base", "themeVariables": {"lineColor": "#a0aec0", "edgeLabelBackground": "#2d3748", "textColor": "#f7fafc"}}}%%
 graph TD
     A["User request"] --> B{"In browser cache?"}
-    B -- "Hit" --> Z["Response served<br>~0ms network"]
+    B -- "Hit" --> Z["Response served ~0ms network"]
     B -- "Miss" --> C{"In CDN edge cache?"}
-    C -- "Hit" --> Z2["Response served<br>from nearest edge"]
+    C -- "Hit" --> Z2["Response served from nearest edge"]
     C -- "Miss" --> D["Origin server"]
     D --> E{"In Redis / app cache?"}
-    E -- "Hit" --> F["Response built from<br>cached value, no DB hit"]
+    E -- "Hit" --> F["Response built from cached value, no DB hit"]
     E -- "Miss" --> G["Query database"]
-    G --> H{"In DB's own<br>buffer pool?"}
+    G --> H{"In DB's own buffer pool?"}
     H -- "Hit" --> I["Served from DB memory"]
     H -- "Miss" --> J["Disk read - slowest path"]
-    G --> K["Write result back to<br>Redis (cache-aside)"]
-    F --> L["Response returned,<br>may populate CDN/browser cache"]
+    G --> K["Write result back to Redis (cache-aside)"]
+    F --> L["Response returned, may populate CDN/browser cache"]
     I --> L
     J --> L
 
@@ -147,9 +147,9 @@ sequenceDiagram
     App->>Cache: "GET key"
     Cache-->>App: "Miss (expired)"
     App->>Cache: "Acquire single-flight lock for key"
-    Note over App: "Only the first requester<br>proceeds to the DB"
+    Note over App: "Only the first requester proceeds to the DB"
     App->>DB: "Query origin data"
-    Note over U2,App: "Concurrent requests wait on<br>the in-flight result instead<br>of issuing their own DB query"
+    Note over U2,App: "Concurrent requests wait on the in-flight result instead of issuing their own DB query"
     DB-->>App: "Result"
     App->>Cache: "SET key with jittered TTL"
     App-->>U1: "Response"
