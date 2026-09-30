@@ -687,6 +687,45 @@
             "passingScore": 70,
             "recommendedWeek": "Week 6-7",
             "tags": ["system-design", "database", "scalability", "backend"]
+          },
+          {
+            "id": "encryption-fundamentals",
+            "name": "Encryption fundamentals: symmetric vs asymmetric, hashing, and TLS/HTTPS",
+            "category": "General System Design (Backend-aware)",
+            "difficulty": "Medium",
+            "estimatedHours": 2,
+            "priority": "High",
+            "status": "not-started",
+            "score": 0,
+            "passingScore": 70,
+            "recommendedWeek": "Week 6-7",
+            "tags": ["system-design", "security", "encryption", "tls"]
+          },
+          {
+            "id": "authentication-jwt-sessions",
+            "name": "Authentication: JWT vs sessions, refresh tokens, and where to store them",
+            "category": "General System Design (Backend-aware)",
+            "difficulty": "Medium",
+            "estimatedHours": 3,
+            "priority": "High",
+            "status": "not-started",
+            "score": 0,
+            "passingScore": 70,
+            "recommendedWeek": "Week 6-7",
+            "tags": ["system-design", "auth", "jwt", "security"]
+          },
+          {
+            "id": "aws-cloud-fundamentals",
+            "name": "AWS fundamentals for frontend leads: S3, CloudFront, Lambda, and hosting a SPA",
+            "category": "General System Design (Backend-aware)",
+            "difficulty": "Medium",
+            "estimatedHours": 3,
+            "priority": "Medium",
+            "status": "not-started",
+            "score": 0,
+            "passingScore": 70,
+            "recommendedWeek": "Week 6-7",
+            "tags": ["system-design", "aws", "cloud", "infrastructure"]
           }
         ]
       },
